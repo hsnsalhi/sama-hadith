@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>سماء الحديث · ثلاثي الأبعاد</title>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600&display=swap" rel="stylesheet">
@@ -90,6 +91,64 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
 .li:last-child{margin-bottom:0;}
 .ld{width:6px;height:6px;border-radius:50%;}
 .ll{font-family:'Cairo',sans-serif;font-size:10px;color:rgba(201,168,76,.45);}
+
+/* GEO AXIS - repère vertical gauche */
+#geo-axis{
+  position:fixed;left:0;top:0;bottom:90px;
+  width:90px;z-index:20;
+  background:linear-gradient(to right,rgba(0,5,8,.92) 70%,transparent);
+  pointer-events:none;
+  display:flex;flex-direction:column;justify-content:stretch;
+}
+#geo-axis-title{
+  position:absolute;top:50%;left:0;width:14px;
+  transform:translateY(-50%);
+  font-family:'Cairo',sans-serif;font-size:8px;
+  color:rgba(201,168,76,.25);letter-spacing:2px;
+  writing-mode:vertical-rl;text-orientation:mixed;
+  transform:translateY(-50%) rotate(180deg);
+}
+#geo-track{
+  position:absolute;top:5%;bottom:5%;left:56px;
+  width:2px;background:rgba(201,168,76,.1);border-radius:1px;
+}
+/* Highlight sélectionné */
+#geo-highlight{
+  position:absolute;left:0;width:6px;
+  transform:translateX(-2px);
+  border-radius:3px;background:var(--gold);
+  box-shadow:0 0 12px var(--gold),0 0 24px rgba(201,168,76,.4);
+  opacity:0;transition:all .5s cubic-bezier(.16,1,.3,1);
+}
+/* Curseur survol */
+#geo-cursor{
+  position:absolute;left:-10px;right:-40px;height:1px;
+  background:rgba(201,168,76,.2);pointer-events:none;
+  opacity:0;transition:opacity .2s;
+}
+/* Labels des villes */
+.geo-label{
+  position:absolute;right:4px;
+  font-family:'Cairo',sans-serif;font-size:9px;
+  color:rgba(201,168,76,.4);
+  white-space:nowrap;direction:rtl;
+  transform:translateY(-50%);
+  transition:color .2s;
+}
+.geo-label.active{color:rgba(201,168,76,.9)!important;}
+.geo-label::after{
+  content:'';position:absolute;left:calc(100% + 3px);top:50%;
+  width:6px;height:1px;background:rgba(201,168,76,.15);
+}
+/* Dot sur la ligne verticale */
+.geo-dot{
+  position:absolute;left:50%;
+  width:4px;height:4px;border-radius:50%;
+  transform:translate(-50%,-50%);
+  background:rgba(201,168,76,.3);
+}
+.geo-dot.major{width:6px;height:6px;background:rgba(201,168,76,.5);}
+
 
 /* CONTROLS */
 #ctrl{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:6px;align-items:center;}
@@ -258,6 +317,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
   <div class="li"><div class="ld" style="background:var(--rijal);box-shadow:0 0 5px var(--rijal)"></div><span class="ll">علماء الرجال</span></div>
 </div>
 
+<!-- Repère géographique vertical -->
+<div id="geo-axis">
+  <div id="geo-axis-title">الموقع الجغرافي</div>
+  <div id="geo-track">
+    <div id="geo-highlight"></div>
+    <div id="geo-cursor"></div>
+  </div>
+</div>
+
 <div id="zc">
   <button class="zb" onclick="doZoom(0.8)">+</button>
   <div id="zv">100%</div>
@@ -329,20 +397,81 @@ async function sbGet(t,q=''){
 const ERA_MIN=1,ERA_MAX=950;
 const GEN_Z={sahabi:-120,tabii:-40,muhaddith:40,rijal:120};
 
+// ── Mapping géographique → Y ──────────────────────────────────────────────────
+// Basé sur la latitude réelle (nord=haut, sud=bas), normalisé sur [-150, +150]
+// Latitude de référence : Médine ~24°N = centre (Y=0)
+// Échelle : 1° de latitude ≈ 6 unités Y
+const GEO_Y_MAP = [
+  // Maghreb / Andalousie (37-35°N) → haut
+  {keys:['الأندلس','أندلس','قرطبة','إشبيلية'],        y: 160},
+  {keys:['المغرب','فاس','مراكش','القيروان','تونس'],    y: 140},
+  // Levant / Syrie (33-34°N)
+  {keys:['الشام','دمشق','سوريا','حلب','حمص','حماة'],  y: 110},
+  // Irak (32-33°N)
+  {keys:['بغداد','العراق'],                            y: 100},
+  {keys:['الكوفة','كوفة'],                             y:  90},
+  {keys:['واسط'],                                       y:  85},
+  {keys:['البصرة','بصرة'],                             y:  75},
+  // Perse / Khorasan (32-36°N)
+  {keys:['خراسان','نيسابور','مرو','هراة','بلخ'],       y: 105},
+  {keys:['الري','ري','همدان','أصبهان','إصبهان'],       y:  95},
+  {keys:['فارس','شيراز','الأهواز'],                    y:  70},
+  // Anatolie / Turquie
+  {keys:['الأناضول','قسطنطينية','أنقرة'],              y: 120},
+  // Azerbaïdjan / Caucase
+  {keys:['أذربيجان','أرمينيا'],                        y: 130},
+  // Moyen-Orient central
+  {keys:['الجزيرة','الموصل','نصيبين'],                 y:  95},
+  // Palestine / Jordanie (31-32°N)
+  {keys:['فلسطين','القدس','الرملة','عسقلان'],          y:  80},
+  // Égypte (24-30°N)
+  {keys:['مصر','الفسطاط','الإسكندرية','القاهرة'],      y:  40},
+  // Hijaz — centre de référence (21-24°N)
+  {keys:['المدينة','المدينة المنورة','يثرب'],           y: -10},
+  {keys:['مكة','مكة المكرمة'],                         y: -30},
+  {keys:['الطائف'],                                     y: -40},
+  // Arabie (18-24°N)
+  {keys:['الحجاز'],                                     y: -20},
+  {keys:['نجد','الرياض'],                               y: -50},
+  // Yémen (12-15°N)
+  {keys:['اليمن','صنعاء','حضرموت','عدن'],              y:-110},
+];
+
+function getGeoY(origin){
+  if(!origin) return null;
+  const o=origin.toLowerCase();
+  for(const {keys,y} of GEO_Y_MAP){
+    for(const k of keys){
+      if(o.includes(k.toLowerCase())) return y;
+    }
+  }
+  return null;
+}
+
 function getPos3D(n){
   const x=(((n.death_ah||1)-ERA_MIN)/(ERA_MAX-ERA_MIN))*400-200;
   const z=GEN_Z[n.generation]||0;
   const seed=(n.id*2654435761)>>>0;
-  const y=((seed%10000)/10000-0.5)*100;
-  const jx=((seed%997)/997-0.5)*30;
-  const jz=((seed%1013)/1013-0.5)*30;
-  return new THREE.Vector3(x+jx,y,z+jz);
+
+  // Y géographique si possible, sinon hash déterministe dans bande centrale
+  const geoY=getGeoY(n.origin);
+  const baseY= geoY !== null ? geoY : ((seed%6000)/6000-0.5)*80;
+
+  // Petite jitter pour éviter l'empilement exact de narrateurs au même lieu/époque
+  const jx=((seed%997)/997-0.5)*20;
+  const jy=((seed%503)/503-0.5)*18;
+  const jz=((seed%1013)/1013-0.5)*20;
+
+  return new THREE.Vector3(x+jx, baseY+jy, z+jz);
 }
+
 function getPos2D(n){
   const x=(((n.death_ah||1)-ERA_MIN)/(ERA_MAX-ERA_MIN))*400-200;
+  const geoY=getGeoY(n.origin);
   const seed=(n.id*2654435761)>>>0;
-  const y=((seed%10000)/10000-0.5)*120;
-  return new THREE.Vector3(x,y,0);
+  const baseY= geoY !== null ? geoY : ((seed%6000)/6000-0.5)*80;
+  const jy=((seed%503)/503-0.5)*18;
+  return new THREE.Vector3(x, baseY+jy, 0);
 }
 function getPos(n){return view==='3d'?getPos3D(n):getPos2D(n);}
 
@@ -402,13 +531,127 @@ function addBgParticles(){
   scene.add(bgParticles);
 }
 
+// ── Nébuleuses dynamiques ─────────────────────────────────────────────────────
+let nebulaMeshes=[];
 function addNebula(){
-  // Nebula glow planes
-  const colors=[0x0a1840,0x1a0830,0x081820];
-  colors.forEach((c,i)=>{
-    const geo=new THREE.SphereGeometry(600+i*80,16,16);
-    const mat=new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.08,side:THREE.BackSide});
-    scene.add(new THREE.Mesh(geo,mat));
+  // Nébuleuses colorées — sprites billboards qui dérivent lentement
+  const nebDefs=[
+    {col:new THREE.Color(0x0a1840),pos:new THREE.Vector3(-100,30,-200),r:300},
+    {col:new THREE.Color(0x1a0830),pos:new THREE.Vector3(80,-40,150),r:250},
+    {col:new THREE.Color(0x081820),pos:new THREE.Vector3(0,80,-100),r:350},
+    {col:new THREE.Color(0x0d1f10),pos:new THREE.Vector3(-180,-60,80),r:220},
+    {col:new THREE.Color(0x1a1000),pos:new THREE.Vector3(150,50,-80),r:200},
+  ];
+  nebDefs.forEach((d,i)=>{
+    const geo=new THREE.SphereGeometry(d.r,12,12);
+    const mat=new THREE.MeshBasicMaterial({color:d.col,transparent:true,opacity:0.12,side:THREE.BackSide,depthWrite:false});
+    const mesh=new THREE.Mesh(geo,mat);
+    mesh.position.copy(d.pos);
+    mesh.userData={speed:0.003+i*0.001,phase:i*1.2,basePos:d.pos.clone()};
+    scene.add(mesh);
+    nebulaMeshes.push(mesh);
+  });
+  // Sphère extérieure (skybox)
+  const sky=new THREE.Mesh(
+    new THREE.SphereGeometry(900,16,16),
+    new THREE.MeshBasicMaterial({color:0x000305,transparent:true,opacity:1,side:THREE.BackSide})
+  );
+  scene.add(sky);
+}
+
+// ── Particules de chaîne (trajet lumineux isnad) ───────────────────────────────
+let chainParticles=[];  // [{mesh, from, to, t, speed, col}]
+let chainParticleMeshes=null;
+
+function spawnChainParticles(sel){
+  // Supprimer les anciennes
+  chainParticles=[];
+  if(chainParticleMeshes){scene.remove(chainParticleMeshes);chainParticleMeshes=null;}
+
+  if(!sel||!posMap[sel.id]) return;
+  const sp=posMap[sel.id];
+  const col=new THREE.Color(GCS[sel.generation]||'#c9a84c');
+
+  const links=[];
+  transmissions.forEach(t=>{
+    if(t.teacher_id===sel.id){
+      const other=narrators.find(n=>n.id===t.student_id);
+      if(other&&posMap[other.id]) links.push({from:sp,to:posMap[other.id],col});
+    } else if(t.student_id===sel.id){
+      const other=narrators.find(n=>n.id===t.teacher_id);
+      if(other&&posMap[other.id]) links.push({from:posMap[other.id],to:sp,col:new THREE.Color(GCS[other.generation]||'#c9a84c')});
+    }
+  });
+  if(!links.length) return;
+
+  // Créer les instances de particules
+  const N=links.length*8; // 8 particules par lien
+  const geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(N*3);
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({size:3,color:0xf0d080,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true});
+  chainParticleMeshes=new THREE.Points(geo,mat);
+  scene.add(chainParticleMeshes);
+
+  links.forEach((lnk,li)=>{
+    for(let p=0;p<8;p++){
+      chainParticles.push({
+        linkIdx:li*8+p,
+        from:lnk.from.clone(),to:lnk.to.clone(),
+        t:(p/8), speed:0.004+Math.random()*0.003,
+        col:lnk.col
+      });
+    }
+  });
+}
+
+function updateChainParticles(){
+  if(!chainParticleMeshes||!chainParticles.length) return;
+  const pos=chainParticleMeshes.geometry.attributes.position;
+  let alive=0;
+  chainParticles.forEach(p=>{
+    p.t+=p.speed;
+    if(p.t>1) p.t-=1;
+    const tp=p.t;
+    // Courbe de Bézier légère pour éviter les lignes droites
+    const mid=new THREE.Vector3().lerpVectors(p.from,p.to,0.5).add(new THREE.Vector3(0,15*Math.sin(p.t*Math.PI),0));
+    const a=new THREE.Vector3().lerpVectors(p.from,mid,tp);
+    const b=new THREE.Vector3().lerpVectors(mid,p.to,tp);
+    const pt=new THREE.Vector3().lerpVectors(a,b,tp);
+    pos.setXYZ(p.linkIdx,pt.x,pt.y,pt.z);
+    // Fade in/out aux extrémités
+    alive++;
+  });
+  pos.needsUpdate=true;
+  // Opacité selon présence
+  chainParticleMeshes.material.opacity=chainParticles.length>0?0.85:0;
+}
+
+// ── Étoiles filantes ──────────────────────────────────────────────────────────
+let shootingStars=[];
+let shootingLines=[];
+function maybeSpawnShootingStar(t){
+  if(Math.random()>0.003) return; // ~1 toutes les 5s
+  const from=new THREE.Vector3(
+    (Math.random()-0.5)*800,
+    (Math.random()-0.5)*400,
+    (Math.random()-0.5)*400
+  );
+  const dir=new THREE.Vector3(Math.random()-.5,Math.random()*.2-.1,Math.random()-.5).normalize().multiplyScalar(300+Math.random()*200);
+  const to=from.clone().add(dir);
+  const pts=[from,to];
+  const geo=new THREE.BufferGeometry().setFromPoints(pts);
+  const mat=new THREE.LineBasicMaterial({color:0xf0e8d0,transparent:true,opacity:0,linewidth:1,blending:THREE.AdditiveBlending});
+  const line=new THREE.Line(geo,mat);
+  scene.add(line);
+  shootingStars.push({line,born:t,life:1.2});
+}
+function updateShootingStars(t){
+  shootingStars=shootingStars.filter(s=>{
+    const age=(t-s.born)/s.life;
+    if(age>1){scene.remove(s.line);s.line.geometry.dispose();return false;}
+    s.line.material.opacity=age<0.3?age/0.3:(1-age)/0.7;
+    return true;
   });
 }
 
@@ -472,25 +715,40 @@ function buildStars(){
       varying float vIdx;
       uniform float uSelected;
       uniform float uHovered;
+      uniform float uTime;
       void main(){
         vec2 uv=gl_PointCoord-0.5;
         float d=length(uv);
         if(d>0.5) discard;
-        float core=1.0-smoothstep(0.0,0.12,d);
-        float mid=1.0-smoothstep(0.0,0.3,d);
+        bool isSel=vIdx==uSelected;
+        bool isHov=vIdx==uHovered;
+        // Bloom multi-couche
+        float core=1.0-smoothstep(0.0,0.10,d);
+        float mid=1.0-smoothstep(0.0,0.28,d);
         float outer=1.0-smoothstep(0.0,0.5,d);
+        float bloom=pow(1.0-d*2.0,3.0)*0.5; // bloom supplémentaire
+        // Diffraction spikes — plus longs si sélectionné
+        float spikeScale=isSel?24.0:isHov?20.0:18.0;
         float spike=0.0;
         float ax=abs(uv.x),ay=abs(uv.y);
         float diag1=abs(uv.x-uv.y),diag2=abs(uv.x+uv.y);
-        spike+=max(0.0,1.0-ax*18.0)*max(0.0,1.0-ay*1.5)*0.6;
-        spike+=max(0.0,1.0-ay*18.0)*max(0.0,1.0-ax*1.5)*0.6;
-        spike+=max(0.0,1.0-diag1*25.0)*max(0.0,1.0-diag2*1.5)*0.3;
-        spike+=max(0.0,1.0-diag2*25.0)*max(0.0,1.0-diag1*1.5)*0.3;
-        vec3 white=vec3(1.0);
-        vec3 col=mix(vColor,white,core);
-        float alpha=core*1.0+mid*0.6+outer*0.25+spike*0.5;
+        spike+=max(0.0,1.0-ax*spikeScale)*max(0.0,1.0-ay*1.5)*0.7;
+        spike+=max(0.0,1.0-ay*spikeScale)*max(0.0,1.0-ax*1.5)*0.7;
+        spike+=max(0.0,1.0-diag1*(spikeScale*1.4))*max(0.0,1.0-diag2*1.5)*0.4;
+        spike+=max(0.0,1.0-diag2*(spikeScale*1.4))*max(0.0,1.0-diag1*1.5)*0.4;
+        // Pulse anneau si sélectionné
+        float ring=0.0;
+        if(isSel){
+          float rd=abs(d-0.38);
+          ring=max(0.0,1.0-rd*30.0)*0.5*(0.7+0.3*sin(uTime*4.0));
+        }
+        vec3 white=vec3(1.0,0.97,0.9);
+        vec3 col=mix(vColor,white,core*0.9);
+        // Légère teinte chaude sur bloom
+        col+=vec3(0.05,0.03,0.0)*bloom*(isSel?2.0:1.0);
+        float alpha=core+mid*0.55+outer*0.2+bloom*0.4+spike*0.55+ring;
         alpha=clamp(alpha,0.0,1.0);
-        if(vIdx==uSelected||vIdx==uHovered) alpha=min(alpha*1.4,1.0);
+        if(isSel||isHov) alpha=min(alpha*1.5,1.0);
         gl_FragColor=vec4(col,alpha);
       }
     `,
@@ -612,6 +870,7 @@ function openPanel(n){
   const students=transmissions.filter(t=>t.teacher_id===n.id).map(t=>narrators.find(x=>x.id===t.student_id)).filter(Boolean);
   const nh=hadiths.filter(h=>h.narrator_id===n.id);
   document.getElementById('pb').innerHTML=`
+    <a href="narrator.html?id=${n.id}" target="_blank" style="display:block;text-align:center;padding:9px;margin-bottom:14px;background:rgba(201,168,76,.1);border:0.5px solid rgba(201,168,76,.3);border-radius:8px;color:var(--gold);font-family:'Cairo',sans-serif;font-size:12px;text-decoration:none;transition:background .2s;" onmouseover="this.style.background='rgba(201,168,76,.18)'" onmouseout="this.style.background='rgba(201,168,76,.1)'">الفيشة الكاملة ↗</a>
     <div class="ir"><span class="il">وفاته</span><span class="iv">${n.death_ah?n.death_ah+' هـ':'—'}</span></div>
     <div class="ir"><span class="il">المنشأ</span><span class="iv">${n.origin||'—'}</span></div>
     <div class="ir"><span class="il">الأحاديث</span><span class="iv">${(n.hadith_count||0).toLocaleString()}</span></div>
@@ -623,6 +882,8 @@ function openPanel(n){
   `;
   document.getElementById('panel').classList.add('open');
   updateTimeline(n);
+  updateGeoAxis(n);
+  spawnChainParticles(n);
   flyTo(n);
 }
 function closePanel(){
@@ -631,6 +892,8 @@ function closePanel(){
   if(selLines){scene.remove(selLines);selLines=null;}
   if(starPoints) starPoints.material.uniforms.uSelected.value=-1;
   updateTimeline(null);
+  updateGeoAxis(null);
+  spawnChainParticles(null);
 }
 
 // ── Camera fly-to ──────────────────────────────────────────────────────────────
@@ -726,7 +989,7 @@ function initControls(){
         const n=narrators.find(x=>x.id===nid);
         if(n){
           document.getElementById('ttn').textContent=n.name_ar;
-          document.getElementById('tts').textContent=(n.death_ah||'?')+' هـ - '+(GL[n.generation]||n.generation);
+          document.getElementById('tts').textContent=(n.death_ah||'?')+' هـ - '+(GL[n.generation]||n.generation)+(n.origin?' - '+n.origin:'');
           tt.style.display='block';
           tt.style.left=(e.clientX+12)+'px';
           tt.style.top=(e.clientY-8)+'px';
@@ -897,8 +1160,27 @@ function animate(){
   camera.position.add(panCurrent);
   camera.lookAt(panCurrent);
 
-  if(bgParticles) bgParticles.rotation.y=t*0.01;
+  // Rotation lente des particules de fond
+  if(bgParticles) bgParticles.rotation.y=t*0.008;
+
+  // Nébuleuses dynamiques — dérive lente et respiration
+  nebulaMeshes.forEach(m=>{
+    const {speed,phase,basePos}=m.userData;
+    m.position.x=basePos.x+Math.sin(t*speed+phase)*30;
+    m.position.y=basePos.y+Math.cos(t*speed*0.7+phase)*20;
+    m.position.z=basePos.z+Math.sin(t*speed*1.3+phase)*25;
+    m.material.opacity=0.08+Math.sin(t*speed*2+phase)*0.04;
+  });
+
+  // Shader time
   if(starPoints) starPoints.material.uniforms.uTime.value=t;
+
+  // Particules de chaîne isnad
+  updateChainParticles();
+
+  // Étoiles filantes
+  maybeSpawnShootingStar(t);
+  updateShootingStars(t);
 
   updateLabels();
   renderer.render(scene,camera);
@@ -908,6 +1190,118 @@ function onResize(){
   camera.aspect=innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
+}
+
+// ── REPÈRE GÉOGRAPHIQUE VERTICAL ─────────────────────────────────────────────
+// Les villes-clés à afficher sur l'axe avec leur Y monde et leur importance
+const GEO_AXIS_CITIES=[
+  {name:'الأندلس',    y:160, major:false},
+  {name:'المغرب',     y:140, major:false},
+  {name:'الشام',      y:110, major:true},
+  {name:'بغداد',      y:100, major:true},
+  {name:'خراسان',     y:105, major:false},
+  {name:'الكوفة',     y: 90, major:false},
+  {name:'البصرة',     y: 75, major:true},
+  {name:'مصر',        y: 40, major:true},
+  {name:'المدينة',    y:-10, major:true},
+  {name:'مكة',        y:-30, major:true},
+  {name:'اليمن',      y:-110,major:true},
+];
+
+// Y monde → % sur l'axe visuel (Y min=-150, max=+170)
+const GEO_Y_MIN=-150, GEO_Y_MAX=170;
+function worldYtoPct(y){ return 1-(y-GEO_Y_MIN)/(GEO_Y_MAX-GEO_Y_MIN); }
+
+function buildGeoAxis(){
+  const track=document.getElementById('geo-track');
+  // Supprimer les anciens labels/dots
+  track.querySelectorAll('.geo-label,.geo-dot').forEach(e=>e.remove());
+
+  GEO_AXIS_CITIES.forEach(city=>{
+    const pct=worldYtoPct(city.y)*100;
+    if(pct<0||pct>100) return;
+
+    // Dot sur la ligne
+    const dot=document.createElement('div');
+    dot.className='geo-dot'+(city.major?' major':'');
+    dot.style.top=pct+'%';
+    track.appendChild(dot);
+
+    // Label
+    const lbl=document.createElement('div');
+    lbl.className='geo-label';
+    lbl.id='geo-lbl-'+city.name;
+    lbl.textContent=city.name;
+    lbl.style.top=pct+'%';
+    lbl.style.color=city.major?'rgba(201,168,76,.55)':'rgba(201,168,76,.3)';
+    track.appendChild(lbl);
+  });
+
+  // Interactivité hover
+  track.addEventListener('mousemove',geoHover);
+  track.addEventListener('mouseleave',geoLeave);
+}
+
+function geoHover(e){
+  const track=document.getElementById('geo-track');
+  const rect=track.getBoundingClientRect();
+  const pct=(e.clientY-rect.top)/rect.height;
+  // Convertir en Y monde
+  const worldY=GEO_Y_MIN+(1-pct)*(GEO_Y_MAX-GEO_Y_MIN);
+  // Trouver la ville la plus proche
+  const closest=GEO_AXIS_CITIES.reduce((best,c)=>{
+    const d=Math.abs(c.y-worldY);
+    return(!best||d<best.d)?{c,d}:best;
+  },null);
+
+  const cursor=document.getElementById('geo-cursor');
+  cursor.style.top=pct*100+'%';
+  cursor.style.opacity='1';
+
+  // Highlight la ville proche
+  document.querySelectorAll('.geo-label').forEach(l=>l.classList.remove('active'));
+  if(closest&&closest.d<25){
+    const lbl=document.getElementById('geo-lbl-'+closest.c.name);
+    if(lbl) lbl.classList.add('active');
+  }
+}
+
+function geoLeave(){
+  document.getElementById('geo-cursor').style.opacity='0';
+  document.querySelectorAll('.geo-label').forEach(l=>l.classList.remove('active'));
+}
+
+function updateGeoAxis(narrator){
+  const hl=document.getElementById('geo-highlight');
+  document.querySelectorAll('.geo-label').forEach(l=>l.classList.remove('active'));
+
+  if(!narrator){
+    hl.style.opacity='0';
+    return;
+  }
+
+  const geoY=getGeoY(narrator.origin);
+  if(geoY===null){hl.style.opacity='0';return;}
+
+  const col=GCS[narrator.generation]||'#c9a84c';
+  const pct=worldYtoPct(geoY)*100;
+
+  // Highlight — barre centrée sur la position Y
+  hl.style.top=(pct-1)+'%';
+  hl.style.height='2%';
+  hl.style.background=col;
+  hl.style.boxShadow=`0 0 10px ${col}, 0 0 20px ${col}44`;
+  hl.style.opacity='1';
+
+  // Activer le label de la ville la plus proche
+  const closest=GEO_AXIS_CITIES.reduce((best,c)=>{
+    const d=Math.abs(c.y-geoY);
+    return(!best||d<best.d)?{c,d}:best;
+  },null);
+  if(closest&&closest.d<30){
+    const lbl=document.getElementById('geo-lbl-'+closest.c.name);
+    if(lbl) lbl.classList.add('active');
+  }
 }
 
 // ── TIMELINE ──────────────────────────────────────────────────────────────────
@@ -1075,6 +1469,7 @@ async function loadData(){
   await new Promise(r=>setTimeout(r,300));
   buildStars();
   buildTimeline();
+  buildGeoAxis();
   setLS('جاهز',100);
   await new Promise(r=>setTimeout(r,400));
   const ld=document.getElementById('ld');
