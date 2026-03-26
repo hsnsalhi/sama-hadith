@@ -3,131 +3,231 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>سماء الحديث</title>
+<title>سماء الحديث · ثلاثي الأبعاد</title>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --gold:#c9a84c;--gold2:#f0d080;--gold3:#8a6a20;
+:root{
+  --gold:#c9a84c;--gold2:#f0d080;--gold3:#6a4a10;
   --sahabi:#f5d77a;--tabii:#7ab8f5;--muhaddith:#c07af5;--rijal:#7af5c0;
-  --bg:#010610;
+  --bg:#000508;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Cairo',sans-serif;}
-#c{position:fixed;inset:0;z-index:0;cursor:grab;}
-#c:active{cursor:grabbing;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
+#c{position:fixed;inset:0;z-index:0;}
+
+/* CSS2D labels */
+.lbl{
+  font-family:'Amiri',serif;font-size:12px;color:var(--gold);
+  pointer-events:none;white-space:nowrap;
+  text-shadow:0 0 8px rgba(201,168,76,.8),0 0 20px rgba(201,168,76,.4);
+  transition:opacity .3s;
+}
+.lbl.era{font-family:'Cairo',sans-serif;font-size:9px;color:rgba(201,168,76,.45);}
 
 /* HEADER */
-#hdr{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:linear-gradient(to bottom,rgba(1,6,16,.95) 60%,transparent);}
-#hdr h1{font-family:'Amiri',serif;font-size:26px;color:var(--gold);letter-spacing:2px;text-shadow:0 0 24px rgba(201,168,76,.5);}
-#hdr p{font-size:10px;color:rgba(201,168,76,.35);letter-spacing:3px;margin-top:1px;}
-.hstat{text-align:center;margin-left:20px;}
-.hstat-v{font-size:17px;font-weight:600;color:var(--gold);}
-.hstat-l{font-size:9px;color:rgba(201,168,76,.35);}
+#hdr{
+  position:fixed;top:0;left:0;right:0;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;
+  background:linear-gradient(to bottom,rgba(0,5,8,.95) 50%,transparent);
+  pointer-events:none;
+}
+#hdr-left{pointer-events:all;}
+#hdr-left h1{font-family:'Amiri',serif;font-size:26px;color:var(--gold);letter-spacing:2px;text-shadow:0 0 20px rgba(201,168,76,.5);}
+#hdr-left p{font-family:'Cairo',sans-serif;font-size:10px;color:rgba(201,168,76,.35);letter-spacing:3px;margin-top:1px;}
+.hstat{text-align:center;margin-left:20px;pointer-events:all;}
+.hv{font-family:'Cairo',sans-serif;font-size:17px;font-weight:600;color:var(--gold);}
+.hl{font-family:'Cairo',sans-serif;font-size:9px;color:rgba(201,168,76,.35);}
 
 /* SEARCH */
-#sw{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:25;width:300px;}
-#si{width:100%;padding:9px 16px;background:rgba(1,9,22,.9);border:0.5px solid rgba(201,168,76,.25);border-radius:22px;color:var(--gold);font-family:'Cairo',sans-serif;font-size:13px;outline:none;text-align:center;direction:rtl;backdrop-filter:blur(12px);}
-#si::placeholder{color:rgba(201,168,76,.3);}
+#sw{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:25;width:280px;}
+#si{width:100%;padding:8px 16px;background:rgba(0,5,8,.88);border:0.5px solid rgba(201,168,76,.22);border-radius:22px;color:var(--gold);font-family:'Cairo',sans-serif;font-size:13px;outline:none;text-align:center;direction:rtl;backdrop-filter:blur(12px);}
+#si::placeholder{color:rgba(201,168,76,.28);}
 #si:focus{border-color:rgba(201,168,76,.5);}
-#sr{margin-top:6px;background:rgba(1,9,22,.96);border:0.5px solid rgba(201,168,76,.2);border-radius:12px;overflow:hidden;display:none;backdrop-filter:blur(12px);}
-.sri{padding:9px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
-.sri:hover{background:rgba(201,168,76,.07);}
-.sri-n{font-family:'Amiri',serif;font-size:14px;color:var(--gold);}
-.sri-g{font-size:10px;padding:2px 8px;border-radius:10px;}
-
-/* ZOOM CONTROLS */
-#zoom-ctrl{position:fixed;left:20px;top:50%;transform:translateY(-50%);z-index:20;display:flex;flex-direction:column;gap:6px;}
-.zb{width:36px;height:36px;border-radius:8px;background:rgba(1,9,22,.85);border:0.5px solid rgba(201,168,76,.22);color:var(--gold);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;backdrop-filter:blur(8px);}
-.zb:hover{background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.45);}
-#zoom-val{font-size:10px;color:rgba(201,168,76,.4);text-align:center;font-family:'Cairo',sans-serif;}
+#sr{margin-top:5px;background:rgba(0,5,8,.96);border:0.5px solid rgba(201,168,76,.18);border-radius:10px;overflow:hidden;display:none;backdrop-filter:blur(12px);max-height:300px;overflow-y:auto;}
+.sri{padding:8px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.sri:hover{background:rgba(201,168,76,.06);}
+.sri-n{font-family:'Amiri',serif;font-size:13px;color:var(--gold);}
+.sri-g{font-size:9px;padding:2px 7px;border-radius:8px;flex-shrink:0;}
 
 /* PANEL */
-#panel{position:fixed;right:0;top:0;bottom:0;width:340px;z-index:30;background:rgba(1,6,16,.97);border-left:0.5px solid rgba(201,168,76,.15);transform:translateX(100%);transition:transform .4s cubic-bezier(.16,1,.3,1);backdrop-filter:blur(20px);display:flex;flex-direction:column;overflow:hidden;}
+#panel{
+  position:fixed;right:0;top:0;bottom:0;width:320px;z-index:30;
+  background:rgba(0,5,8,.97);border-left:0.5px solid rgba(201,168,76,.12);
+  transform:translateX(100%);transition:transform .4s cubic-bezier(.16,1,.3,1);
+  backdrop-filter:blur(20px);display:flex;flex-direction:column;
+}
 #panel.open{transform:translateX(0);}
-#pcl{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:rgba(201,168,76,.07);border:0.5px solid rgba(201,168,76,.2);color:var(--gold);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-#pcl:hover{background:rgba(201,168,76,.15);}
-#ph{padding:24px 22px 18px;border-bottom:0.5px solid rgba(201,168,76,.08);flex-shrink:0;}
-.pdot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:7px;}
-#pg{font-size:11px;color:rgba(201,168,76,.4);margin-bottom:7px;display:flex;align-items:center;}
-#pn{font-family:'Amiri',serif;font-size:24px;color:var(--gold);line-height:1.2;margin-bottom:3px;}
-#pl{font-size:11px;color:rgba(201,168,76,.35);}
-#pb{flex:1;overflow-y:auto;padding:18px 22px;}
+#pcl{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,.06);border:0.5px solid rgba(201,168,76,.18);color:var(--gold);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#pcl:hover{background:rgba(201,168,76,.14);}
+#ph{padding:22px 20px 16px;border-bottom:0.5px solid rgba(201,168,76,.07);flex-shrink:0;}
+.pdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:6px;}
+#pg{font-size:11px;color:rgba(201,168,76,.38);margin-bottom:6px;display:flex;align-items:center;}
+#pn{font-family:'Amiri',serif;font-size:22px;color:var(--gold);line-height:1.2;margin-bottom:3px;}
+#pl{font-size:11px;color:rgba(201,168,76,.32);}
+#pb{flex:1;overflow-y:auto;padding:16px 20px;}
 #pb::-webkit-scrollbar{width:2px;}
-#pb::-webkit-scrollbar-thumb{background:rgba(201,168,76,.15);border-radius:1px;}
-.ir{display:flex;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid rgba(201,168,76,.05);}
-.il{font-size:11px;color:rgba(201,168,76,.38);}
-.iv{font-size:12px;color:rgba(201,168,76,.8);text-align:left;max-width:180px;}
-.ps{margin-top:18px;}
-.pst{font-size:10px;letter-spacing:2px;color:rgba(201,168,76,.25);margin-bottom:8px;text-transform:uppercase;}
-.tag{display:inline-block;padding:3px 9px;border-radius:10px;font-size:11px;margin:2px;}
-.tc{background:rgba(201,168,76,.06);border:0.5px solid rgba(201,168,76,.18);color:rgba(201,168,76,.75);}
-.tr{background:rgba(122,245,192,.06);border:0.5px solid rgba(122,245,192,.18);color:#7af5c0;}
-.pl-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer;transition:background .15s;margin-bottom:3px;}
-.pl-item:hover{background:rgba(201,168,76,.05);}
-.pl-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-.pl-name{font-family:'Amiri',serif;font-size:14px;color:rgba(201,168,76,.82);}
-.pl-era{font-size:10px;color:rgba(201,168,76,.3);margin-right:auto;}
-.hc{background:rgba(201,168,76,.04);border:0.5px solid rgba(201,168,76,.09);border-radius:7px;padding:11px;margin-bottom:7px;}
-.ht{font-family:'Amiri',serif;font-size:14px;color:rgba(201,168,76,.82);line-height:1.8;direction:rtl;}
-.hm{font-size:10px;color:rgba(201,168,76,.3);margin-top:5px;}
+#pb::-webkit-scrollbar-thumb{background:rgba(201,168,76,.12);}
+.ir{display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid rgba(201,168,76,.05);}
+.il{font-size:11px;color:rgba(201,168,76,.35);}
+.iv{font-size:11px;color:rgba(201,168,76,.78);text-align:left;max-width:160px;}
+.ps{margin-top:16px;}
+.pst{font-size:9px;letter-spacing:2px;color:rgba(201,168,76,.22);margin-bottom:7px;text-transform:uppercase;}
+.tag{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;margin:2px;}
+.tc{background:rgba(201,168,76,.05);border:0.5px solid rgba(201,168,76,.15);color:rgba(201,168,76,.7);}
+.pl-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s;margin-bottom:2px;}
+.pl-item:hover{background:rgba(201,168,76,.04);}
+.pl-d{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.pl-n{font-family:'Amiri',serif;font-size:13px;color:rgba(201,168,76,.8);}
+.pl-e{font-size:9px;color:rgba(201,168,76,.28);margin-right:auto;}
+.hc{background:rgba(201,168,76,.03);border:0.5px solid rgba(201,168,76,.08);border-radius:6px;padding:10px;margin-bottom:6px;}
+.ht{font-family:'Amiri',serif;font-size:13px;color:rgba(201,168,76,.8);line-height:1.8;direction:rtl;}
+.hm{font-size:9px;color:rgba(201,168,76,.28);margin-top:4px;}
 
 /* LEGEND */
-#leg{position:fixed;left:20px;bottom:68px;z-index:20;background:rgba(1,9,22,.82);border:0.5px solid rgba(201,168,76,.1);border-radius:10px;padding:11px 13px;backdrop-filter:blur(8px);}
-.li{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+#leg{position:fixed;left:16px;bottom:130px;z-index:20;background:rgba(0,5,8,.8);border:0.5px solid rgba(201,168,76,.1);border-radius:8px;padding:10px 12px;backdrop-filter:blur(8px);}
+.li{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
 .li:last-child{margin-bottom:0;}
-.ld{width:7px;height:7px;border-radius:50%;}
-.ll{font-size:11px;color:rgba(201,168,76,.5);}
+.ld{width:6px;height:6px;border-radius:50%;}
+.ll{font-family:'Cairo',sans-serif;font-size:10px;color:rgba(201,168,76,.45);}
 
-/* BOTTOM BAR */
-#bot{position:fixed;bottom:0;left:0;right:0;z-index:20;padding:10px 24px;background:linear-gradient(to top,rgba(1,6,16,.95) 60%,transparent);display:flex;align-items:center;justify-content:center;gap:6px;}
-.cb{padding:6px 14px;border-radius:18px;background:rgba(1,9,22,.85);border:0.5px solid rgba(201,168,76,.2);color:rgba(201,168,76,.65);font-family:'Cairo',sans-serif;font-size:11px;cursor:pointer;transition:all .2s;backdrop-filter:blur(8px);}
-.cb:hover,.cb.on{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.4);color:var(--gold);}
-.csep{width:1px;height:16px;background:rgba(201,168,76,.12);}
+/* CONTROLS */
+#ctrl{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:6px;align-items:center;}
+.cb{padding:6px 13px;border-radius:16px;background:rgba(0,5,8,.85);border:0.5px solid rgba(201,168,76,.18);color:rgba(201,168,76,.6);font-family:'Cairo',sans-serif;font-size:10px;cursor:pointer;transition:all .2s;backdrop-filter:blur(8px);white-space:nowrap;}
+.cb:hover,.cb.on{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.38);color:var(--gold);}
+.csep{width:1px;height:14px;background:rgba(201,168,76,.1);}
 
 /* TIMELINE */
-#tl{position:fixed;bottom:46px;left:50%;transform:translateX(-50%);z-index:15;width:72%;max-width:860px;pointer-events:none;}
-.tll{height:1px;background:linear-gradient(to right,transparent,rgba(201,168,76,.18) 15%,rgba(201,168,76,.18) 85%,transparent);margin-bottom:5px;}
-.tls{display:flex;justify-content:space-between;}
-.tlb{font-size:9px;color:rgba(201,168,76,.25);}
+#tl-wrap{
+  position:fixed;bottom:0;left:0;right:0;z-index:20;
+  background:linear-gradient(to top,rgba(0,5,8,.98) 60%,rgba(0,5,8,.0));
+  padding:10px 70px 14px 70px;
+  pointer-events:all;
+}
+#tl-hl-name{
+  font-family:'Amiri',serif;font-size:13px;color:var(--gold);
+  text-shadow:0 0 8px currentColor;
+}
+#tl-hl-dates{
+  font-family:'Cairo',sans-serif;font-size:9px;color:rgba(201,168,76,.6);
+}
+#tl-track{
+  position:relative;height:28px;cursor:crosshair;
+}
+/* Barre de fond */
+#tl-bg{
+  position:absolute;top:50%;left:0;right:0;height:2px;
+  transform:translateY(-50%);
+  background:rgba(201,168,76,.1);border-radius:1px;
+}
+/* Eras colorées */
+#tl-eras{
+  position:absolute;top:50%;left:0;right:0;height:2px;
+  transform:translateY(-50%);
+  display:flex;
+}
+/* Surbrillance narrateur sélectionné */
+#tl-highlight{
+  position:absolute;top:50%;height:6px;
+  transform:translateY(-50%);border-radius:3px;
+  background:var(--gold);
+  box-shadow:0 0 12px var(--gold),0 0 24px rgba(201,168,76,.4);
+  opacity:0;transition:all .5s cubic-bezier(.16,1,.3,1);
+  pointer-events:none;
+}
+/* Label centré sur la plage */
+#tl-hl-label{
+  position:absolute;top:50%;transform:translateY(-220%);
+  white-space:nowrap;pointer-events:none;
+  opacity:0;transition:all .5s cubic-bezier(.16,1,.3,1);
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+}
+/* Curseur de survol */
+#tl-cursor{
+  position:absolute;top:0;bottom:0;width:1px;
+  background:rgba(201,168,76,.25);pointer-events:none;
+  opacity:0;transition:opacity .2s;
+}
+/* Marqueurs d'étoiles sur la timeline */
+.tl-dot{
+  position:absolute;top:50%;width:4px;height:4px;
+  border-radius:50%;transform:translate(-50%,-50%);
+  cursor:pointer;transition:all .15s;
+  z-index:2;
+}
+.tl-dot:hover{transform:translate(-50%,-50%) scale(2);}
+/* Labels d'ères */
+#tl-labels{
+  display:flex;justify-content:space-between;
+  margin-top:5px;padding:0 0;
+}
+.tl-era-label{
+  font-family:'Cairo',sans-serif;font-size:9px;
+  color:rgba(201,168,76,.28);text-align:center;
+  position:relative;
+}
+.tl-era-label::before{
+  content:'';position:absolute;top:-8px;left:50%;
+  width:1px;height:4px;background:rgba(201,168,76,.15);
+}
+/* Marqueur d'année au survol */
+#tl-year-tip{
+  position:absolute;bottom:calc(100% + 4px);
+  background:rgba(0,5,8,.9);border:0.5px solid rgba(201,168,76,.2);
+  border-radius:4px;padding:2px 7px;
+  font-family:'Cairo',sans-serif;font-size:9px;color:rgba(201,168,76,.8);
+  pointer-events:none;opacity:0;transition:opacity .15s;
+  transform:translateX(-50%);white-space:nowrap;
+}
 
-/* LOADING */
-#ld{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s;}
-#ld h2{font-family:'Amiri',serif;font-size:38px;color:var(--gold);margin-bottom:6px;text-shadow:0 0 30px rgba(201,168,76,.4);}
-#ld p{font-size:11px;color:rgba(201,168,76,.35);letter-spacing:3px;margin-bottom:28px;}
-.lbw{width:180px;height:2px;background:rgba(201,168,76,.08);border-radius:1px;overflow:hidden;}
-.lbf{height:100%;background:var(--gold);border-radius:1px;width:0%;transition:width .3s;}
-#lst{font-size:11px;color:rgba(201,168,76,.28);margin-top:10px;}
-
-/* HINT */
-#hint{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none;transition:opacity 1.5s;}
-#hint p{font-size:11px;color:rgba(201,168,76,.22);letter-spacing:1px;}
+/* ZOOM */
+#zc{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:20;display:flex;flex-direction:column;gap:5px;}
+.zb{width:32px;height:32px;border-radius:7px;background:rgba(0,5,8,.82);border:0.5px solid rgba(201,168,76,.18);color:var(--gold);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;backdrop-filter:blur(8px);}
+.zb:hover{background:rgba(201,168,76,.1);}
+#zv{font-family:'Cairo',sans-serif;font-size:9px;color:rgba(201,168,76,.35);text-align:center;}
 
 /* TOOLTIP */
-#tt{position:fixed;z-index:25;background:rgba(1,9,22,.92);border:0.5px solid rgba(201,168,76,.22);border-radius:8px;padding:8px 12px;pointer-events:none;display:none;backdrop-filter:blur(10px);}
-#tt-n{font-family:'Amiri',serif;font-size:14px;color:var(--gold);}
-#tt-s{font-size:10px;color:rgba(201,168,76,.45);margin-top:2px;}
+#tt{position:fixed;z-index:25;background:rgba(0,5,8,.92);border:0.5px solid rgba(201,168,76,.2);border-radius:7px;padding:7px 11px;pointer-events:none;display:none;backdrop-filter:blur(10px);}
+#ttn{font-family:'Amiri',serif;font-size:13px;color:var(--gold);}
+#tts{font-family:'Cairo',sans-serif;font-size:9px;color:rgba(201,168,76,.4);margin-top:2px;}
+
+/* LOADING */
+#ld{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 1s;}
+#ld h2{font-family:'Amiri',serif;font-size:40px;color:var(--gold);margin-bottom:6px;text-shadow:0 0 40px rgba(201,168,76,.5),0 0 80px rgba(201,168,76,.2);}
+#ld p{font-family:'Cairo',sans-serif;font-size:11px;color:rgba(201,168,76,.3);letter-spacing:3px;margin-bottom:30px;}
+.lbw{width:160px;height:1px;background:rgba(201,168,76,.08);}
+.lbf{height:100%;background:var(--gold);width:0%;transition:width .4s;}
+#lst{font-family:'Cairo',sans-serif;font-size:10px;color:rgba(201,168,76,.22);margin-top:10px;}
+
+/* VIEW TOGGLE */
+#vtoggle{position:fixed;top:14px;right:24px;z-index:25;display:flex;gap:5px;}
+.vb{padding:5px 12px;border-radius:14px;background:rgba(0,5,8,.85);border:0.5px solid rgba(201,168,76,.18);color:rgba(201,168,76,.5);font-family:'Cairo',sans-serif;font-size:10px;cursor:pointer;transition:all .2s;backdrop-filter:blur(8px);}
+.vb.on{background:rgba(201,168,76,.12);border-color:rgba(201,168,76,.4);color:var(--gold);}
+
+/* HINT */
+#hint{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none;transition:opacity 2s;}
+#hint p{font-family:'Cairo',sans-serif;font-size:10px;color:rgba(201,168,76,.2);letter-spacing:1px;}
 </style>
 </head>
 <body>
 
 <div id="ld">
   <h2>سماء الحديث</h2>
-  <p>SAMA AL-HADITH</p>
+  <p>SAMA AL-HADITH · ثلاثي الأبعاد</p>
   <div class="lbw"><div class="lbf" id="lbf"></div></div>
   <div id="lst">جارٍ التحميل...</div>
 </div>
 
-<canvas id="c"></canvas>
+<div id="c"></div>
 
 <div id="hdr">
-  <div>
+  <div id="hdr-left">
     <h1>سماء الحديث</h1>
-    <p>SAMA AL-HADITH · L'UNIVERS DES NARRATEURS</p>
+    <p>SAMA AL-HADITH · 3D</p>
   </div>
   <div style="display:flex;">
-    <div class="hstat"><div class="hstat-v" id="stn">—</div><div class="hstat-l">ناقل</div></div>
-    <div class="hstat"><div class="hstat-v" id="stl">—</div><div class="hstat-l">سند</div></div>
-    <div class="hstat"><div class="hstat-v" id="sth">—</div><div class="hstat-l">حديث</div></div>
+    <div class="hstat"><div class="hv" id="stn">—</div><div class="hl">ناقل</div></div>
+    <div class="hstat"><div class="hv" id="stl">—</div><div class="hl">سند</div></div>
   </div>
 </div>
 
@@ -136,11 +236,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   <div id="sr"></div>
 </div>
 
-<div id="zoom-ctrl">
-  <button class="zb" onclick="zoomIn()" title="تكبير">+</button>
-  <div id="zoom-val">100%</div>
-  <button class="zb" onclick="zoomOut()" title="تصغير">−</button>
-  <button class="zb" onclick="resetView()" title="إعادة" style="font-size:13px;margin-top:4px;">↺</button>
+<div id="vtoggle">
+  <div class="vb on" id="vb3d" onclick="setView('3d')">3D</div>
+  <div class="vb" id="vb2d" onclick="setView('2d')">2D</div>
 </div>
 
 <div id="panel">
@@ -154,510 +252,848 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 </div>
 
 <div id="leg">
-  <div class="li"><div class="ld" style="background:var(--sahabi);box-shadow:0 0 6px var(--sahabi)"></div><span class="ll">الصحابة</span></div>
-  <div class="li"><div class="ld" style="background:var(--tabii);box-shadow:0 0 6px var(--tabii)"></div><span class="ll">التابعون</span></div>
-  <div class="li"><div class="ld" style="background:var(--muhaddith);box-shadow:0 0 6px var(--muhaddith)"></div><span class="ll">المحدثون</span></div>
-  <div class="li"><div class="ld" style="background:var(--rijal);box-shadow:0 0 6px var(--rijal)"></div><span class="ll">علماء الرجال</span></div>
+  <div class="li"><div class="ld" style="background:var(--sahabi);box-shadow:0 0 5px var(--sahabi)"></div><span class="ll">الصحابة</span></div>
+  <div class="li"><div class="ld" style="background:var(--tabii);box-shadow:0 0 5px var(--tabii)"></div><span class="ll">التابعون</span></div>
+  <div class="li"><div class="ld" style="background:var(--muhaddith);box-shadow:0 0 5px var(--muhaddith)"></div><span class="ll">المحدثون</span></div>
+  <div class="li"><div class="ld" style="background:var(--rijal);box-shadow:0 0 5px var(--rijal)"></div><span class="ll">علماء الرجال</span></div>
 </div>
 
-<div id="bot">
+<div id="zc">
+  <button class="zb" onclick="doZoom(0.8)">+</button>
+  <div id="zv">100%</div>
+  <button class="zb" onclick="doZoom(1.25)">−</button>
+  <button class="zb" onclick="resetCam()" style="font-size:12px;margin-top:3px;">↺</button>
+</div>
+
+<div id="ctrl">
   <button class="cb on" id="ba" onclick="setF('all')">الكل</button>
   <div class="csep"></div>
   <button class="cb" id="bs" onclick="setF('sahabi')">الصحابة</button>
   <button class="cb" id="bt" onclick="setF('tabii')">التابعون</button>
   <button class="cb" id="bm" onclick="setF('muhaddith')">المحدثون</button>
   <button class="cb" id="br" onclick="setF('rijal')">علماء الرجال</button>
+  <div class="csep"></div>
+  <button class="cb" id="bauto" onclick="toggleAuto()">⟳ دوران</button>
 </div>
 
-<div id="tl">
-  <div class="tll"></div>
-  <div class="tls">
-    <span class="tlb">1 هـ</span><span class="tlb">100 هـ</span><span class="tlb">200 هـ</span>
-    <span class="tlb">300 هـ</span><span class="tlb">400 هـ</span><span class="tlb">600 هـ</span><span class="tlb">900 هـ</span>
+<div id="hint"><p>سحب للتدوير · كليك يمين / Ctrl+سحب للتحريك · عجلة للتكبير · نقر على نجمة للتفاصيل</p></div>
+<div id="tt"><div id="ttn"></div><div id="tts"></div></div>
+
+<!-- TIMELINE -->
+<div id="tl-wrap">
+  <div id="tl-track">
+    <div id="tl-bg"></div>
+    <div id="tl-eras"></div>
+    <div id="tl-highlight"></div>
+    <div id="tl-hl-label">
+      <span id="tl-hl-name"></span>
+      <span id="tl-hl-dates"></span>
+    </div>
+    <div id="tl-cursor"></div>
+    <div id="tl-year-tip"></div>
   </div>
+  <div id="tl-labels"></div>
 </div>
 
-<div id="hint"><p>اسحب للتنقل · عجلة الفأرة أو قرصة للتكبير · انقر على نجمة للتفاصيل</p></div>
-
-<div id="tt"><div id="tt-n"></div><div id="tt-s"></div></div>
-
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script>
-const SB_URL='https://kiqzfwyzekduitxghwaa.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpcXpmd3l6ZWtkdWl0eGdod2FhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ0MzYxOSwiZXhwIjoyMDkwMDE5NjE5fQ.BQSVuoh62aDcSGYyKKQkfrie6BZFL-dpiunYvflyjLA';
+const SB='https://kiqzfwyzekduitxghwaa.supabase.co';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpcXpmd3l6ZWtkdWl0eGdod2FhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ0MzYxOSwiZXhwIjoyMDkwMDE5NjE5fQ.BQSVuoh62aDcSGYyKKQkfrie6BZFL-dpiunYvflyjLA';
 
-const GC={sahabi:'#f5d77a',tabii:'#7ab8f5',muhaddith:'#c07af5',rijal:'#7af5c0'};
+const GC={sahabi:0xf5d77a,tabii:0x7ab8f5,muhaddith:0xc07af5,rijal:0x7af5c0};
+const GCS={sahabi:'#f5d77a',tabii:'#7ab8f5',muhaddith:'#c07af5',rijal:'#7af5c0'};
 const GL={sahabi:'صحابي',tabii:'تابعي',muhaddith:'محدّث',rijal:'ناقد رجال'};
 
 let narrators=[],transmissions=[],hadiths=[];
+let scene,camera,renderer,clock;
+let starPoints,selLines,bgParticles;
+let raycaster,mouse;
 let selId=null,hovId=null,filter='all';
-let camX=0,camY=0,zoom=1;
-let dragging=false,dragSX=0,dragSY=0,camSX=0,camSY=0;
-let af=0,bgS=[],W=0,H=0,dpr=1;
-let hintOn=true;
-// Pinch
-let pinchDist=0;
+let autoRotate=false,view='3d';
+let posMap={},idxMap={};
+let labelDivs=[];
 
-const cv=document.getElementById('c');
-const ctx=cv.getContext('2d');
+// CSS2D renderer (manual implementation without import)
+const labelContainer=document.createElement('div');
+labelContainer.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:10;overflow:hidden;';
+document.body.appendChild(labelContainer);
 
-const ERA_MIN=1,ERA_MAX=950;
-const WORLD_W=8000,WORLD_H=3000;
-
-// ── Data ──────────────────────────────────────────────────────────────────────
-async function sbGet(t,q=''){
-  const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,{headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`}});
-  return r.json();
-}
 function setLS(m,p){document.getElementById('lst').textContent=m;document.getElementById('lbf').style.width=p+'%';}
 
-async function loadData(){
-  setLS('تحميل الرواة...',20);
-  narrators=await sbGet('narrators','select=*&order=death_ah.asc&limit=500');
-  setLS('تحميل الأسانيد...',55);
-  transmissions=await sbGet('transmissions','select=*&limit=2000');
-  setLS('تحميل الأحاديث...',80);
-  hadiths=await sbGet('hadiths','select=*&limit=1000');
-  setLS('بناء الكون...',95);
-  document.getElementById('stn').textContent=narrators.length;
-  document.getElementById('stl').textContent=transmissions.length;
-  document.getElementById('sth').textContent=hadiths.length;
-  await new Promise(r=>setTimeout(r,500));
-  setLS('جاهز',100);
-  await new Promise(r=>setTimeout(r,400));
-  const ld=document.getElementById('ld');
-  ld.style.opacity='0';
-  setTimeout(()=>ld.style.display='none',900);
+async function sbGet(t,q=''){
+  const r=await fetch(SB+'/rest/v1/'+t+'?'+q,{headers:{'apikey':KEY,'Authorization':'Bearer '+KEY}});
+  return r.json();
 }
 
-// ── World coordinates ─────────────────────────────────────────────────────────
-function worldX(n){
-  return 200+((( n.death_ah||1)-ERA_MIN)/(ERA_MAX-ERA_MIN))*(WORLD_W-400);
-}
-function worldY(n){
-  // Deterministic y with vertical spread
+// ── World position ─────────────────────────────────────────────────────────────
+const ERA_MIN=1,ERA_MAX=950;
+const GEN_Z={sahabi:-120,tabii:-40,muhaddith:40,rijal:120};
+
+function getPos3D(n){
+  const x=(((n.death_ah||1)-ERA_MIN)/(ERA_MAX-ERA_MIN))*400-200;
+  const z=GEN_Z[n.generation]||0;
   const seed=(n.id*2654435761)>>>0;
-  const norm=(seed%10000)/10000; // 0..1
-  // Band height grows with zoom to spread more when zoomed in
-  return WORLD_H*0.15 + norm*(WORLD_H*0.7);
+  const y=((seed%10000)/10000-0.5)*100;
+  const jx=((seed%997)/997-0.5)*30;
+  const jz=((seed%1013)/1013-0.5)*30;
+  return new THREE.Vector3(x+jx,y,z+jz);
 }
-function toScreen(wx,wy){
-  return {
-    x:(wx-camX)*zoom+W/2,
-    y:(wy-camY)*zoom+H/2
-  };
+function getPos2D(n){
+  const x=(((n.death_ah||1)-ERA_MIN)/(ERA_MAX-ERA_MIN))*400-200;
+  const seed=(n.id*2654435761)>>>0;
+  const y=((seed%10000)/10000-0.5)*120;
+  return new THREE.Vector3(x,y,0);
 }
-function toWorld(sx,sy){
-  return {
-    x:(sx-W/2)/zoom+camX,
-    y:(sy-H/2)/zoom+camY
-  };
-}
+function getPos(n){return view==='3d'?getPos3D(n):getPos2D(n);}
 
-// ── Star radius ───────────────────────────────────────────────────────────────
-function baseR(n){
-  if(n.generation==='sahabi') return 7;
-  if(n.hadith_count>10000) return 8;
-  if(n.hadith_count>3000) return 6;
-  if(n.hadith_count>800) return 5;
-  return 4;
+function starSize(n){
+  if(n.generation==='sahabi') return 4.5;
+  if(n.hadith_count>10000) return 5;
+  if(n.hadith_count>3000) return 3.8;
+  if(n.hadith_count>800) return 3;
+  return 2.2;
 }
 
-// ── Realistic star rendering ──────────────────────────────────────────────────
-function drawStar(x,y,r,col,isHov,isSel,alpha){
-  const pulse=isHov?1+Math.sin(af*0.09)*0.18:1;
-  const ar=r*pulse;
+// ── Three.js setup ─────────────────────────────────────────────────────────────
+function initThree(){
+  scene=new THREE.Scene();
+  clock=new THREE.Clock();
+  mouse=new THREE.Vector2();
+  spherical=new THREE.Spherical(350,Math.PI/2,0);
+  targetSpherical=new THREE.Spherical(350,Math.PI/2,0);
 
-  // === Layer 1 : diffuse large halo (very soft) ===
-  const haloR=ar*(isHov||isSel?14:9);
-  const g1=ctx.createRadialGradient(x,y,0,x,y,haloR);
-  g1.addColorStop(0,col+'18');
-  g1.addColorStop(0.4,col+'08');
-  g1.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.beginPath();ctx.arc(x,y,haloR,0,Math.PI*2);
-  ctx.fillStyle=g1;ctx.fill();
+  camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,3000);
+  camera.position.set(0,0,350);
 
-  // === Layer 2 : mid glow ===
-  const midR=ar*(isHov||isSel?6:4);
-  const g2=ctx.createRadialGradient(x,y,0,x,y,midR);
-  g2.addColorStop(0,col+'55');
-  g2.addColorStop(0.5,col+'22');
-  g2.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.beginPath();ctx.arc(x,y,midR,0,Math.PI*2);
-  ctx.fillStyle=g2;ctx.fill();
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.setClearColor(0x000508,1);
+  document.getElementById('c').appendChild(renderer.domElement);
 
-  // === Layer 3 : bright core ===
-  const coreR=ar*1.1;
-  const g3=ctx.createRadialGradient(x,y,0,x,y,coreR);
-  g3.addColorStop(0,'rgba(255,255,255,0.95)');
-  g3.addColorStop(0.25,'rgba(255,255,255,0.7)');
-  g3.addColorStop(0.55,col);
-  g3.addColorStop(1,col+'00');
-  ctx.beginPath();ctx.arc(x,y,coreR,0,Math.PI*2);
-  ctx.fillStyle=g3;ctx.fill();
+  raycaster=new THREE.Raycaster();
+  raycaster.params.Points.threshold=4;
 
-  // === Layer 4 : diffraction spikes (cross) ===
-  const spikeLen=ar*(isHov||isSel?10:7);
-  const spikeW=ar*0.18;
-  ctx.save();
-  ctx.globalAlpha=isHov||isSel?0.55:0.35;
-  // Horizontal spike
-  const sg1=ctx.createLinearGradient(x-spikeLen,y,x+spikeLen,y);
-  sg1.addColorStop(0,'rgba(0,0,0,0)');sg1.addColorStop(0.4,col+'aa');
-  sg1.addColorStop(0.5,'rgba(255,255,255,.9)');
-  sg1.addColorStop(0.6,col+'aa');sg1.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=sg1;
-  ctx.beginPath();ctx.ellipse(x,y,spikeLen,spikeW,0,0,Math.PI*2);ctx.fill();
-  // Vertical spike
-  const sg2=ctx.createLinearGradient(x,y-spikeLen,x,y+spikeLen);
-  sg2.addColorStop(0,'rgba(0,0,0,0)');sg2.addColorStop(0.4,col+'aa');
-  sg2.addColorStop(0.5,'rgba(255,255,255,.9)');
-  sg2.addColorStop(0.6,col+'aa');sg2.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=sg2;
-  ctx.beginPath();ctx.ellipse(x,y,spikeW,spikeLen,0,0,Math.PI*2);ctx.fill();
-  // Diagonal spikes (fainter)
-  ctx.globalAlpha=(isHov||isSel?0.3:0.18);
-  const dl=spikeLen*0.65;
-  const sg3=ctx.createLinearGradient(x-dl,y-dl,x+dl,y+dl);
-  sg3.addColorStop(0,'rgba(0,0,0,0)');sg3.addColorStop(0.5,col+'88');sg3.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=sg3;
-  ctx.beginPath();ctx.ellipse(x,y,dl,spikeW*.7,Math.PI/4,0,Math.PI*2);ctx.fill();
-  const sg4=ctx.createLinearGradient(x-dl,y+dl,x+dl,y-dl);
-  sg4.addColorStop(0,'rgba(0,0,0,0)');sg4.addColorStop(0.5,col+'88');sg4.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=sg4;
-  ctx.beginPath();ctx.ellipse(x,y,dl,spikeW*.7,-Math.PI/4,0,Math.PI*2);ctx.fill();
-  ctx.restore();
+  addBgParticles();
+  addNebula();
 
-  // === Layer 5 : selection ring ===
-  if(isSel){
-    ctx.beginPath();ctx.arc(x,y,ar+5,0,Math.PI*2);
-    ctx.strokeStyle=col+'99';ctx.lineWidth=1.2;ctx.stroke();
-    ctx.beginPath();ctx.arc(x,y,ar+10,0,Math.PI*2);
-    ctx.strokeStyle=col+'33';ctx.lineWidth=0.8;ctx.stroke();
+  window.addEventListener('resize',onResize);
+  initControls();
+}
+
+function addBgParticles(){
+  const geo=new THREE.BufferGeometry();
+  const n=3000;
+  const pos=new Float32Array(n*3);
+  const col=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    pos[i*3]=(Math.random()-0.5)*2000;
+    pos[i*3+1]=(Math.random()-0.5)*2000;
+    pos[i*3+2]=(Math.random()-0.5)*2000;
+    const t=Math.random();
+    if(t<0.15){col[i*3]=0.7;col[i*3+1]=0.85;col[i*3+2]=1.0;}
+    else if(t<0.25){col[i*3]=1.0;col[i*3+1]=0.95;col[i*3+2]=0.8;}
+    else{col[i*3]=0.9;col[i*3+1]=0.88;col[i*3+2]=0.82;}
   }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  const mat=new THREE.PointsMaterial({size:0.6,vertexColors:true,transparent:true,opacity:0.7,sizeAttenuation:true});
+  bgParticles=new THREE.Points(geo,mat);
+  scene.add(bgParticles);
 }
 
-// ── Background stars ──────────────────────────────────────────────────────────
-function genBg(){
-  bgS=[];
-  for(let i=0;i<500;i++){
-    bgS.push({
-      x:Math.random()*W,y:Math.random()*H,
-      r:Math.random()*0.9+0.1,
-      a:Math.random()*0.6+0.1,
-      tw:Math.random()*Math.PI*2,
-      sp:Math.random()*0.012+0.004,
-      col:Math.random()<0.15?'#b8d4f5':(Math.random()<0.1?'#f5e0b8':'#e8e0d0')
-    });
-  }
+function addNebula(){
+  // Nebula glow planes
+  const colors=[0x0a1840,0x1a0830,0x081820];
+  colors.forEach((c,i)=>{
+    const geo=new THREE.SphereGeometry(600+i*80,16,16);
+    const mat=new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.08,side:THREE.BackSide});
+    scene.add(new THREE.Mesh(geo,mat));
+  });
 }
 
-// ── Draw ──────────────────────────────────────────────────────────────────────
-function draw(){
-  af++;
-  ctx.clearRect(0,0,W,H);
+// ── Build star field ──────────────────────────────────────────────────────────
+function buildStars(){
+  const vis=narrators.filter(n=>filter==='all'||n.generation===filter);
+  if(starPoints){scene.remove(starPoints);starPoints.geometry.dispose();}
+  clearLabels();
 
-  // Sky gradient
-  const bg=ctx.createRadialGradient(W*.45,H*.4,0,W*.45,H*.4,W*.85);
-  bg.addColorStop(0,'#03122e');
-  bg.addColorStop(0.5,'#020a1c');
-  bg.addColorStop(1,'#010610');
-  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  const geo=new THREE.BufferGeometry();
+  const positions=new Float32Array(vis.length*3);
+  const colors=new Float32Array(vis.length*3);
+  const sizes=new Float32Array(vis.length);
 
-  // Milky-way band
-  const mw=ctx.createLinearGradient(0,H*.25,0,H*.75);
-  mw.addColorStop(0,'rgba(0,0,0,0)');
-  mw.addColorStop(0.5,'rgba(20,40,80,0.18)');
-  mw.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=mw;ctx.fillRect(0,0,W,H);
+  idxMap={};posMap={};
 
-  // BG stars (fixed, no zoom)
-  bgS.forEach(s=>{
-    const a=Math.max(0,s.a+Math.sin(af*s.sp+s.tw)*0.1);
-    const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,s.r*2.5);
-    g.addColorStop(0,s.col);
-    g.addColorStop(0.4,s.col.slice(0,7)+'88');
-    g.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.globalAlpha=a;
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r*2.5,0,Math.PI*2);
-    ctx.fillStyle=g;ctx.fill();
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r*.5,0,Math.PI*2);
-    ctx.fillStyle='rgba(255,255,255,0.9)';ctx.fill();
-    ctx.globalAlpha=1;
+  vis.forEach((n,i)=>{
+    const p=getPos(n);
+    positions[i*3]=p.x;positions[i*3+1]=p.y;positions[i*3+2]=p.z;
+    posMap[n.id]=p;idxMap[i]=n.id;
+    const c=new THREE.Color(GC[n.generation]||0xc9a84c);
+    colors[i*3]=c.r;colors[i*3+1]=c.g;colors[i*3+2]=c.b;
+    sizes[i]=starSize(n);
   });
 
-  const vis=narrators.filter(n=>filter==='all'||n.generation===filter);
+  geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  geo.setAttribute('aColor',new THREE.BufferAttribute(colors,3));
+  geo.setAttribute('size',new THREE.BufferAttribute(sizes,1));
 
-  // Transmission lines for selected
-  if(selId){
-    const sel=narrators.find(n=>n.id===selId);
-    if(sel){
-      const sp=toScreen(worldX(sel),worldY(sel));
-      transmissions.forEach(t=>{
-        let other=null;
-        if(t.teacher_id===selId) other=narrators.find(n=>n.id===t.student_id);
-        else if(t.student_id===selId) other=narrators.find(n=>n.id===t.teacher_id);
-        if(!other) return;
-        const op=toScreen(worldX(other),worldY(other));
-        const col=GC[other.generation]||'#c9a84c';
-        ctx.beginPath();
-        ctx.moveTo(sp.x,sp.y);
-        const cpx=sp.x+(op.x-sp.x)*0.5,cpy=sp.y;
-        const cpx2=sp.x+(op.x-sp.x)*0.5,cpy2=op.y;
-        ctx.bezierCurveTo(cpx,cpy,cpx2,cpy2,op.x,op.y);
-        const grad=ctx.createLinearGradient(sp.x,sp.y,op.x,op.y);
-        const isTch=t.student_id===selId;
-        grad.addColorStop(0,isTch?col+'60':'#c9a84c60');
-        grad.addColorStop(1,isTch?'#c9a84c18':col+'18');
-        ctx.strokeStyle=grad;ctx.lineWidth=1;ctx.setLineDash([3,7]);ctx.stroke();
-        ctx.setLineDash([]);
-      });
-    }
-  }
-
-  // Draw narrator stars
-  vis.forEach(n=>{
-    const {x,y}=toScreen(worldX(n),worldY(n));
-    if(x<-80||x>W+80||y<-80||y>H+80) return;
-    const r=baseR(n)*(0.7+zoom*0.15);
-    const col=GC[n.generation]||'#c9a84c';
-    const isHov=n.id===hovId,isSel=n.id===selId;
-    ctx.globalAlpha=filter==='all'||n.generation===filter?1:0.2;
-    drawStar(x,y,Math.max(2,Math.min(r,zoom>3?r:r)),col,isHov,isSel);
-    ctx.globalAlpha=1;
-
-    // Label — show when hovered, selected, or zoomed in enough
-    const showLabel=isHov||isSel||(zoom>2.5);
-    if(showLabel){
-      const labelAlpha=isHov||isSel?1:Math.min(1,(zoom-2.5)*0.8);
-      ctx.save();
-      ctx.globalAlpha=labelAlpha;
-      ctx.font=`500 ${Math.round(11+zoom*0.5)}px Amiri,serif`;
-      ctx.textAlign='center';
-      ctx.fillStyle=col;
-      ctx.shadowColor=col;ctx.shadowBlur=6;
-      ctx.fillText(n.name_ar,x,y-r*zoom*0.5-10);
-      ctx.shadowBlur=0;
-      if(zoom>1.8||isHov||isSel){
-        ctx.font=`400 ${Math.round(9+zoom*0.3)}px Cairo,sans-serif`;
-        ctx.fillStyle=col+'77';
-        ctx.fillText((n.death_ah||'?')+' هـ',x,y-r*zoom*0.5-24);
+  const mat=new THREE.ShaderMaterial({
+    uniforms:{
+      uTime:{value:0},
+      uSelected:{value:-1},
+      uHovered:{value:-1}
+    },
+    vertexShader:`
+      attribute float size;
+      attribute vec3 aColor;
+      varying vec3 vColor;
+      varying float vIdx;
+      uniform float uTime;
+      uniform float uSelected;
+      uniform float uHovered;
+      void main(){
+        vColor=aColor;
+        float idx=float(gl_VertexID);
+        vIdx=idx;
+        float pulse=1.0;
+        if(idx==uHovered||idx==uSelected){
+          pulse=1.0+sin(uTime*6.0)*0.25;
+        }
+        vec4 mv=modelViewMatrix*vec4(position,1.0);
+        float dist=length(mv.xyz);
+        float attn=clamp(300.0/dist,0.4,2.0);
+        gl_PointSize=size*pulse*attn*(idx==uSelected?2.2:(idx==uHovered?1.8:1.0));
+        gl_Position=projectionMatrix*mv;
       }
-      ctx.restore();
-    }
+    `,
+    fragmentShader:`
+      varying vec3 vColor;
+      varying float vIdx;
+      uniform float uSelected;
+      uniform float uHovered;
+      void main(){
+        vec2 uv=gl_PointCoord-0.5;
+        float d=length(uv);
+        if(d>0.5) discard;
+        float core=1.0-smoothstep(0.0,0.12,d);
+        float mid=1.0-smoothstep(0.0,0.3,d);
+        float outer=1.0-smoothstep(0.0,0.5,d);
+        float spike=0.0;
+        float ax=abs(uv.x),ay=abs(uv.y);
+        float diag1=abs(uv.x-uv.y),diag2=abs(uv.x+uv.y);
+        spike+=max(0.0,1.0-ax*18.0)*max(0.0,1.0-ay*1.5)*0.6;
+        spike+=max(0.0,1.0-ay*18.0)*max(0.0,1.0-ax*1.5)*0.6;
+        spike+=max(0.0,1.0-diag1*25.0)*max(0.0,1.0-diag2*1.5)*0.3;
+        spike+=max(0.0,1.0-diag2*25.0)*max(0.0,1.0-diag1*1.5)*0.3;
+        vec3 white=vec3(1.0);
+        vec3 col=mix(vColor,white,core);
+        float alpha=core*1.0+mid*0.6+outer*0.25+spike*0.5;
+        alpha=clamp(alpha,0.0,1.0);
+        if(vIdx==uSelected||vIdx==uHovered) alpha=min(alpha*1.4,1.0);
+        gl_FragColor=vec4(col,alpha);
+      }
+    `,
+    transparent:true,
+    depthWrite:false,
+    blending:THREE.AdditiveBlending
   });
 
-  requestAnimationFrame(draw);
+  starPoints=new THREE.Points(geo,mat);
+  scene.add(starPoints);
 }
 
-// ── Zoom ─────────────────────────────────────────────────────────────────────
-function clampZoom(z){return Math.max(0.3,Math.min(8,z));}
-function applyZoom(newZ,pivotSX,pivotSY){
-  const pw=toWorld(pivotSX,pivotSY);
-  zoom=clampZoom(newZ);
-  // Keep pivot world point under same screen point
-  camX=pw.x-(pivotSX-W/2)/zoom;
-  camY=pw.y-(pivotSY-H/2)/zoom;
-  document.getElementById('zoom-val').textContent=Math.round(zoom*100)+'%';
+// ── Labels ─────────────────────────────────────────────────────────────────────
+function clearLabels(){
+  labelDivs.forEach(d=>d.remove());
+  labelDivs=[];
 }
-function zoomIn(){applyZoom(zoom*1.35,W/2,H/2);}
-function zoomOut(){applyZoom(zoom/1.35,W/2,H/2);}
-
-// ── Hit test ──────────────────────────────────────────────────────────────────
-function getHit(sx,sy){
+function updateLabels(){
+  labelDivs.forEach(d=>d.remove());
+  labelDivs=[];
   const vis=narrators.filter(n=>filter==='all'||n.generation===filter);
-  for(const n of [...vis].reverse()){
-    const {x,y}=toScreen(worldX(n),worldY(n));
-    const r=(baseR(n)+10)*Math.max(1,zoom*0.4);
-    if((sx-x)**2+(sy-y)**2<r*r) return n;
-  }
-  return null;
+  const camDist=spherical.radius;
+
+  // Seuils de zoom : labels uniquement quand assez proche
+  // > 400 : aucun label   200-400 : sélection/survol seulement   < 200 : tous
+  const showAll = camDist < 180;
+  const showSome = camDist < 320;
+
+  // Éviter la superposition : on trie par distance écran et on skip les proches
+  const projected = [];
+  vis.forEach(n=>{
+    const isSpecial = n.id===selId||n.id===hovId;
+    if(!isSpecial && !showSome) return;
+    const p=posMap[n.id];if(!p) return;
+    const v=p.clone().project(camera);
+    if(v.z>1||v.z<-1) return;
+    const sx=(v.x*0.5+0.5)*innerWidth;
+    const sy=(-v.y*0.5+0.5)*innerHeight;
+    if(sx<-50||sx>innerWidth+50||sy<-50||sy>innerHeight+50) return;
+    projected.push({n, sx, sy, isSpecial});
+  });
+
+  // Anti-collision : skip si trop proche d'un label déjà placé
+  const placed=[];
+  const minDist = showAll ? 55 : 80;
+
+  // Priorité : sélectionné > survolé > importants > reste
+  projected.sort((a,b)=>{
+    if(a.n.id===selId) return -1;
+    if(b.n.id===selId) return 1;
+    if(a.n.id===hovId) return -1;
+    if(b.n.id===hovId) return 1;
+    return (b.n.hadith_count||0)-(a.n.hadith_count||0);
+  });
+
+  projected.forEach(({n,sx,sy,isSpecial})=>{
+    if(!isSpecial){
+      const tooClose=placed.some(p=>Math.hypot(p.sx-sx,p.sy-sy)<minDist);
+      if(tooClose) return;
+    }
+    placed.push({sx,sy});
+
+    const isSel=n.id===selId, isHov=n.id===hovId;
+    const opacity=isSel?1:isHov?0.9:showAll?0.55:0.7;
+    const fontSize=isSel?14:isHov?12:10;
+    const offsetY=isSel?22:isHov?20:16;
+
+    const d=document.createElement('div');
+    d.className='lbl';
+    d.textContent=n.name_ar;
+    d.style.cssText=`position:absolute;left:${sx}px;top:${sy-offsetY}px;transform:translateX(-50%);opacity:${opacity};font-size:${fontSize}px;`;
+    labelContainer.appendChild(d);
+    labelDivs.push(d);
+  });
 }
 
-// ── Interaction ───────────────────────────────────────────────────────────────
-cv.addEventListener('mousedown',e=>{
-  dragging=true;dragSX=e.clientX;dragSY=e.clientY;camSX=camX;camSY=camY;
-  cv.style.cursor='grabbing';
-});
-window.addEventListener('mouseup',e=>{
-  if(!dragging) return;
-  const moved=Math.abs(e.clientX-dragSX)+Math.abs(e.clientY-dragSY);
-  dragging=false;cv.style.cursor='grab';
-  if(moved<5){
-    const rect=cv.getBoundingClientRect();
-    const hit=getHit(e.clientX-rect.left,e.clientY-rect.top);
-    if(hit) openPanel(hit);
-    else if(!document.getElementById('panel').contains(e.target)) closePanel();
-  }
-});
-cv.addEventListener('mousemove',e=>{
-  if(dragging){camX=camSX-(e.clientX-dragSX)/zoom;camY=camSY-(e.clientY-dragSY)/zoom;return;}
-  const rect=cv.getBoundingClientRect();
-  const hit=getHit(e.clientX-rect.left,e.clientY-rect.top);
-  hovId=hit?hit.id:null;
-  cv.style.cursor=hit?'pointer':'grab';
-  const tt=document.getElementById('tt');
-  if(hit){
-    document.getElementById('tt-n').textContent=hit.name_ar;
-    document.getElementById('tt-s').textContent=(hit.death_ah||'?')+' هـ · '+(GL[hit.generation]||hit.generation);
-    tt.style.display='block';
-    tt.style.left=(e.clientX+14)+'px';
-    tt.style.top=(e.clientY-10)+'px';
-  } else { tt.style.display='none'; }
-});
-cv.addEventListener('wheel',e=>{
-  e.preventDefault();
-  const rect=cv.getBoundingClientRect();
-  const factor=e.deltaY<0?1.12:0.89;
-  applyZoom(zoom*factor,e.clientX-rect.left,e.clientY-rect.top);
-},{passive:false});
+// ── Selection lines ────────────────────────────────────────────────────────────
+function buildSelLines(narratorId){
+  if(selLines){scene.remove(selLines);selLines.geometry.dispose();}
+  const sel=narrators.find(n=>n.id===narratorId);
+  if(!sel) return;
+  const sp=posMap[sel.id];if(!sp) return;
+  const pts=[];
+  const cols=[];
+  transmissions.forEach(t=>{
+    let other=null;
+    if(t.teacher_id===narratorId) other=narrators.find(n=>n.id===t.student_id);
+    else if(t.student_id===narratorId) other=narrators.find(n=>n.id===t.teacher_id);
+    if(!other||!posMap[other.id]) return;
+    const op=posMap[other.id];
+    pts.push(sp.x,sp.y,sp.z,op.x,op.y,op.z);
+    const c=new THREE.Color(GC[other.generation]||0xc9a84c);
+    const isTeacher=t.student_id===narratorId;
+    const alpha=isTeacher?0.6:0.3;
+    cols.push(c.r*alpha,c.g*alpha,c.b*alpha,c.r*0.1,c.g*0.1,c.b*0.1);
+  });
+  if(!pts.length) return;
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
+  geo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(cols),3));
+  const mat=new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.7,blending:THREE.AdditiveBlending});
+  selLines=new THREE.LineSegments(geo,mat);
+  scene.add(selLines);
+}
 
-// Pinch-to-zoom
-cv.addEventListener('touchstart',e=>{
-  if(e.touches.length===2){
-    const dx=e.touches[0].clientX-e.touches[1].clientX;
-    const dy=e.touches[0].clientY-e.touches[1].clientY;
-    pinchDist=Math.hypot(dx,dy);
-  } else {
-    dragging=true;
-    dragSX=e.touches[0].clientX;dragSY=e.touches[0].clientY;
-    camSX=camX;camSY=camY;
-  }
-},{passive:true});
-cv.addEventListener('touchmove',e=>{
-  if(e.touches.length===2){
-    const dx=e.touches[0].clientX-e.touches[1].clientX;
-    const dy=e.touches[0].clientY-e.touches[1].clientY;
-    const d=Math.hypot(dx,dy);
-    const mx=(e.touches[0].clientX+e.touches[1].clientX)/2;
-    const my=(e.touches[0].clientY+e.touches[1].clientY)/2;
-    const rect=cv.getBoundingClientRect();
-    applyZoom(zoom*(d/pinchDist),mx-rect.left,my-rect.top);
-    pinchDist=d;
-  } else if(dragging){
-    camX=camSX-(e.touches[0].clientX-dragSX)/zoom;
-    camY=camSY-(e.touches[0].clientY-dragSY)/zoom;
-  }
-},{passive:true});
-cv.addEventListener('touchend',e=>{
-  dragging=false;
-  if(e.changedTouches.length===1 && e.touches.length===0){
-    const dx=Math.abs(e.changedTouches[0].clientX-dragSX);
-    const dy=Math.abs(e.changedTouches[0].clientY-dragSY);
-    if(dx+dy<10){
-      const rect=cv.getBoundingClientRect();
-      const t=e.changedTouches[0];
-      const hit=getHit(t.clientX-rect.left,t.clientY-rect.top);
-      if(hit) openPanel(hit);
-    }
-  }
-},{passive:true});
-
-// ── Panel ─────────────────────────────────────────────────────────────────────
+// ── Panel ──────────────────────────────────────────────────────────────────────
+const GEN_LABELS=GL;
 function openPanel(n){
   selId=n.id;
-  if(hintOn){document.getElementById('hint').style.opacity='0';hintOn=false;}
-  const col=GC[n.generation]||'#c9a84c';
-  document.getElementById('pdot').style.cssText=`background:${col};box-shadow:0 0 7px ${col}`;
+  buildSelLines(n.id);
+  if(starPoints) starPoints.material.uniforms.uSelected.value=Object.keys(idxMap).find(k=>parseInt(idxMap[k])===n.id)||-1;
+  const col=GCS[n.generation]||'#c9a84c';
+  document.getElementById('pdot').style.cssText=`background:${col};box-shadow:0 0 6px ${col}`;
   document.getElementById('pgt').textContent=GL[n.generation]||n.generation;
   document.getElementById('pn').textContent=n.name_ar;
   document.getElementById('pl').textContent=n.name_latin||'';
-  const colls=Array.isArray(n.collections)?n.collections:(n.collections?JSON.parse(n.collections):[]);
+  const colls=Array.isArray(n.collections)?n.collections:(typeof n.collections==='string'?JSON.parse(n.collections):[]);
   const teachers=transmissions.filter(t=>t.student_id===n.id).map(t=>narrators.find(x=>x.id===t.teacher_id)).filter(Boolean);
   const students=transmissions.filter(t=>t.teacher_id===n.id).map(t=>narrators.find(x=>x.id===t.student_id)).filter(Boolean);
   const nh=hadiths.filter(h=>h.narrator_id===n.id);
-  const pb=document.getElementById('pb');
-  pb.innerHTML=`
-    <div class="ir"><span class="il">وفاته</span><span class="iv">${n.death_ah?n.death_ah+' هـ':'غير معروف'}</span></div>
+  document.getElementById('pb').innerHTML=`
+    <div class="ir"><span class="il">وفاته</span><span class="iv">${n.death_ah?n.death_ah+' هـ':'—'}</span></div>
     <div class="ir"><span class="il">المنشأ</span><span class="iv">${n.origin||'—'}</span></div>
-    <div class="ir"><span class="il">عدد الأحاديث</span><span class="iv">${(n.hadith_count||0).toLocaleString()}</span></div>
+    <div class="ir"><span class="il">الأحاديث</span><span class="iv">${(n.hadith_count||0).toLocaleString()}</span></div>
     <div class="ir"><span class="il">الحكم</span><span class="iv">${n.reliability||'—'}</span></div>
     ${colls.length?`<div class="ps"><div class="pst">المصادر</div>${colls.map(c=>`<span class="tag tc">${c}</span>`).join('')}</div>`:''}
-    ${teachers.length?`<div class="ps"><div class="pst">شيوخه (${teachers.length})</div>${teachers.map(t=>`<div class="pl-item" onclick="jumpTo(${t.id})"><div class="pl-dot" style="background:${GC[t.generation]};box-shadow:0 0 4px ${GC[t.generation]}"></div><span class="pl-name">${t.name_ar}</span><span class="pl-era">${t.death_ah||''}هـ</span></div>`).join('')}</div>`:''}
-    ${students.length?`<div class="ps"><div class="pst">تلاميذه (${students.length})</div>${students.map(s=>`<div class="pl-item" onclick="jumpTo(${s.id})"><div class="pl-dot" style="background:${GC[s.generation]};box-shadow:0 0 4px ${GC[s.generation]}"></div><span class="pl-name">${s.name_ar}</span><span class="pl-era">${s.death_ah||''}هـ</span></div>`).join('')}</div>`:''}
-    ${nh.length?`<div class="ps"><div class="pst">أحاديثه</div>${nh.map(h=>`<div class="hc"><div class="ht">${h.text_ar}</div><div class="hm">${h.collection||''}${h.chapter?' · '+h.chapter:''}</div></div>`).join('')}</div>`:''}
+    ${teachers.length?`<div class="ps"><div class="pst">شيوخه (${teachers.length})</div>${teachers.map(t=>`<div class="pl-item" onclick="focusNarrator(${t.id})"><div class="pl-d" style="background:${GCS[t.generation]};box-shadow:0 0 4px ${GCS[t.generation]}"></div><span class="pl-n">${t.name_ar}</span><span class="pl-e">${t.death_ah||''}هـ</span></div>`).join('')}</div>`:''}
+    ${students.length?`<div class="ps"><div class="pst">تلاميذه (${students.length})</div>${students.map(s=>`<div class="pl-item" onclick="focusNarrator(${s.id})"><div class="pl-d" style="background:${GCS[s.generation]};box-shadow:0 0 4px ${GCS[s.generation]}"></div><span class="pl-n">${s.name_ar}</span><span class="pl-e">${s.death_ah||''}هـ</span></div>`).join('')}</div>`:''}
+    ${nh.length?`<div class="ps"><div class="pst">أحاديثه</div>${nh.map(h=>`<div class="hc"><div class="ht">${h.text_ar}</div><div class="hm">${h.collection||''}${h.chapter?' - '+h.chapter:''}</div></div>`).join('')}</div>`:''}
   `;
   document.getElementById('panel').classList.add('open');
+  updateTimeline(n);
+  flyTo(n);
 }
-function closePanel(){document.getElementById('panel').classList.remove('open');selId=null;}
-function jumpTo(id){const n=narrators.find(x=>x.id===id);if(n) openPanel(n);}
+function closePanel(){
+  document.getElementById('panel').classList.remove('open');
+  selId=null;
+  if(selLines){scene.remove(selLines);selLines=null;}
+  if(starPoints) starPoints.material.uniforms.uSelected.value=-1;
+  updateTimeline(null);
+}
 
-// ── Search ────────────────────────────────────────────────────────────────────
+// ── Camera fly-to ──────────────────────────────────────────────────────────────
+let flyAnim=null;
+function flyTo(n){
+  if(!posMap[n.id]) return;
+  // Centrer le pan sur la position de l'étoile
+  const tp=posMap[n.id].clone();
+  const startPan=panTarget.clone();
+  const startR=targetSpherical.radius;
+  let t=0;
+  if(flyAnim) clearInterval(flyAnim);
+  flyAnim=setInterval(()=>{
+    t+=0.04; if(t>=1){t=1;clearInterval(flyAnim);}
+    const e=1-Math.pow(1-t,3);
+    panTarget.lerpVectors(startPan,tp,e);
+    targetSpherical.radius=startR+(200-startR)*e;
+    updateZoomLabel();
+  },16);
+}
+function focusNarrator(id){
+  const n=narrators.find(x=>x.id===id);
+  if(n) openPanel(n);
+}
+
+// ── Orbit controls (manual) ────────────────────────────────────────────────────
+let isDragging=false,prevX=0,prevY=0;
+let spherical,targetSpherical;
+let tDist=0;
+// Pan target — décalage du point de regard
+let panTarget=new THREE.Vector3(0,0,0);
+let panCurrent=new THREE.Vector3(0,0,0);
+
+function initControls(){
+  const el=renderer.domElement;
+  // 0=none 1=orbit 2=pan
+  let dragMode=0;
+
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+
+  el.addEventListener('mousedown',e=>{
+    prevX=e.clientX;prevY=e.clientY;
+    // Clic droit OU Ctrl/Shift+clic gauche → pan
+    if(e.button===2||e.ctrlKey||e.shiftKey){
+      dragMode=2; el.style.cursor='move';
+    } else {
+      dragMode=1; el.style.cursor='grabbing';
+    }
+    isDragging=true;
+  });
+
+  window.addEventListener('mouseup',()=>{
+    isDragging=false; dragMode=0;
+    el.style.cursor='grab';
+  });
+
+  window.addEventListener('mousemove',e=>{
+    if(isDragging){
+      const dx=e.clientX-prevX;
+      const dy=e.clientY-prevY;
+      if(dragMode===1){
+        // Orbite
+        targetSpherical.theta-=dx*0.005;
+        targetSpherical.phi-=dy*0.005;
+        targetSpherical.phi=Math.max(0.15,Math.min(Math.PI-0.15,targetSpherical.phi));
+      } else if(dragMode===2){
+        // Pan — déplacer le point de regard dans le plan caméra
+        const panSpeed=targetSpherical.radius*0.001;
+        // Vecteurs right et up de la caméra
+        const right=new THREE.Vector3();
+        const up=new THREE.Vector3();
+        camera.getWorldDirection(new THREE.Vector3()); // force update
+        right.setFromMatrixColumn(camera.matrix,0);
+        up.setFromMatrixColumn(camera.matrix,1);
+        panTarget.addScaledVector(right,-dx*panSpeed);
+        panTarget.addScaledVector(up,dy*panSpeed);
+      }
+      prevX=e.clientX;prevY=e.clientY;
+      return;
+    }
+    // Hover raycasting
+    mouse.x=(e.clientX/innerWidth)*2-1;
+    mouse.y=-(e.clientY/innerHeight)*2+1;
+    if(starPoints){
+      raycaster.setFromCamera(mouse,camera);
+      const hits=raycaster.intersectObject(starPoints);
+      const tt=document.getElementById('tt');
+      if(hits.length){
+        const idx=hits[0].index;
+        const nid=idxMap[idx];
+        hovId=nid;
+        if(starPoints) starPoints.material.uniforms.uHovered.value=idx;
+        const n=narrators.find(x=>x.id===nid);
+        if(n){
+          document.getElementById('ttn').textContent=n.name_ar;
+          document.getElementById('tts').textContent=(n.death_ah||'?')+' هـ - '+(GL[n.generation]||n.generation);
+          tt.style.display='block';
+          tt.style.left=(e.clientX+12)+'px';
+          tt.style.top=(e.clientY-8)+'px';
+        }
+        el.style.cursor='pointer';
+      } else {
+        hovId=null;
+        if(starPoints) starPoints.material.uniforms.uHovered.value=-1;
+        tt.style.display='none';
+        el.style.cursor='grab';
+      }
+    }
+  });
+
+  el.addEventListener('click',e=>{
+    if(Math.abs(e.clientX-prevX)+Math.abs(e.clientY-prevY)>5) return;
+    if(e.button!==0) return;
+    if(starPoints){
+      mouse.x=(e.clientX/innerWidth)*2-1;
+      mouse.y=-(e.clientY/innerHeight)*2+1;
+      raycaster.setFromCamera(mouse,camera);
+      const hits=raycaster.intersectObject(starPoints);
+      if(hits.length){
+        const n=narrators.find(x=>x.id===idxMap[hits[0].index]);
+        if(n) openPanel(n);
+      } else if(!document.getElementById('panel').contains(e.target)){
+        closePanel();
+      }
+    }
+  });
+
+  el.addEventListener('wheel',e=>{
+    e.preventDefault();
+    targetSpherical.radius*=(e.deltaY>0?1.12:0.89);
+    targetSpherical.radius=Math.max(120,Math.min(800,targetSpherical.radius));
+    updateZoomLabel();
+  },{passive:false});
+
+  // Touch — 1 doigt = orbite, 2 doigts = zoom + pan
+  let touch2PrevMidX=0,touch2PrevMidY=0;
+  el.addEventListener('touchstart',e=>{
+    if(e.touches.length===1){
+      isDragging=true; dragMode=1;
+      prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;
+    } else if(e.touches.length===2){
+      isDragging=false; dragMode=2;
+      tDist=Math.hypot(
+        e.touches[0].clientX-e.touches[1].clientX,
+        e.touches[0].clientY-e.touches[1].clientY
+      );
+      touch2PrevMidX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      touch2PrevMidY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+    }
+  },{passive:true});
+
+  el.addEventListener('touchmove',e=>{
+    if(e.touches.length===1&&dragMode===1&&isDragging){
+      const dx=e.touches[0].clientX-prevX;
+      const dy=e.touches[0].clientY-prevY;
+      targetSpherical.theta-=dx*0.005;
+      targetSpherical.phi-=dy*0.005;
+      targetSpherical.phi=Math.max(0.15,Math.min(Math.PI-0.15,targetSpherical.phi));
+      prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;
+    } else if(e.touches.length===2){
+      const d=Math.hypot(
+        e.touches[0].clientX-e.touches[1].clientX,
+        e.touches[0].clientY-e.touches[1].clientY
+      );
+      // Zoom
+      targetSpherical.radius*=tDist/d;
+      targetSpherical.radius=Math.max(120,Math.min(800,targetSpherical.radius));
+      tDist=d; updateZoomLabel();
+      // Pan avec le point médian
+      const midX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      const midY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+      const dx=midX-touch2PrevMidX, dy=midY-touch2PrevMidY;
+      const panSpeed=targetSpherical.radius*0.001;
+      const right=new THREE.Vector3(); const up=new THREE.Vector3();
+      right.setFromMatrixColumn(camera.matrix,0);
+      up.setFromMatrixColumn(camera.matrix,1);
+      panTarget.addScaledVector(right,-dx*panSpeed);
+      panTarget.addScaledVector(up,dy*panSpeed);
+      touch2PrevMidX=midX; touch2PrevMidY=midY;
+    }
+  },{passive:true});
+
+  el.addEventListener('touchend',e=>{
+    if(e.touches.length===0){isDragging=false;dragMode=0;}
+    else if(e.touches.length===1){
+      isDragging=true;dragMode=1;
+      prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;
+    }
+  },{passive:true});
+}
+
+function updateZoomLabel(){
+  const pct=Math.round(350/Math.max(targetSpherical.radius,1)*100);
+  document.getElementById('zv').textContent=Math.min(pct,290)+'%';
+}
+function doZoom(f){targetSpherical.radius*=f;targetSpherical.radius=Math.max(120,Math.min(800,targetSpherical.radius));updateZoomLabel();}
+function resetCam(){
+  targetSpherical.set(350,Math.PI/2,0);
+  panTarget.set(0,0,0);
+  updateZoomLabel();
+}
+
+// ── Filter / View ──────────────────────────────────────────────────────────────
+function setF(f){
+  filter=f;
+  ['all','sahabi','tabii','muhaddith','rijal'].forEach(k=>{
+    const b=document.getElementById('b'+(k==='all'?'a':k[0]));
+    if(b) b.classList.toggle('on',k===f);
+  });
+  buildStars();
+  buildTimeline();
+}
+
+let autoOn=false;
+function toggleAuto(){
+  autoOn=!autoOn;
+  document.getElementById('bauto').classList.toggle('on',autoOn);
+}
+
+function setView(v){
+  view=v;
+  document.getElementById('vb3d').classList.toggle('on',v==='3d');
+  document.getElementById('vb2d').classList.toggle('on',v==='2d');
+  if(v==='2d'){targetSpherical.set(targetSpherical.radius,Math.PI/2,0);}
+  buildStars();
+  if(selId) buildSelLines(selId);
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────────
 document.getElementById('si').addEventListener('input',function(){
   const q=this.value.trim();
   const sr=document.getElementById('sr');
   if(!q){sr.style.display='none';return;}
-  const res=narrators.filter(n=>n.name_ar?.includes(q)||n.name_latin?.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  const res=narrators.filter(n=>n.name_ar?.includes(q)||n.name_latin?.toLowerCase().includes(q.toLowerCase())).slice(0,10);
   if(!res.length){sr.style.display='none';return;}
-  sr.innerHTML=res.map(n=>`<div class="sri" onclick="focusNarrator(${n.id})"><span class="sri-n">${n.name_ar}</span><span class="sri-g" style="background:${GC[n.generation]}18;color:${GC[n.generation]};border:0.5px solid ${GC[n.generation]}33">${GL[n.generation]||n.generation}</span></div>`).join('');
+  sr.innerHTML=res.map(n=>`<div class="sri" onclick="searchSelect(${n.id})"><span class="sri-n">${n.name_ar}</span><span class="sri-g" style="background:${GCS[n.generation]}18;color:${GCS[n.generation]};border:0.5px solid ${GCS[n.generation]}33">${GL[n.generation]}</span></div>`).join('');
   sr.style.display='block';
 });
-document.addEventListener('click',e=>{
-  if(!document.getElementById('sw').contains(e.target)) document.getElementById('sr').style.display='none';
-});
-
-function focusNarrator(id){
-  const n=narrators.find(x=>x.id===id);
-  if(!n) return;
+document.addEventListener('click',e=>{if(!document.getElementById('sw').contains(e.target)) document.getElementById('sr').style.display='none';});
+function searchSelect(id){
   document.getElementById('sr').style.display='none';
   document.getElementById('si').value='';
-  // Animate camera to narrator
-  const tx=worldX(n),ty=worldY(n);
-  const startX=camX,startY=camY,startZ=zoom;
-  const targetZ=Math.max(2.5,zoom);
-  let t=0;
-  const anim=setInterval(()=>{
-    t+=0.06;
-    if(t>=1){t=1;clearInterval(anim);}
-    const e=1-Math.pow(1-t,3);
-    camX=startX+(tx-startX)*e;
-    camY=startY+(ty-startY)*e;
-    zoom=startZ+(targetZ-startZ)*e;
-    document.getElementById('zoom-val').textContent=Math.round(zoom*100)+'%';
-  },16);
-  setTimeout(()=>openPanel(n),400);
-}
-function focusNarratorInstant(id){
   const n=narrators.find(x=>x.id===id);
-  if(!n) return;
-  camX=worldX(n); camY=worldY(n); zoom=Math.max(2.5,zoom);
-  document.getElementById('zoom-val').textContent=Math.round(zoom*100)+'%';
-  openPanel(n);
+  if(n) openPanel(n);
 }
 
-// ── Filter ────────────────────────────────────────────────────────────────────
-function setF(f){
-  filter=f;
-  ['all','sahabi','tabii','muhaddith','rijal'].forEach(k=>{
-    const b=document.getElementById('b'+k[0]+(k==='all'?'a':k==='sahabi'?'s':k==='tabii'?'t':k==='muhaddith'?'m':'r'));
-    if(b) b.classList.toggle('on',k===f);
+// ── Animate ────────────────────────────────────────────────────────────────────
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=clock.getDelta();
+  const t=clock.getElapsedTime();
+
+  // Smooth orbit
+  spherical.theta+=(targetSpherical.theta-spherical.theta)*0.08;
+  spherical.phi+=(targetSpherical.phi-spherical.phi)*0.08;
+  spherical.radius+=(targetSpherical.radius-spherical.radius)*0.08;
+
+  // Smooth pan
+  panCurrent.lerp(panTarget,0.08);
+
+  if(autoOn) targetSpherical.theta+=dt*0.15;
+
+  camera.position.setFromSpherical(spherical);
+  camera.position.add(panCurrent);
+  camera.lookAt(panCurrent);
+
+  if(bgParticles) bgParticles.rotation.y=t*0.01;
+  if(starPoints) starPoints.material.uniforms.uTime.value=t;
+
+  updateLabels();
+  renderer.render(scene,camera);
+}
+
+function onResize(){
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+}
+
+// ── TIMELINE ──────────────────────────────────────────────────────────────────
+const TL_MIN=1, TL_MAX=950;
+const ERAS=[
+  {label:'عصر النبوة',start:1,end:11,col:'#f5d77a'},
+  {label:'الصحابة',start:11,end:100,col:'#f5c040'},
+  {label:'التابعون',start:100,end:180,col:'#7ab8f5'},
+  {label:'أتباع التابعين',start:180,end:250,col:'#5090d0'},
+  {label:'عصر التدوين',start:250,end:400,col:'#c07af5'},
+  {label:'المحدثون',start:400,end:700,col:'#9050d0'},
+  {label:'علماء الرجال',start:700,end:950,col:'#7af5c0'},
+];
+
+function tlPct(year){
+  return Math.max(0,Math.min(1,(year-TL_MIN)/(TL_MAX-TL_MIN)))*100;
+}
+
+function buildTimeline(){
+  const track=document.getElementById('tl-track');
+  const W=track.clientWidth;
+
+  // Eras background
+  const erasEl=document.getElementById('tl-eras');
+  erasEl.innerHTML='';
+  ERAS.forEach(era=>{
+    const left=tlPct(era.start);
+    const width=tlPct(era.end)-left;
+    const seg=document.createElement('div');
+    seg.style.cssText=`flex:none;width:${width}%;background:${era.col}22;border-right:0.5px solid ${era.col}33;`;
+    erasEl.appendChild(seg);
   });
+
+  // Labels
+  const labelsEl=document.getElementById('tl-labels');
+  labelsEl.innerHTML='';
+  const years=[1,100,200,300,400,500,600,700,800,900,950];
+  years.forEach(y=>{
+    const sp=document.createElement('span');
+    sp.className='tl-era-label';
+    sp.textContent=y+' هـ';
+    sp.style.left=tlPct(y)+'%';
+    sp.style.position='absolute';
+    labelsEl.appendChild(sp);
+  });
+  labelsEl.style.position='relative';
+  labelsEl.style.height='16px';
+
+  // Dots pour chaque narrateur visible
+  const oldDots=track.querySelectorAll('.tl-dot');
+  oldDots.forEach(d=>d.remove());
+
+  const vis=narrators.filter(n=>filter==='all'||n.generation===filter);
+  vis.forEach(n=>{
+    if(!n.death_ah) return;
+    const dot=document.createElement('div');
+    dot.className='tl-dot';
+    dot.style.cssText=`left:${tlPct(n.death_ah)}%;background:${GCS[n.generation]};box-shadow:0 0 3px ${GCS[n.generation]};`;
+    dot.title=n.name_ar;
+    dot.addEventListener('click',()=>openPanel(n));
+    track.appendChild(dot);
+  });
+
+  // Interactions hover sur la timeline
+  track.addEventListener('mousemove',tlHover);
+  track.addEventListener('mouseleave',tlLeave);
+  track.addEventListener('click',tlClick);
 }
 
-// ── Reset ─────────────────────────────────────────────────────────────────────
-function resetView(){
-  camX=WORLD_W/2;camY=WORLD_H/2;zoom=1;
-  document.getElementById('zoom-val').textContent='100%';
-  closePanel();selId=null;hovId=null;
+function tlHover(e){
+  const track=document.getElementById('tl-track');
+  const rect=track.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  const pct=x/rect.width;
+  const year=Math.round(TL_MIN+pct*(TL_MAX-TL_MIN));
+
+  const cursor=document.getElementById('tl-cursor');
+  cursor.style.left=x+'px';
+  cursor.style.opacity='1';
+
+  const tip=document.getElementById('tl-year-tip');
+  tip.style.left=x+'px';
+  tip.style.opacity='1';
+  tip.textContent=year+' هـ';
 }
 
-// ── Resize ────────────────────────────────────────────────────────────────────
-function resize(){
-  dpr=window.devicePixelRatio||1;
-  W=window.innerWidth;H=window.innerHeight;
-  cv.width=W*dpr;cv.height=H*dpr;
-  cv.style.width=W+'px';cv.style.height=H+'px';
-  ctx.scale(dpr,dpr);
-  genBg();
+function tlLeave(){
+  document.getElementById('tl-cursor').style.opacity='0';
+  document.getElementById('tl-year-tip').style.opacity='0';
 }
-window.addEventListener('resize',resize);
-resize();
 
-// Initial camera position
-camX=WORLD_W*0.08; camY=WORLD_H/2;
+function tlClick(e){
+  // Clic sur la timeline → trouver le narrateur le plus proche de cette année
+  const track=document.getElementById('tl-track');
+  const rect=track.getBoundingClientRect();
+  const pct=(e.clientX-rect.left)/rect.width;
+  const year=TL_MIN+pct*(TL_MAX-TL_MIN);
+  const vis=narrators.filter(n=>filter==='all'||n.generation===filter);
+  const closest=vis.reduce((best,n)=>{
+    if(!n.death_ah) return best;
+    const d=Math.abs(n.death_ah-year);
+    return (!best||d<best.d)?{n,d}:best;
+  },null);
+  if(closest&&closest.d<30) openPanel(closest.n);
+}
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
-draw();
-loadData();
+function updateTimeline(narrator){
+  const hl=document.getElementById('tl-highlight');
+  const hlLabel=document.getElementById('tl-hl-label');
+  const hlName=document.getElementById('tl-hl-name');
+  const hlDates=document.getElementById('tl-hl-dates');
+
+  if(!narrator){
+    hl.style.opacity='0';
+    hlLabel.style.opacity='0';
+    return;
+  }
+
+  const col=GCS[narrator.generation]||'#c9a84c';
+
+  // Estimer la naissance selon la génération
+  const avgLife={sahabi:65,tabii:70,muhaddith:70,rijal:75};
+  const lifespan=avgLife[narrator.generation]||70;
+  const birthEst=narrator.death_ah?(narrator.death_ah-lifespan):null;
+
+  const startYear=birthEst?Math.max(TL_MIN,birthEst):TL_MIN;
+  const endYear=narrator.death_ah||TL_MAX;
+
+  const leftPct=tlPct(startYear);
+  const rightPct=tlPct(endYear);
+  const widthPct=rightPct-leftPct;
+  const centerPct=leftPct+widthPct/2;
+
+  // Plage colorée
+  hl.style.left=leftPct+'%';
+  hl.style.width=widthPct+'%';
+  hl.style.background=col;
+  hl.style.boxShadow=`0 0 14px ${col}, 0 0 28px ${col}44`;
+  hl.style.opacity='1';
+
+  // Label centré sur la plage
+  hlLabel.style.left=centerPct+'%';
+  hlLabel.style.opacity='1';
+
+  hlName.textContent=narrator.name_ar;
+  hlName.style.color=col;
+  hlName.style.textShadow=`0 0 10px ${col}`;
+
+  const birthStr=birthEst?`${Math.max(0,birthEst)} هـ`:'؟';
+  const deathStr=narrator.death_ah?`${narrator.death_ah} هـ`:'؟';
+  hlDates.textContent=`${birthStr} — ${deathStr}`;
+}
+
+// ── Load & Boot ────────────────────────────────────────────────────────────────
+async function loadData(){
+  setLS('تحميل الرواة...',20);
+  narrators=await sbGet('narrators','select=*&order=death_ah.asc&limit=1000');
+  setLS('تحميل الأسانيد...',55);
+  transmissions=await sbGet('transmissions','select=*&limit=5000');
+  setLS('تحميل الأحاديث...',80);
+  hadiths=await sbGet('hadiths','select=*&limit=2000');
+  document.getElementById('stn').textContent=narrators.length;
+  document.getElementById('stl').textContent=transmissions.length;
+  setLS('بناء الكون ثلاثي الأبعاد...',92);
+  await new Promise(r=>setTimeout(r,300));
+  buildStars();
+  buildTimeline();
+  setLS('جاهز',100);
+  await new Promise(r=>setTimeout(r,400));
+  const ld=document.getElementById('ld');
+  ld.style.opacity='0';
+  setTimeout(()=>ld.style.display='none',1000);
+  setTimeout(()=>{document.getElementById('hint').style.opacity='0';},5000);
+}
+
+window.onload = function() {
+  if(typeof THREE === 'undefined') {
+    document.getElementById('lst').textContent = 'خطأ: فشل تحميل Three.js - تحقق من الاتصال';
+    document.getElementById('lbf').style.background = '#f57a7a';
+    console.error('Three.js failed to load');
+    return;
+  }
+  initThree();
+  animate();
+  loadData();
+};
 </script>
 </body>
 </html>
