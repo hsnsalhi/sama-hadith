@@ -18,10 +18,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
 
 /* CSS2D labels */
 .lbl{
-  font-family:'Amiri',serif;font-size:12px;color:var(--gold);
+  font-family:'Amiri',serif,'Traditional Arabic','Arial Unicode MS','Noto Naskh Arabic',serif;
+  font-size:12px;color:var(--gold);
   pointer-events:none;white-space:nowrap;
   text-shadow:0 0 8px rgba(201,168,76,.8),0 0 20px rgba(201,168,76,.4);
   transition:opacity .3s;
+  direction:rtl;
+  unicode-bidi:isolate;
 }
 .lbl.era{font-family:'Cairo',sans-serif;font-size:9px;color:rgba(201,168,76,.45);}
 
@@ -246,8 +249,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
 #zv{font-family:'Cairo',sans-serif;font-size:9px;color:rgba(201,168,76,.35);text-align:center;}
 
 /* TOOLTIP */
-#tt{position:fixed;z-index:25;background:rgba(0,5,8,.92);border:0.5px solid rgba(201,168,76,.2);border-radius:7px;padding:7px 11px;pointer-events:none;display:none;backdrop-filter:blur(10px);}
-#ttn{font-family:'Amiri',serif;font-size:13px;color:var(--gold);}
+#tt{position:fixed;z-index:25;background:rgba(0,5,8,.92);border:0.5px solid rgba(201,168,76,.2);border-radius:7px;padding:7px 11px;pointer-events:none;display:none;backdrop-filter:blur(10px);direction:rtl;}
+#ttn{font-family:'Amiri',serif,'Traditional Arabic',serif;font-size:13px;color:var(--gold);}
 #tts{font-family:'Cairo',sans-serif;font-size:9px;color:rgba(201,168,76,.4);margin-top:2px;}
 
 /* LOADING */
@@ -344,7 +347,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
   <button class="cb" id="bauto" onclick="toggleAuto()">⟳ دوران</button>
 </div>
 
-<div id="hint"><p>سحب للتدوير · كليك يمين / Ctrl+سحب للتحريك · عجلة للتكبير · نقر على نجمة للتفاصيل</p></div>
+<div id="hint"><p>سحب أيسر للتحريك · سحب أيمن / Ctrl للتدوير · عجلة للتكبير · نقر على نجمة للتفاصيل</p></div>
 <div id="tt"><div id="ttn"></div><div id="tts"></div></div>
 
 <!-- TIMELINE -->
@@ -384,6 +387,7 @@ let labelDivs=[];
 // CSS2D renderer (manual implementation without import)
 const labelContainer=document.createElement('div');
 labelContainer.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:10;overflow:hidden;';
+labelContainer.setAttribute('dir','rtl');
 document.body.appendChild(labelContainer);
 
 function setLS(m,p){document.getElementById('lst').textContent=m;document.getElementById('lbf').style.width=p+'%';}
@@ -394,7 +398,7 @@ async function sbGet(t,q=''){
 }
 
 // ── World position ─────────────────────────────────────────────────────────────
-const ERA_MIN=1,ERA_MAX=950;
+let ERA_MIN=1,ERA_MAX=950;
 const GEN_Z={sahabi:-120,tabii:-40,muhaddith:40,rijal:120};
 
 // ── Mapping géographique → Y ──────────────────────────────────────────────────
@@ -534,126 +538,28 @@ function addBgParticles(){
 // ── Nébuleuses dynamiques ─────────────────────────────────────────────────────
 let nebulaMeshes=[];
 function addNebula(){
-  // Nébuleuses colorées — sprites billboards qui dérivent lentement
-  const nebDefs=[
-    {col:new THREE.Color(0x0a1840),pos:new THREE.Vector3(-100,30,-200),r:300},
-    {col:new THREE.Color(0x1a0830),pos:new THREE.Vector3(80,-40,150),r:250},
-    {col:new THREE.Color(0x081820),pos:new THREE.Vector3(0,80,-100),r:350},
-    {col:new THREE.Color(0x0d1f10),pos:new THREE.Vector3(-180,-60,80),r:220},
-    {col:new THREE.Color(0x1a1000),pos:new THREE.Vector3(150,50,-80),r:200},
-  ];
-  nebDefs.forEach((d,i)=>{
-    const geo=new THREE.SphereGeometry(d.r,12,12);
-    const mat=new THREE.MeshBasicMaterial({color:d.col,transparent:true,opacity:0.12,side:THREE.BackSide,depthWrite:false});
-    const mesh=new THREE.Mesh(geo,mat);
-    mesh.position.copy(d.pos);
-    mesh.userData={speed:0.003+i*0.001,phase:i*1.2,basePos:d.pos.clone()};
-    scene.add(mesh);
-    nebulaMeshes.push(mesh);
-  });
-  // Sphère extérieure (skybox)
+  // Skybox sombre uniquement — sans nébuleuses
   const sky=new THREE.Mesh(
-    new THREE.SphereGeometry(900,16,16),
-    new THREE.MeshBasicMaterial({color:0x000305,transparent:true,opacity:1,side:THREE.BackSide})
+    new THREE.SphereGeometry(900,8,8),
+    new THREE.MeshBasicMaterial({color:0x000305,side:THREE.BackSide})
   );
   scene.add(sky);
 }
 
 // ── Particules de chaîne (trajet lumineux isnad) ───────────────────────────────
-let chainParticles=[];  // [{mesh, from, to, t, speed, col}]
+// Particules de chaîne désactivées
+let chainParticles=[];
 let chainParticleMeshes=null;
+function spawnChainParticles(sel){}
+function updateChainParticles(){}
 
-function spawnChainParticles(sel){
-  // Supprimer les anciennes
-  chainParticles=[];
-  if(chainParticleMeshes){scene.remove(chainParticleMeshes);chainParticleMeshes=null;}
-
-  if(!sel||!posMap[sel.id]) return;
-  const sp=posMap[sel.id];
-  const col=new THREE.Color(GCS[sel.generation]||'#c9a84c');
-
-  const links=[];
-  transmissions.forEach(t=>{
-    if(t.teacher_id===sel.id){
-      const other=narrators.find(n=>n.id===t.student_id);
-      if(other&&posMap[other.id]) links.push({from:sp,to:posMap[other.id],col});
-    } else if(t.student_id===sel.id){
-      const other=narrators.find(n=>n.id===t.teacher_id);
-      if(other&&posMap[other.id]) links.push({from:posMap[other.id],to:sp,col:new THREE.Color(GCS[other.generation]||'#c9a84c')});
-    }
-  });
-  if(!links.length) return;
-
-  // Créer les instances de particules
-  const N=links.length*8; // 8 particules par lien
-  const geo=new THREE.BufferGeometry();
-  const pos=new Float32Array(N*3);
-  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
-  const mat=new THREE.PointsMaterial({size:3,color:0xf0d080,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true});
-  chainParticleMeshes=new THREE.Points(geo,mat);
-  scene.add(chainParticleMeshes);
-
-  links.forEach((lnk,li)=>{
-    for(let p=0;p<8;p++){
-      chainParticles.push({
-        linkIdx:li*8+p,
-        from:lnk.from.clone(),to:lnk.to.clone(),
-        t:(p/8), speed:0.004+Math.random()*0.003,
-        col:lnk.col
-      });
-    }
-  });
-}
-
-function updateChainParticles(){
-  if(!chainParticleMeshes||!chainParticles.length) return;
-  const pos=chainParticleMeshes.geometry.attributes.position;
-  let alive=0;
-  chainParticles.forEach(p=>{
-    p.t+=p.speed;
-    if(p.t>1) p.t-=1;
-    const tp=p.t;
-    // Courbe de Bézier légère pour éviter les lignes droites
-    const mid=new THREE.Vector3().lerpVectors(p.from,p.to,0.5).add(new THREE.Vector3(0,15*Math.sin(p.t*Math.PI),0));
-    const a=new THREE.Vector3().lerpVectors(p.from,mid,tp);
-    const b=new THREE.Vector3().lerpVectors(mid,p.to,tp);
-    const pt=new THREE.Vector3().lerpVectors(a,b,tp);
-    pos.setXYZ(p.linkIdx,pt.x,pt.y,pt.z);
-    // Fade in/out aux extrémités
-    alive++;
-  });
-  pos.needsUpdate=true;
-  // Opacité selon présence
-  chainParticleMeshes.material.opacity=chainParticles.length>0?0.85:0;
-}
 
 // ── Étoiles filantes ──────────────────────────────────────────────────────────
+// Étoiles filantes désactivées
 let shootingStars=[];
 let shootingLines=[];
-function maybeSpawnShootingStar(t){
-  if(Math.random()>0.003) return; // ~1 toutes les 5s
-  const from=new THREE.Vector3(
-    (Math.random()-0.5)*800,
-    (Math.random()-0.5)*400,
-    (Math.random()-0.5)*400
-  );
-  const dir=new THREE.Vector3(Math.random()-.5,Math.random()*.2-.1,Math.random()-.5).normalize().multiplyScalar(300+Math.random()*200);
-  const to=from.clone().add(dir);
-  const pts=[from,to];
-  const geo=new THREE.BufferGeometry().setFromPoints(pts);
-  const mat=new THREE.LineBasicMaterial({color:0xf0e8d0,transparent:true,opacity:0,linewidth:1,blending:THREE.AdditiveBlending});
-  const line=new THREE.Line(geo,mat);
-  scene.add(line);
-  shootingStars.push({line,born:t,life:1.2});
-}
-function updateShootingStars(t){
-  shootingStars=shootingStars.filter(s=>{
-    const age=(t-s.born)/s.life;
-    if(age>1){scene.remove(s.line);s.line.geometry.dispose();return false;}
-    s.line.material.opacity=age<0.3?age/0.3:(1-age)/0.7;
-    return true;
-  });
-}
+function maybeSpawnShootingStar(t){}
+function updateShootingStars(t){}
 
 // ── Build star field ──────────────────────────────────────────────────────────
 function buildStars(){
@@ -705,8 +611,9 @@ function buildStars(){
         }
         vec4 mv=modelViewMatrix*vec4(position,1.0);
         float dist=length(mv.xyz);
-        float attn=clamp(300.0/dist,0.4,2.0);
-        gl_PointSize=size*pulse*attn*(idx==uSelected?2.2:(idx==uHovered?1.8:1.0));
+        float attn=clamp(300.0/dist,0.4,4.0);
+        float ps=size*pulse*attn*(idx==uSelected?2.2:(idx==uHovered?1.8:1.0));
+        gl_PointSize=min(ps,40.0);
         gl_Position=projectionMatrix*mv;
       }
     `,
@@ -818,6 +725,7 @@ function updateLabels(){
 
     const d=document.createElement('div');
     d.className='lbl';
+    d.setAttribute('dir','rtl');
     d.textContent=n.name_ar;
     d.style.cssText=`position:absolute;left:${sx}px;top:${sy-offsetY}px;transform:translateX(-50%);opacity:${opacity};font-size:${fontSize}px;`;
     labelContainer.appendChild(d);
@@ -900,18 +808,15 @@ function closePanel(){
 let flyAnim=null;
 function flyTo(n){
   if(!posMap[n.id]) return;
-  // Centrer le pan sur la position de l'étoile
+  // Centrer le pan sur l'étoile sans changer le zoom
   const tp=posMap[n.id].clone();
   const startPan=panTarget.clone();
-  const startR=targetSpherical.radius;
   let t=0;
   if(flyAnim) clearInterval(flyAnim);
   flyAnim=setInterval(()=>{
-    t+=0.04; if(t>=1){t=1;clearInterval(flyAnim);}
+    t+=0.05; if(t>=1){t=1;clearInterval(flyAnim);}
     const e=1-Math.pow(1-t,3);
     panTarget.lerpVectors(startPan,tp,e);
-    targetSpherical.radius=startR+(200-startR)*e;
-    updateZoomLabel();
   },16);
 }
 function focusNarrator(id){
@@ -936,11 +841,11 @@ function initControls(){
 
   el.addEventListener('mousedown',e=>{
     prevX=e.clientX;prevY=e.clientY;
-    // Clic droit OU Ctrl/Shift+clic gauche → pan
+    // Clic gauche → pan  |  clic droit / Ctrl → orbite
     if(e.button===2||e.ctrlKey||e.shiftKey){
-      dragMode=2; el.style.cursor='move';
-    } else {
       dragMode=1; el.style.cursor='grabbing';
+    } else {
+      dragMode=2; el.style.cursor='move';
     }
     isDragging=true;
   });
@@ -1024,7 +929,7 @@ function initControls(){
   el.addEventListener('wheel',e=>{
     e.preventDefault();
     targetSpherical.radius*=(e.deltaY>0?1.12:0.89);
-    targetSpherical.radius=Math.max(120,Math.min(800,targetSpherical.radius));
+    targetSpherical.radius=Math.max(30,Math.min(2000,targetSpherical.radius));
     updateZoomLabel();
   },{passive:false});
 
@@ -1060,7 +965,7 @@ function initControls(){
       );
       // Zoom
       targetSpherical.radius*=tDist/d;
-      targetSpherical.radius=Math.max(120,Math.min(800,targetSpherical.radius));
+      targetSpherical.radius=Math.max(30,Math.min(2000,targetSpherical.radius));
       tDist=d; updateZoomLabel();
       // Pan avec le point médian
       const midX=(e.touches[0].clientX+e.touches[1].clientX)/2;
@@ -1087,9 +992,9 @@ function initControls(){
 
 function updateZoomLabel(){
   const pct=Math.round(350/Math.max(targetSpherical.radius,1)*100);
-  document.getElementById('zv').textContent=Math.min(pct,290)+'%';
+  document.getElementById('zv').textContent=pct+'%';
 }
-function doZoom(f){targetSpherical.radius*=f;targetSpherical.radius=Math.max(120,Math.min(800,targetSpherical.radius));updateZoomLabel();}
+function doZoom(f){targetSpherical.radius*=f;targetSpherical.radius=Math.max(30,Math.min(2000,targetSpherical.radius));updateZoomLabel();}
 function resetCam(){
   targetSpherical.set(350,Math.PI/2,0);
   panTarget.set(0,0,0);
@@ -1163,15 +1068,6 @@ function animate(){
   // Rotation lente des particules de fond
   if(bgParticles) bgParticles.rotation.y=t*0.008;
 
-  // Nébuleuses dynamiques — dérive lente et respiration
-  nebulaMeshes.forEach(m=>{
-    const {speed,phase,basePos}=m.userData;
-    m.position.x=basePos.x+Math.sin(t*speed+phase)*30;
-    m.position.y=basePos.y+Math.cos(t*speed*0.7+phase)*20;
-    m.position.z=basePos.z+Math.sin(t*speed*1.3+phase)*25;
-    m.material.opacity=0.08+Math.sin(t*speed*2+phase)*0.04;
-  });
-
   // Shader time
   if(starPoints) starPoints.material.uniforms.uTime.value=t;
 
@@ -1231,6 +1127,7 @@ function buildGeoAxis(){
     const lbl=document.createElement('div');
     lbl.className='geo-label';
     lbl.id='geo-lbl-'+city.name;
+    lbl.setAttribute('dir','rtl');
     lbl.textContent=city.name;
     lbl.style.top=pct+'%';
     lbl.style.color=city.major?'rgba(201,168,76,.55)':'rgba(201,168,76,.3)';
@@ -1305,7 +1202,21 @@ function updateGeoAxis(narrator){
 }
 
 // ── TIMELINE ──────────────────────────────────────────────────────────────────
-const TL_MIN=1, TL_MAX=950;
+// TL_MIN et TL_MAX calculés dynamiquement après chargement des données
+let TL_MIN=1, TL_MAX=950;
+
+function computeTimelineRange(){
+  const deaths=narrators.filter(n=>n.death_ah&&n.death_ah>0).map(n=>n.death_ah);
+  if(!deaths.length) return;
+  TL_MIN=Math.max(1, Math.min(...deaths)-10);
+  TL_MAX=Math.max(...deaths)+10;
+  // Arrondir aux dizaines pour des labels propres
+  TL_MIN=Math.floor(TL_MIN/10)*10||1;
+  TL_MAX=Math.ceil(TL_MAX/10)*10;
+  // Synchroniser avec ERA_MIN/ERA_MAX pour le positionnement 3D
+  ERA_MIN=TL_MIN;
+  ERA_MAX=TL_MAX;
+}
 const ERAS=[
   {label:'عصر النبوة',start:1,end:11,col:'#f5d77a'},
   {label:'الصحابة',start:11,end:100,col:'#f5c040'},
@@ -1338,7 +1249,12 @@ function buildTimeline(){
   // Labels
   const labelsEl=document.getElementById('tl-labels');
   labelsEl.innerHTML='';
-  const years=[1,100,200,300,400,500,600,700,800,900,950];
+  // Générer des labels réguliers entre TL_MIN et TL_MAX
+  const range=TL_MAX-TL_MIN;
+  const step=range<=200?20:range<=400?50:range<=600?100:200;
+  const firstLabel=Math.ceil(TL_MIN/step)*step;
+  const years=[];
+  for(let y=firstLabel;y<=TL_MAX;y+=step) years.push(y);
   years.forEach(y=>{
     const sp=document.createElement('span');
     sp.className='tl-era-label';
@@ -1468,6 +1384,7 @@ async function loadData(){
   setLS('بناء الكون ثلاثي الأبعاد...',92);
   await new Promise(r=>setTimeout(r,300));
   buildStars();
+  computeTimelineRange();
   buildTimeline();
   buildGeoAxis();
   setLS('جاهز',100);
