@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سماء الحديث · بطاقة الراوي</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#c9a84c;--gold2:#f0d080;
+  --sahabi:#f5d77a;--tabii:#7ab8f5;--muhaddith:#c07af5;--rijal:#7af5c0;
+  --bg:#000810;--card:rgba(255,255,255,0.03);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:rgba(201,168,76,.85);font-family:'Cairo',sans-serif;min-height:100vh;}
+
+/* ── STARS BG ── */
+#stars-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+#stars-bg canvas{position:absolute;inset:0;}
+
+/* ── LAYOUT ── */
+#page{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
+
+/* ── BACK ── */
+#back{display:inline-flex;align-items:center;gap:8px;color:rgba(201,168,76,.4);font-size:12px;text-decoration:none;margin-bottom:28px;transition:color .2s;letter-spacing:1px;}
+#back:hover{color:var(--gold);}
+#back svg{width:14px;height:14px;fill:currentColor;}
+
+/* ── HERO ── */
+#hero{
+  display:flex;align-items:flex-start;gap:28px;
+  margin-bottom:36px;padding:28px 32px;
+  background:var(--card);border:0.5px solid rgba(201,168,76,.12);
+  border-radius:16px;
+  position:relative;overflow:hidden;
+}
+#hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 20% 50%,rgba(201,168,76,.04) 0%,transparent 70%);
+  pointer-events:none;
+}
+#hero-star{
+  width:64px;height:64px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;position:relative;
+}
+#hero-star::after{
+  content:'';position:absolute;inset:-6px;border-radius:50%;
+  border:0.5px solid currentColor;opacity:.3;animation:pulse 3s infinite;
+}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.08);opacity:.6}}
+#hero-info{flex:1;}
+#hero-gen{font-size:11px;letter-spacing:2px;opacity:.45;margin-bottom:6px;text-transform:uppercase;}
+#hero-name{font-family:'Amiri',serif;font-size:36px;line-height:1.1;margin-bottom:4px;}
+#hero-latin{font-size:13px;opacity:.4;margin-bottom:16px;direction:ltr;text-align:right;}
+#hero-tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;}
+.htag{padding:3px 12px;border-radius:20px;font-size:11px;background:rgba(201,168,76,.07);border:0.5px solid rgba(201,168,76,.18);color:rgba(201,168,76,.75);}
+
+/* ── STATS ROW ── */
+#stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+.stat-card{
+  background:var(--card);border:0.5px solid rgba(201,168,76,.1);
+  border-radius:12px;padding:16px;text-align:center;
+}
+.stat-val{font-size:26px;font-weight:600;color:var(--gold);line-height:1;}
+.stat-lbl{font-size:10px;opacity:.4;margin-top:5px;letter-spacing:1px;}
+
+/* ── SECTION ── */
+.section{margin-bottom:28px;}
+.section-title{
+  font-size:11px;letter-spacing:3px;opacity:.35;text-transform:uppercase;
+  margin-bottom:14px;display:flex;align-items:center;gap:10px;
+}
+.section-title::after{content:'';flex:1;height:1px;background:rgba(201,168,76,.1);}
+.card{
+  background:var(--card);border:0.5px solid rgba(201,168,76,.1);
+  border-radius:12px;padding:20px 24px;
+}
+
+/* ── MINI TIMELINE ── */
+#mini-tl{position:relative;height:50px;margin:4px 0;}
+#mtl-line{position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(201,168,76,.15);}
+#mtl-life{position:absolute;top:50%;height:5px;transform:translateY(-50%);border-radius:3px;transition:all .6s cubic-bezier(.16,1,.3,1);}
+#mtl-birth{position:absolute;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;border:1px solid currentColor;}
+#mtl-death{position:absolute;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;}
+.mtl-label{position:absolute;font-size:9px;opacity:.5;white-space:nowrap;transform:translateX(-50%);}
+.mtl-label.top{bottom:calc(50% + 10px);}
+.mtl-label.bot{top:calc(50% + 10px);}
+/* Era bands */
+.mtl-era{position:absolute;top:0;bottom:0;opacity:.06;}
+.mtl-era-lbl{position:absolute;bottom:4px;font-size:8px;opacity:.3;transform:translateX(-50%);}
+
+/* ── ISNAD GRAPH ── */
+#isnad-canvas{width:100%;height:320px;border-radius:10px;display:block;}
+
+/* ── HADITHS ── */
+.hadith-item{
+  padding:16px 0;border-bottom:0.5px solid rgba(201,168,76,.07);
+}
+.hadith-item:last-child{border-bottom:none;}
+.hadith-text{
+  font-family:'Amiri',serif;font-size:16px;line-height:2;
+  color:rgba(201,168,76,.9);direction:rtl;margin-bottom:8px;
+}
+.hadith-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+.hadith-tag{font-size:10px;padding:2px 10px;border-radius:10px;background:rgba(201,168,76,.06);border:0.5px solid rgba(201,168,76,.12);color:rgba(201,168,76,.55);}
+.hadith-grade-sahih{color:#7af5c0;border-color:#7af5c030;background:rgba(122,245,192,.06);}
+.hadith-grade-hasan{color:#7ab8f5;border-color:#7ab8f530;background:rgba(122,184,245,.06);}
+
+/* ── MAP ── */
+#geo-map{position:relative;height:260px;background:rgba(0,0,0,.3);border-radius:10px;overflow:hidden;}
+#geo-map canvas{display:block;width:100%;height:100%;}
+#geo-map-label{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  font-size:12px;color:var(--gold);
+  background:rgba(0,8,16,.85);padding:4px 14px;border-radius:20px;
+  border:0.5px solid rgba(201,168,76,.2);white-space:nowrap;
+}
+
+/* ── RIJAL ── */
+.rijal-card{
+  background:rgba(122,245,192,.04);border:0.5px solid rgba(122,245,192,.15);
+  border-radius:10px;padding:14px 18px;margin-bottom:10px;
+}
+.rijal-name{font-size:12px;color:rgba(201,168,76,.5);margin-bottom:4px;}
+.rijal-text{font-family:'Amiri',serif;font-size:14px;color:rgba(201,168,76,.85);line-height:1.8;}
+.rijal-grade{font-size:11px;padding:2px 10px;border-radius:10px;display:inline-block;margin-top:6px;}
+
+/* ── LOADING ── */
+#loading{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s;}
+#loading h2{font-family:'Amiri',serif;font-size:32px;color:var(--gold);margin-bottom:8px;}
+#loading p{font-size:11px;opacity:.3;letter-spacing:2px;}
+.load-dots{display:flex;gap:6px;margin-top:20px;}
+.load-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:ldot 1.2s infinite;}
+.load-dot:nth-child(2){animation-delay:.2s;}
+.load-dot:nth-child(3){animation-delay:.4s;}
+@keyframes ldot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}
+
+/* ── NOT FOUND ── */
+#notfound{display:none;text-align:center;padding:80px 20px;}
+#notfound h2{font-family:'Amiri',serif;font-size:28px;color:var(--gold);margin-bottom:8px;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:700px){
+  #stats{grid-template-columns:repeat(2,1fr);}
+  #hero{flex-direction:column;}
+  #hero-name{font-size:26px;}
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <h2>سماء الحديث</h2>
+  <p>جارٍ تحميل بيانات الراوي...</p>
+  <div class="load-dots">
+    <div class="load-dot"></div>
+    <div class="load-dot"></div>
+    <div class="load-dot"></div>
+  </div>
+</div>
+
+<div id="stars-bg"><canvas id="bg-c"></canvas></div>
+
+<div id="page">
+
+  <a id="back" href="index.html">
+    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    العودة إلى سماء الحديث
+  </a>
+
+  <div id="notfound">
+    <h2>راوٍ غير موجود</h2>
+    <p style="opacity:.4;margin-top:8px">لم يتم العثور على هذا الراوي في قاعدة البيانات</p>
+  </div>
+
+  <!-- HERO -->
+  <div id="hero" style="display:none">
+    <div id="hero-star">⭐</div>
+    <div id="hero-info">
+      <div id="hero-gen"></div>
+      <div id="hero-name"></div>
+      <div id="hero-latin"></div>
+      <div id="hero-tags"></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div id="stats" style="display:none">
+    <div class="stat-card"><div class="stat-val" id="st-hadiths">—</div><div class="stat-lbl">عدد الأحاديث</div></div>
+    <div class="stat-card"><div class="stat-val" id="st-death">—</div><div class="stat-lbl">سنة الوفاة</div></div>
+    <div class="stat-card"><div class="stat-val" id="st-teachers">—</div><div class="stat-lbl">شيوخه</div></div>
+    <div class="stat-card"><div class="stat-val" id="st-students">—</div><div class="stat-lbl">تلاميذه</div></div>
+  </div>
+
+  <!-- MINI TIMELINE -->
+  <div class="section" id="sec-tl" style="display:none">
+    <div class="section-title">الحقبة الزمنية</div>
+    <div class="card">
+      <div id="mini-tl">
+        <div id="mtl-line"></div>
+        <div id="mtl-life"></div>
+        <div id="mtl-birth"></div>
+        <div id="mtl-death-dot"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;opacity:.35">
+        <span>1 هـ</span><span>100 هـ</span><span>200 هـ</span><span>300 هـ</span><span>400 هـ</span><span>600 هـ</span><span>900 هـ</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="section" id="sec-map" style="display:none">
+    <div class="section-title">الموقع الجغرافي</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div id="geo-map">
+        <canvas id="map-c"></canvas>
+        <div id="geo-map-label"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ISNAD GRAPH -->
+  <div class="section" id="sec-isnad" style="display:none">
+    <div class="section-title">شبكة الإسناد</div>
+    <div class="card" style="padding:12px;">
+      <canvas id="isnad-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- HADITHS -->
+  <div class="section" id="sec-hadiths" style="display:none">
+    <div class="section-title">أحاديثه</div>
+    <div class="card" id="hadiths-list"></div>
+  </div>
+
+  <!-- RIJAL -->
+  <div class="section" id="sec-rijal" style="display:none">
+    <div class="section-title">أقوال علماء الرجال</div>
+    <div id="rijal-list"></div>
+  </div>
+
+</div>
+
+<script>
+const SB='https://kiqzfwyzekduitxghwaa.supabase.co';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpcXpmd3l6ZWtkdWl0eGdod2FhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ0MzYxOSwiZXhwIjoyMDkwMDE5NjE5fQ.BQSVuoh62aDcSGYyKKQkfrie6BZFL-dpiunYvflyjLA';
+const GC={sahabi:'#f5d77a',tabii:'#7ab8f5',muhaddith:'#c07af5',rijal:'#7af5c0'};
+const GL={sahabi:'صحابي',tabii:'تابعي',muhaddith:'محدّث',rijal:'ناقد رجال'};
+
+async function sbGet(table,qs=''){
+  const r=await fetch(`${SB}/rest/v1/${table}?${qs}`,{headers:{'apikey':KEY,'Authorization':`Bearer ${KEY}`}});
+  return r.json();
+}
+
+// ── Background stars ──────────────────────────────────────────────────────────
+function initBg(){
+  const c=document.getElementById('bg-c');
+  const ctx=c.getContext('2d');
+  c.width=innerWidth;c.height=innerHeight;
+  const stars=Array.from({length:300},()=>({
+    x:Math.random()*innerWidth,y:Math.random()*innerHeight,
+    r:Math.random()*.8+.1,a:Math.random()*.4+.05,sp:Math.random()*.01+.003,tw:Math.random()*Math.PI*2
+  }));
+  let t=0;
+  function draw(){
+    t+=0.016;ctx.clearRect(0,0,innerWidth,innerHeight);
+    ctx.fillStyle='#000810';ctx.fillRect(0,0,innerWidth,innerHeight);
+    stars.forEach(s=>{
+      const a=s.a+Math.sin(t*s.sp+s.tw)*.08;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,185,140,${a})`;ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ── Geo coordinates ───────────────────────────────────────────────────────────
+const GEO_CITIES={
+  'الأندلس':{lat:37.9,lng:-4.7},'المغرب':{lat:33.9,lng:-6.8},
+  'الشام':{lat:33.5,lng:36.3},'دمشق':{lat:33.5,lng:36.3},
+  'بغداد':{lat:33.3,lng:44.4},'العراق':{lat:33.3,lng:44.4},
+  'الكوفة':{lat:32.0,lng:44.4},'البصرة':{lat:30.5,lng:47.8},
+  'خراسان':{lat:36.2,lng:59.6},'نيسابور':{lat:36.2,lng:58.8},
+  'مرو':{lat:37.6,lng:61.8},'بلخ':{lat:36.7,lng:66.9},
+  'فارس':{lat:29.6,lng:52.5},'أصبهان':{lat:32.7,lng:51.7},
+  'الري':{lat:35.6,lng:51.4},'بخارى':{lat:39.8,lng:64.4},
+  'مصر':{lat:30.0,lng:31.2},'الفسطاط':{lat:30.0,lng:31.2},
+  'الإسكندرية':{lat:31.2,lng:29.9},
+  'المدينة':{lat:24.5,lng:39.6},'المدينة المنورة':{lat:24.5,lng:39.6},
+  'مكة':{lat:21.4,lng:39.8},'مكة المكرمة':{lat:21.4,lng:39.8},
+  'الطائف':{lat:21.3,lng:40.4},'اليمن':{lat:15.4,lng:44.2},
+  'صنعاء':{lat:15.4,lng:44.2},'القدس':{lat:31.8,lng:35.2},
+  'قرطبة':{lat:37.9,lng:-4.7},'واسط':{lat:32.5,lng:45.8},
+  'الموصل':{lat:36.3,lng:43.1},'حران':{lat:36.9,lng:39.0},
+};
+
+function getCoords(origin){
+  if(!origin) return null;
+  for(const[k,v] of Object.entries(GEO_CITIES)){
+    if(origin.includes(k)) return v;
+  }
+  return null;
+}
+
+// ── Mini map ──────────────────────────────────────────────────────────────────
+function drawMap(coords,origin){
+  const cv=document.getElementById('map-c');
+  const W=cv.parentElement.clientWidth,H=260;
+  cv.width=W;cv.height=H;
+  const ctx=cv.getContext('2d');
+
+  // Background
+  ctx.fillStyle='#000c1a';ctx.fillRect(0,0,W,H);
+
+  // Monde islamique medieval - projection simple
+  // On centre sur le Moyen-Orient (lng 0-80, lat 10-45)
+  const LNG_MIN=-10,LNG_MAX=80,LAT_MIN=10,LAT_MAX=45;
+  function proj(lat,lng){
+    return{
+      x:(lng-LNG_MIN)/(LNG_MAX-LNG_MIN)*(W-60)+30,
+      y:(1-(lat-LAT_MIN)/(LAT_MAX-LAT_MIN))*(H-40)+20
+    };
+  }
+
+  // Grille légère
+  ctx.strokeStyle='rgba(201,168,76,.06)';ctx.lineWidth=0.5;
+  for(let lng=0;lng<=80;lng+=20){
+    const p1=proj(LAT_MIN,lng),p2=proj(LAT_MAX,lng);
+    ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+    ctx.fillStyle='rgba(201,168,76,.2)';ctx.font='8px Cairo,sans-serif';
+    ctx.fillText(lng+'°',p1.x-6,H-6);
+  }
+  for(let lat=10;lat<=45;lat+=10){
+    const p1=proj(lat,LNG_MIN),p2=proj(lat,LNG_MAX);
+    ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+    ctx.fillStyle='rgba(201,168,76,.2)';ctx.font='8px Cairo,sans-serif';
+    ctx.fillText(lat+'°',2,p1.y+3);
+  }
+
+  // Villes connues
+  Object.entries(GEO_CITIES).forEach(([name,c])=>{
+    if(c.lng<LNG_MIN||c.lng>LNG_MAX||c.lat<LAT_MIN||c.lat>LAT_MAX) return;
+    const p=proj(c.lat,c.lng);
+    ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);
+    ctx.fillStyle='rgba(201,168,76,.25)';ctx.fill();
+    ctx.font='8px Cairo,sans-serif';ctx.fillStyle='rgba(201,168,76,.3)';
+    ctx.fillText(name,p.x+4,p.y+3);
+  });
+
+  // Point du narrateur
+  if(coords){
+    const p=proj(coords.lat,coords.lng);
+    // Halo
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,30);
+    g.addColorStop(0,'rgba(201,168,76,.25)');g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.arc(p.x,p.y,30,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+    // Point principal
+    ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);
+    ctx.fillStyle='#f0d080';ctx.fill();
+    ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1.5;ctx.stroke();
+    // Anneau pulsant
+    ctx.beginPath();ctx.arc(p.x,p.y,12,0,Math.PI*2);
+    ctx.strokeStyle='rgba(201,168,76,.4)';ctx.lineWidth=1;ctx.stroke();
+    document.getElementById('geo-map-label').textContent=origin||'';
+  }
+}
+
+// ── Mini timeline ─────────────────────────────────────────────────────────────
+function drawMiniTimeline(narrator,col){
+  const ERA_MIN=1,ERA_MAX=950;
+  function pct(y){return Math.max(0,Math.min(100,(y-ERA_MIN)/(ERA_MAX-ERA_MIN)*100));}
+
+  const avgLife={sahabi:65,tabii:70,muhaddith:70,rijal:75};
+  const life=avgLife[narrator.generation]||70;
+  const death=narrator.death_ah||300;
+  const birth=Math.max(1,death-life);
+
+  const lp=pct(birth),rp=pct(death);
+
+  // Bandes d'ères
+  const eras=[
+    {s:1,e:100,c:'rgba(245,215,122,.06)'},
+    {s:100,e:200,c:'rgba(122,184,245,.06)'},
+    {s:200,e:400,c:'rgba(192,122,245,.06)'},
+    {s:400,e:950,c:'rgba(122,245,192,.06)'},
+  ];
+  const track=document.getElementById('mini-tl');
+  eras.forEach(e=>{
+    const d=document.createElement('div');
+    d.className='mtl-era';
+    d.style.cssText=`left:${pct(e.s)}%;width:${pct(e.e)-pct(e.s)}%;background:${e.c}`;
+    track.insertBefore(d,track.firstChild);
+  });
+
+  // Barre de vie
+  const life_bar=document.getElementById('mtl-life');
+  life_bar.style.cssText=`left:${lp}%;width:${rp-lp}%;background:${col};box-shadow:0 0 8px ${col}44;`;
+
+  // Naissance
+  const b=document.getElementById('mtl-birth');
+  b.style.cssText=`left:${lp}%;color:${col};`;
+  const bl=document.createElement('div');bl.className='mtl-label top';
+  bl.style.left=lp+'%';bl.textContent='ولادة ~'+birth+'هـ';track.appendChild(bl);
+
+  // Mort
+  const dm=document.getElementById('mtl-death-dot');
+  dm.style.cssText=`left:${rp}%;background:${col};box-shadow:0 0 6px ${col};`;
+  dm.style.position='absolute';dm.style.top='50%';dm.style.transform='translate(-50%,-50%)';
+  dm.style.width='8px';dm.style.height='8px';dm.style.borderRadius='50%';
+  const dl=document.createElement('div');dl.className='mtl-label bot';
+  dl.style.left=rp+'%';dl.textContent='وفاة '+death+'هـ';track.appendChild(dl);
+}
+
+// ── Isnad graph ───────────────────────────────────────────────────────────────
+function drawIsnad(narrator,teachers,students){
+  const cv=document.getElementById('isnad-canvas');
+  const W=cv.parentElement.clientWidth||800;
+  const H=320;
+  cv.width=W;cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='rgba(0,8,16,0)';ctx.fillRect(0,0,W,H);
+
+  const col=GC[narrator.generation]||'#c9a84c';
+
+  // Layout : colonne gauche = maîtres, centre = narrateur, droite = élèves
+  const CX=W/2,CY=H/2;
+  const nodes=[];
+
+  // Narrateur central
+  nodes.push({n:narrator,x:CX,y:CY,r:22,col,isMain:true});
+
+  // Maîtres (à gauche, en colonne)
+  const tH=Math.min(teachers.length,6);
+  teachers.slice(0,6).forEach((t,i)=>{
+    const y=CY-(tH-1)*35/2+i*35;
+    nodes.push({n:t,x:W*0.2,y,r:12,col:GC[t.generation]||'#c9a84c',isMain:false});
+  });
+
+  // Élèves (à droite)
+  const sH=Math.min(students.length,6);
+  students.slice(0,6).forEach((s,i)=>{
+    const y=CY-(sH-1)*35/2+i*35;
+    nodes.push({n:s,x:W*0.8,y,r:12,col:GC[s.generation]||'#c9a84c',isMain:false});
+  });
+
+  // Lignes maîtres → narrateur
+  teachers.slice(0,6).forEach((_,i)=>{
+    const from=nodes[1+i],to=nodes[0];
+    const g=ctx.createLinearGradient(from.x,from.y,to.x,to.y);
+    g.addColorStop(0,from.col+'44');g.addColorStop(1,to.col+'88');
+    ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);
+    ctx.strokeStyle=g;ctx.lineWidth=1;ctx.setLineDash([3,6]);ctx.stroke();ctx.setLineDash([]);
+    // Flèche
+    const ang=Math.atan2(to.y-from.y,to.x-from.x);
+    const ax=to.x-Math.cos(ang)*(to.r+4),ay=to.y-Math.sin(ang)*(to.r+4);
+    ctx.beginPath();ctx.moveTo(ax,ay);
+    ctx.lineTo(ax-8*Math.cos(ang-0.4),ay-8*Math.sin(ang-0.4));
+    ctx.lineTo(ax-8*Math.cos(ang+0.4),ay-8*Math.sin(ang+0.4));
+    ctx.closePath();ctx.fillStyle=to.col+'88';ctx.fill();
+  });
+
+  // Lignes narrateur → élèves
+  students.slice(0,6).forEach((_,i)=>{
+    const from=nodes[0],to=nodes[1+teachers.slice(0,6).length+i];
+    const g=ctx.createLinearGradient(from.x,from.y,to.x,to.y);
+    g.addColorStop(0,from.col+'88');g.addColorStop(1,to.col+'44');
+    ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);
+    ctx.strokeStyle=g;ctx.lineWidth=1;ctx.setLineDash([3,6]);ctx.stroke();ctx.setLineDash([]);
+    const ang=Math.atan2(to.y-from.y,to.x-from.x);
+    const ax=to.x-Math.cos(ang)*(to.r+4),ay=to.y-Math.sin(ang)*(to.r+4);
+    ctx.beginPath();ctx.moveTo(ax,ay);
+    ctx.lineTo(ax-8*Math.cos(ang-0.4),ay-8*Math.sin(ang-0.4));
+    ctx.lineTo(ax-8*Math.cos(ang+0.4),ay-8*Math.sin(ang+0.4));
+    ctx.closePath();ctx.fillStyle=to.col+'88';ctx.fill();
+  });
+
+  // Labels colonnes
+  ctx.font='9px Cairo,sans-serif';ctx.textAlign='center';
+  ctx.fillStyle='rgba(201,168,76,.25)';
+  if(teachers.length) ctx.fillText('الشيوخ',W*0.2,20);
+  if(students.length) ctx.fillText('التلاميذ',W*0.8,20);
+
+  // Noeuds
+  nodes.forEach(nd=>{
+    // Halo
+    const g=ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,nd.r*3);
+    g.addColorStop(0,nd.col+(nd.isMain?'44':'22'));g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.arc(nd.x,nd.y,nd.r*3,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+    // Cercle
+    ctx.beginPath();ctx.arc(nd.x,nd.y,nd.r,0,Math.PI*2);
+    ctx.fillStyle=nd.isMain?nd.col:nd.col+'55';ctx.fill();
+    if(nd.isMain){ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=1.5;ctx.stroke();}
+    // Nom
+    ctx.font=(nd.isMain?'bold 13px':'11px')+' Amiri,serif';
+    ctx.textAlign='center';
+    ctx.fillStyle=nd.isMain?'#fff':nd.col;
+    const name=nd.n.name_ar.split(' ').slice(0,2).join(' ');
+    ctx.fillText(name,nd.x,nd.y+nd.r+14);
+    if(nd.n.death_ah){
+      ctx.font='9px Cairo,sans-serif';
+      ctx.fillStyle='rgba(201,168,76,.35)';
+      ctx.fillText(nd.n.death_ah+'هـ',nd.x,nd.y+nd.r+25);
+    }
+  });
+}
+
+// ── Rijal (jugements des critiques) ──────────────────────────────────────────
+// Données encyclopédiques pour les narrateurs majeurs
+const RIJAL_DATA={
+  'أبو هريرة':[
+    {critic:'البخاري',text:'أكثر الصحابة حديثاً عن رسول الله ﷺ',grade:'ثقة'},
+    {critic:'الذهبي',text:'حافظ الصحابة',grade:'ثقة'},
+  ],
+  'عائشة بنت أبي بكر':[
+    {critic:'ابن حجر',text:'أم المؤمنين وأفقه نساء الأمة',grade:'ثقة'},
+  ],
+  'البخاري':[
+    {critic:'ابن خزيمة',text:'ما رأيت تحت أديم السماء أعلم بحديث رسول الله ﷺ من محمد بن إسماعيل',grade:'إمام'},
+    {critic:'الترمذي',text:'ما رأيت أحداً أعلم بالعلل والرجال من البخاري',grade:'إمام'},
+  ],
+  'مالك بن أنس':[
+    {critic:'الشافعي',text:'مالك حجة الله على خلقه بعد التابعين',grade:'حجة إمام'},
+    {critic:'يحيى بن معين',text:'ثقة، هو أثبت الناس في كل شيء',grade:'ثقة'},
+  ],
+  'أحمد بن حنبل':[
+    {critic:'ابن المديني',text:'ليس في أصحابنا أحفظ من أحمد',grade:'إمام حافظ'},
+    {critic:'الشافعي',text:'خرجت من بغداد وما خلفت بها أحداً أفضل ولا أعلم ولا أفقه من أحمد',grade:'إمام'},
+  ],
+};
+
+function buildRijal(narrator){
+  const list=document.getElementById('rijal-list');
+  const data=RIJAL_DATA[narrator.name_ar]||[];
+
+  // Toujours afficher le jugement general (reliability)
+  if(narrator.reliability){
+    const card=document.createElement('div');card.className='rijal-card';
+    card.innerHTML=`
+      <div class="rijal-name">الحكم العام</div>
+      <div class="rijal-text">${narrator.reliability}</div>
+      <span class="rijal-grade" style="background:rgba(122,245,192,.08);border:0.5px solid rgba(122,245,192,.2);color:#7af5c0">${narrator.reliability}</span>
+    `;
+    list.appendChild(card);
+  }
+
+  data.forEach(r=>{
+    const card=document.createElement('div');card.className='rijal-card';
+    card.innerHTML=`
+      <div class="rijal-name">${r.critic}</div>
+      <div class="rijal-text">"${r.text}"</div>
+      <span class="rijal-grade" style="background:rgba(122,245,192,.08);border:0.5px solid rgba(122,245,192,.2);color:#7af5c0">${r.grade}</span>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// ── MAIN ─────────────────────────────────────────────────────────────────────
+async function main(){
+  initBg();
+
+  const params=new URLSearchParams(location.search);
+  const id=params.get('id');
+  if(!id){showNotFound();return;}
+
+  // Charger toutes les données en parallèle
+  const [narData,transData,hadithData,allNar]=await Promise.all([
+    sbGet('narrators',`select=*&id=eq.${id}`),
+    sbGet('transmissions',`select=*&or=(teacher_id.eq.${id},student_id.eq.${id})`),
+    sbGet('hadiths',`select=*&narrator_id=eq.${id}&limit=30`),
+    sbGet('narrators','select=id,name_ar,generation,death_ah&limit=500'),
+  ]);
+
+  if(!narData||!narData[0]){showNotFound();return;}
+  const n=narData[0];
+  const col=GC[n.generation]||'#c9a84c';
+
+  // Construire maps
+  const narMap={};(allNar||[]).forEach(x=>narMap[x.id]=x);
+
+  const teacherIds=(transData||[]).filter(t=>t.student_id==id).map(t=>t.teacher_id);
+  const studentIds=(transData||[]).filter(t=>t.teacher_id==id).map(t=>t.student_id);
+  const teachers=teacherIds.map(i=>narMap[i]).filter(Boolean);
+  const students=studentIds.map(i=>narMap[i]).filter(Boolean);
+
+  // Mettre à jour le titre de la page
+  document.title='سماء الحديث · '+n.name_ar;
+
+  // ── HERO ──
+  const colls=Array.isArray(n.collections)?n.collections:(n.collections?JSON.parse(n.collections):[]);
+  document.getElementById('hero-star').innerHTML=`<svg viewBox="0 0 24 24" width="36" height="36" fill="${col}"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+  document.getElementById('hero-star').style.color=col;
+  document.getElementById('hero-gen').textContent=GL[n.generation]||n.generation;
+  document.getElementById('hero-gen').style.color=col;
+  document.getElementById('hero-name').textContent=n.name_ar;
+  document.getElementById('hero-name').style.color=col;
+  document.getElementById('hero-latin').textContent=n.name_latin||'';
+  const tags=[...(n.origin?[n.origin]:[]),...colls.slice(0,3)];
+  document.getElementById('hero-tags').innerHTML=tags.map(t=>`<span class="htag">${t}</span>`).join('');
+  document.getElementById('hero').style.display='flex';
+  document.getElementById('hero').style.borderColor=col+'44';
+
+  // ── STATS ──
+  document.getElementById('st-hadiths').textContent=(n.hadith_count||0).toLocaleString();
+  document.getElementById('st-death').textContent=n.death_ah?n.death_ah+' هـ':'—';
+  document.getElementById('st-teachers').textContent=teachers.length;
+  document.getElementById('st-students').textContent=students.length;
+  document.getElementById('stats').style.display='grid';
+
+  // ── MINI TIMELINE ──
+  document.getElementById('sec-tl').style.display='block';
+  drawMiniTimeline(n,col);
+
+  // ── MAP ──
+  const coords=getCoords(n.origin);
+  if(coords){
+    document.getElementById('sec-map').style.display='block';
+    setTimeout(()=>drawMap(coords,n.origin),100);
+  }
+
+  // ── ISNAD GRAPH ──
+  if(teachers.length||students.length){
+    document.getElementById('sec-isnad').style.display='block';
+    setTimeout(()=>drawIsnad(n,teachers,students),100);
+  }
+
+  // ── HADITHS ──
+  if(hadithData&&hadithData.length>0){
+    document.getElementById('sec-hadiths').style.display='block';
+    const list=document.getElementById('hadiths-list');
+    list.innerHTML=hadithData.map(h=>{
+      const gradeClass=h.chapter?.includes('صحيح')?'hadith-grade-sahih':h.chapter?.includes('حسن')?'hadith-grade-hasan':'';
+      return `<div class="hadith-item">
+        <div class="hadith-text">${h.text_ar}</div>
+        <div class="hadith-meta">
+          ${h.collection?`<span class="hadith-tag">${h.collection}</span>`:''}
+          ${h.chapter?`<span class="hadith-tag ${gradeClass}">${h.chapter}</span>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── RIJAL ──
+  document.getElementById('sec-rijal').style.display='block';
+  buildRijal(n);
+
+  // Masquer loading
+  const ld=document.getElementById('loading');
+  ld.style.opacity='0';
+  setTimeout(()=>ld.style.display='none',600);
+}
+
+function showNotFound(){
+  document.getElementById('loading').style.display='none';
+  document.getElementById('notfound').style.display='block';
+}
+
+main().catch(e=>{console.error(e);showNotFound();});
+</script>
+</body>
+</html>
