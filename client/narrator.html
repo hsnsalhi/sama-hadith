@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سماء الحديث · بطاقة الراوي</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="loading">
+  <h2>سماء الحديث</h2>
+  <p>جارٍ تحميل بيانات الراوي...</p>
+  <div class="load-dots">
+    <div class="load-dot"></div>
+    <div class="load-dot"></div>
+    <div class="load-dot"></div>
+  </div>
+</div>
+
+<div id="stars-bg"><canvas id="bg-c"></canvas></div>
+
+<div id="page">
+
+  <a id="back" href="index.html">
+    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    العودة إلى سماء الحديث
+  </a>
+
+  <div id="notfound">
+    <h2>راوٍ غير موجود</h2>
+    <p style="opacity:.4;margin-top:8px">لم يتم العثور على هذا الراوي في قاعدة البيانات</p>
+  </div>
+
+  <div id="hero" style="display:none">
+    <div id="hero-star">⭐</div>
+    <div id="hero-info">
+      <div id="hero-gen"></div>
+      <div id="hero-name"></div>
+      <div id="hero-latin"></div>
+      <div id="hero-tags"></div>
+    </div>
+  </div>
+
+  <div id="stats" style="display:none">
+    <div class="stat-card"><div class="stat-val" id="st-hadiths">—</div><div class="stat-lbl">عدد الأحاديث</div></div>
+    <div class="stat-card"><div class="stat-val" id="st-death">—</div><div class="stat-lbl">سنة الوفاة</div></div>
+    <div class="stat-card"><div class="stat-val" id="st-teachers">—</div><div class="stat-lbl">شيوخه</div></div>
+    <div class="stat-card"><div class="stat-val" id="st-students">—</div><div class="stat-lbl">تلاميذه</div></div>
+  </div>
+
+  <div class="section" id="sec-tl" style="display:none">
+    <div class="section-title">الحقبة الزمنية</div>
+    <div class="card">
+      <div id="mini-tl">
+        <div id="mtl-line"></div>
+        <div id="mtl-life"></div>
+        <div id="mtl-birth"></div>
+        <div id="mtl-death-dot"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;opacity:.35">
+        <span>1 هـ</span><span>100 هـ</span><span>200 هـ</span><span>300 هـ</span><span>400 هـ</span><span>600 هـ</span><span>900 هـ</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="sec-map" style="display:none">
+    <div class="section-title">الموقع الجغرافي</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div id="geo-map">
+        <canvas id="map-c"></canvas>
+        <div id="geo-map-label"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="sec-isnad" style="display:none">
+    <div class="section-title">شبكة الإسناد</div>
+    <div class="card" style="padding:12px;">
+      <canvas id="isnad-canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="section" id="sec-hadiths" style="display:none">
+    <div class="section-title">أحاديثه</div>
+    <div class="card" id="hadiths-list"></div>
+  </div>
+
+  <div class="section" id="sec-rijal" style="display:none">
+    <div class="section-title">أقوال علماء الرجال</div>
+    <div id="rijal-list"></div>
+  </div>
+
+</div>
+
+<script type="module" src="/src/narrator/main.js"></script>
+</body>
+</html>

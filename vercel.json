@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "index.html", "use": "@vercel/static" }
-  ],
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/dist",
   "routes": [
+    { "src": "/narrator(\\.html)?", "dest": "/narrator.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سماء الحديث · ثلاثي الأبعاد</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="ld">
+  <h2>سماء الحديث</h2>
+  <p>SAMA AL-HADITH · ثلاثي الأبعاد</p>
+  <div class="lbw"><div class="lbf" id="lbf"></div></div>
+  <div id="lst">جارٍ التحميل...</div>
+</div>
+
+<div id="c"></div>
+
+<div id="hdr">
+  <div id="hdr-left">
+    <h1>سماء الحديث</h1>
+    <p>SAMA AL-HADITH · 3D</p>
+  </div>
+  <div style="display:flex;">
+    <div class="hstat"><div class="hv" id="stn">—</div><div class="hl">ناقل</div></div>
+    <div class="hstat"><div class="hv" id="stl">—</div><div class="hl">سند</div></div>
+  </div>
+</div>
+
+<div id="sw">
+  <input id="si" type="text" placeholder="ابحث عن راوٍ..." autocomplete="off">
+  <div id="sr"></div>
+</div>
+
+<div id="vtoggle">
+  <div class="vb on" id="vb3d">3D</div>
+  <div class="vb" id="vb2d">2D</div>
+</div>
+
+<div id="panel">
+  <div id="pcl">✕</div>
+  <div id="ph">
+    <div id="pg"><span class="pdot" id="pdot"></span><span id="pgt"></span></div>
+    <div id="pn"></div>
+    <div id="pl"></div>
+  </div>
+  <div id="pb"></div>
+</div>
+
+<div id="leg">
+  <div class="li"><div class="ld" style="background:var(--sahabi);box-shadow:0 0 5px var(--sahabi)"></div><span class="ll">الصحابة</span></div>
+  <div class="li"><div class="ld" style="background:var(--tabii);box-shadow:0 0 5px var(--tabii)"></div><span class="ll">التابعون</span></div>
+  <div class="li"><div class="ld" style="background:var(--muhaddith);box-shadow:0 0 5px var(--muhaddith)"></div><span class="ll">المحدثون</span></div>
+  <div class="li"><div class="ld" style="background:var(--rijal);box-shadow:0 0 5px var(--rijal)"></div><span class="ll">علماء الرجال</span></div>
+</div>
+
+<div id="geo-axis">
+  <div id="geo-axis-title">الموقع الجغرافي</div>
+  <div id="geo-track">
+    <div id="geo-highlight"></div>
+    <div id="geo-cursor"></div>
+  </div>
+</div>
+
+<div id="zc">
+  <button class="zb">+</button>
+  <div id="zv">100%</div>
+  <button class="zb">−</button>
+  <button class="zb" style="font-size:12px;margin-top:3px;">↺</button>
+</div>
+
+<div id="ctrl">
+  <button class="cb on" id="ba">الكل</button>
+  <div class="csep"></div>
+  <button class="cb" id="bs">الصحابة</button>
+  <button class="cb" id="bt">التابعون</button>
+  <button class="cb" id="bm">المحدثون</button>
+  <button class="cb" id="br">علماء الرجال</button>
+  <div class="csep"></div>
+  <button class="cb" id="bauto">⟳ دوران</button>
+</div>
+
+<div id="hint"><p>سحب أيسر للتحريك · سحب أيمن / Ctrl للتدوير · عجلة للتكبير · نقر على نجمة للتفاصيل</p></div>
+<div id="tt"><div id="ttn"></div><div id="tts"></div></div>
+
+<div id="tl-wrap">
+  <div id="tl-track">
+    <div id="tl-bg"></div>
+    <div id="tl-eras"></div>
+    <div id="tl-highlight"></div>
+    <div id="tl-hl-label">
+      <span id="tl-hl-name"></span>
+      <span id="tl-hl-dates"></span>
+    </div>
+    <div id="tl-cursor"></div>
+    <div id="tl-year-tip"></div>
+  </div>
+  <div id="tl-labels"></div>
+</div>
+
+<script type="module" src="/src/index/main.js"></script>
+</body>
+</html>

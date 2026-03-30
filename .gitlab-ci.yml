@@ -1,8 +1,10 @@
+image: node:20-alpine
+
 pages:
   stage: deploy
   script:
-    - mkdir -p public
-    - cp index.html public/index.html
+    - cd client && npm ci && npm run build
+    - mv dist ../public
   artifacts:
     paths:
       - public
