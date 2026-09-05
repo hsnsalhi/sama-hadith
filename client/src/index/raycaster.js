@@ -49,7 +49,6 @@ export function handleClick(e, prevX, prevY) {
   if (hits.length) {
     const n = state.narrators.find(x => x.id === state.idxMap[hits[0].index]);
     if (n) openPanel(n);
-  } else if (!document.getElementById('panel').contains(e.target)) {
-    closePanel();
   }
+  // Don't close panel on empty clicks — user must click the ✕ button to deselect
 }
