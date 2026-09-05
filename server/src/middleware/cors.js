@@ -2,6 +2,6 @@ import cors from 'cors';
 import { config } from '../config.js';
 
 export const corsMiddleware = cors({
-  origin: config.clientOrigin,
+  origin: config.clientOrigins,
   methods: ['GET'],
 });
