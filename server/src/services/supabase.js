@@ -73,3 +73,28 @@ export async function getNarratorsLite({ limit = 500 } = {}) {
   if (error) throw error;
   return data;
 }
+
+/** All transmissions where either endpoint belongs to `ids` (paginated). */
+export async function getTransmissionsAmong(ids) {
+  const out = [];
+  const CHUNK = 500;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    for (const col of ['teacher_id', 'student_id']) {
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from('transmissions')
+          .select('*')
+          .in(col, ids.slice(i, i + CHUNK))
+          .order('id', { ascending: true })
+          .range(from, from + 999);
+        if (error) throw error;
+        out.push(...data);
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+    }
+  }
+  const seen = new Set();
+  return out.filter(t => (seen.has(t.id) ? false : (seen.add(t.id), true)));
+}

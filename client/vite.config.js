@@ -3,6 +3,8 @@ import glsl from 'vite-plugin-glsl';
 import { resolve } from 'path';
 
 export default defineConfig({
+  // Sub-path when hosted on GitHub Pages (e.g. /sama-hadith/), "/" elsewhere
+  base: process.env.VITE_BASE || '/',
   plugins: [glsl()],
   build: {
     rollupOptions: {

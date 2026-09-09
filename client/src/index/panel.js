@@ -3,6 +3,7 @@ import { GCS, GL } from '../lib/constants.js';
 import { buildSelLines, flyTo } from './selection.js';
 import { updateTimeline } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
+import { getHadiths } from '../lib/api.js';
 
 export function openPanel(n) {
   state.selId = n.id;
@@ -36,6 +37,9 @@ export function openPanel(n) {
     ${nh.length ? `<div class="ps"><div class="pst">أحاديثه</div>${nh.map(h => `<div class="hc"><div class="ht">${h.text_ar}</div><div class="hm">${h.collection || ''}${h.chapter ? ' - ' + h.chapter : ''}</div></div>`).join('')}</div>` : ''}
   `;
 
+  // Hadiths not in the preloaded sample: load them for this narrator
+  if (!nh.length) loadPanelHadiths(n.id);
+
   // Bind click events on narrator items
   document.getElementById('pb').querySelectorAll('.pl-item[data-narrator-id]').forEach(el => {
     el.addEventListener('click', () => {
@@ -48,6 +52,19 @@ export function openPanel(n) {
   updateTimeline(n);
   updateGeoAxis(n);
   flyTo(n);
+}
+
+async function loadPanelHadiths(id) {
+  try {
+    const rows = await getHadiths({ narratorId: id, limit: 30 });
+    if (!rows.length || state.selId !== id) return;
+    const div = document.createElement('div');
+    div.className = 'ps';
+    div.innerHTML = `<div class="pst">أحاديثه</div>${rows.map(h => `<div class="hc"><div class="ht">${h.text_ar}</div><div class="hm">${h.collection || ''}${h.chapter ? ' - ' + h.chapter : ''}</div></div>`).join('')}`;
+    document.getElementById('pb').appendChild(div);
+  } catch (e) {
+    console.warn('hadiths load failed', e);
+  }
 }
 
 export function closePanel() {
