@@ -7,7 +7,7 @@ export function buildSelLines(narratorId) {
     state.scene.remove(state.selLines);
     state.selLines.geometry.dispose();
   }
-  const sel = state.narrators.find(n => n.id === narratorId);
+  const sel = state.narById.get(narratorId);
   if (!sel) return;
   const sp = state.posMap[sel.id];
   if (!sp) return;
@@ -17,8 +17,8 @@ export function buildSelLines(narratorId) {
 
   state.transmissions.forEach(t => {
     let other = null;
-    if (t.teacher_id === narratorId) other = state.narrators.find(n => n.id === t.student_id);
-    else if (t.student_id === narratorId) other = state.narrators.find(n => n.id === t.teacher_id);
+    if (t.teacher_id === narratorId) other = state.narById.get(t.student_id);
+    else if (t.student_id === narratorId) other = state.narById.get(t.teacher_id);
     if (!other || !state.posMap[other.id]) return;
     const op = state.posMap[other.id];
     pts.push(sp.x, sp.y, sp.z, op.x, op.y, op.z);

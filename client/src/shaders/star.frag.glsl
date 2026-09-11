@@ -1,8 +1,10 @@
 varying vec3 vColor;
 varying float vIdx;
+varying float vHi;
 uniform float uSelected;
 uniform float uHovered;
 uniform float uTime;
+uniform float uDim; // 1.0 while a hadith path is shown: everything else fades
 
 void main() {
   vec2 uv = gl_PointCoord - 0.5;
@@ -11,6 +13,7 @@ void main() {
 
   bool isSel = vIdx == uSelected;
   bool isHov = vIdx == uHovered;
+  bool isHi = vHi > 0.5;
 
   // Multi-layer bloom
   float core = 1.0 - smoothstep(0.0, 0.10, d);
@@ -28,11 +31,11 @@ void main() {
   spike += max(0.0, 1.0 - diag1 * (spikeScale * 1.4)) * max(0.0, 1.0 - diag2 * 1.5) * 0.4;
   spike += max(0.0, 1.0 - diag2 * (spikeScale * 1.4)) * max(0.0, 1.0 - diag1 * 1.5) * 0.4;
 
-  // Pulsing ring when selected
+  // Pulsing ring when selected or on the hadith path
   float ring = 0.0;
-  if (isSel) {
+  if (isSel || isHi) {
     float rd = abs(d - 0.38);
-    ring = max(0.0, 1.0 - rd * 30.0) * 0.5 * (0.7 + 0.3 * sin(uTime * 4.0));
+    ring = max(0.0, 1.0 - rd * 30.0) * 0.5 * (0.7 + 0.3 * sin(uTime * 4.0 + vIdx));
   }
 
   vec3 white = vec3(1.0, 0.97, 0.9);
@@ -41,7 +44,8 @@ void main() {
 
   float alpha = core + mid * 0.55 + outer * 0.2 + bloom * 0.4 + spike * 0.55 + ring;
   alpha = clamp(alpha, 0.0, 1.0);
-  if (isSel || isHov) alpha = min(alpha * 1.5, 1.0);
+  if (isSel || isHov || isHi) alpha = min(alpha * 1.5, 1.0);
+  if (!isHi && !isSel && !isHov) alpha *= mix(1.0, 0.12, uDim);
 
   gl_FragColor = vec4(col, alpha);
 }

@@ -2,14 +2,17 @@
   "name": "sama-hadith",
   "private": true,
   "type": "module",
-  "engines": { "node": "22.x" },
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
-    "build": "cd client && npm run build",
+    "build": "npm run build:data && cd client && npm run build",
     "start": "cd server && npm start",
-    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build:data": "node server/scripts/build-dataset.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",

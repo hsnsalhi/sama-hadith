@@ -1,13 +1,16 @@
 import { state } from './state.js';
 import { GCS, GL } from '../lib/constants.js';
 import { openPanel } from './panel.js';
+import { isHadithMode, runHadithSearch } from './hadith-mode.js';
 
 export function initSearch() {
   const si = document.getElementById('si');
   const sr = document.getElementById('sr');
 
+  let timer = null;
   si.addEventListener('input', () => {
     const q = si.value.trim();
+    if (isHadithMode()) { clearTimeout(timer); timer = setTimeout(() => runHadithSearch(q), 180); return; }
     if (!q) { sr.style.display = 'none'; return; }
 
     const res = state.narrators

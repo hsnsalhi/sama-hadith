@@ -52,9 +52,9 @@ export function buildTimeline() {
 
   // Dots
   track.querySelectorAll('.tl-dot').forEach(d => d.remove());
-  const vis = state.narrators.filter(n => state.filter === 'all' || n.generation === state.filter);
+  const vis = state.narrators.filter(n => (state.filter === 'all' || n.generation === state.filter) && n.death_ah)
+    .sort((a, b) => (b.hadith_count || 0) - (a.hadith_count || 0)).slice(0, 600);
   vis.forEach(n => {
-    if (!n.death_ah) return;
     const dot = document.createElement('div');
     dot.className = 'tl-dot';
     dot.style.cssText = `left:${tlPct(n.death_ah)}%;background:${GCS[n.generation]};box-shadow:0 0 3px ${GCS[n.generation]};`;
@@ -141,4 +141,18 @@ export function updateTimeline(narrator) {
   const birthStr = birthEst ? `${Math.max(0, birthEst)} هـ` : '؟';
   const deathStr = narrator.death_ah ? `${narrator.death_ah} هـ` : '؟';
   hlDates.textContent = `${birthStr} — ${deathStr}`;
+}
+
+/** Highlight a year range (used by the hadith path). Pass null to hide. */
+export function updateTimelineRange(start, end, label, col = '#f0d080') {
+  const hl = document.getElementById('tl-highlight');
+  const hlLabel = document.getElementById('tl-hl-label');
+  if (start == null) { hl.style.opacity = '0'; hlLabel.style.opacity = '0'; return; }
+  const l = tlPct(start), r = tlPct(end);
+  hl.style.left = l + '%'; hl.style.width = Math.max(0.6, r - l) + '%';
+  hl.style.background = col; hl.style.boxShadow = `0 0 14px ${col}, 0 0 28px ${col}44`; hl.style.opacity = '1';
+  hlLabel.style.left = (l + (r - l) / 2) + '%'; hlLabel.style.opacity = '1';
+  const name = document.getElementById('tl-hl-name'), dates = document.getElementById('tl-hl-dates');
+  name.textContent = label || ''; name.style.color = col; name.style.textShadow = `0 0 10px ${col}`;
+  dates.textContent = `${start} — ${end} هـ`;
 }

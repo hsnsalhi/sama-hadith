@@ -8,8 +8,9 @@ import { buildGeoAxis } from './geo-axis.js';
 import { initSearch } from './search.js';
 import { initFilters } from './filters.js';
 import { doZoom, resetCam } from './controls.js';
-import { closePanel } from './panel.js';
-import { getNarrators, getTransmissions, getHadiths } from '../lib/api.js';
+import { closePanel, bindHadithApi } from './panel.js';
+import { initHadithMode, updatePathLabels, openHadith, clearPath, backToHadith } from './hadith-mode.js';
+import { getNarrators, getTransmissions, getManifest } from '../lib/api.js';
 
 function setLS(m, p) {
   document.getElementById('lst').textContent = m;
@@ -37,19 +38,23 @@ function animate() {
   if (state.starPoints) state.starPoints.material.uniforms.uTime.value = t;
 
   updateLabels();
+  updatePathLabels();
   state.renderer.render(state.scene, state.camera);
 }
 
 async function loadData() {
   setLS('تحميل الرواة...', 20);
+  const manifest = await getManifest();
   state.narrators = await getNarrators();
+  state.narById = new Map(state.narrators.map(n => [n.id, n]));
   setLS('تحميل الأسانيد...', 55);
   state.transmissions = await getTransmissions();
-  setLS('تحميل الأحاديث...', 80);
-  state.hadiths = await getHadiths();
+  setLS('تجهيز فهرس الأحاديث...', 80);
+  await initHadithMode();
 
-  document.getElementById('stn').textContent = state.narrators.length;
-  document.getElementById('stl').textContent = state.transmissions.length;
+  document.getElementById('stn').textContent = state.narrators.length.toLocaleString('ar-EG');
+  document.getElementById('stl').textContent = state.transmissions.length.toLocaleString('ar-EG');
+  document.getElementById('sth').textContent = (manifest.hadiths_with_isnad || manifest.hadiths).toLocaleString('ar-EG');
 
   setLS('بناء الكون ثلاثي الأبعاد...', 92);
   await new Promise(r => setTimeout(r, 300));
@@ -61,6 +66,10 @@ async function loadData() {
 
   setLS('جاهز', 100);
   await new Promise(r => setTimeout(r, 400));
+
+  // deep link: index.html?hadith=bukhari:1
+  const hid = new URLSearchParams(location.search).get('hadith');
+  if (hid) { document.querySelector('#sw-tabs .swt[data-m="hadith"]')?.click(); openHadith(hid); }
 
   const ld = document.getElementById('ld');
   ld.style.opacity = '0';
@@ -81,6 +90,7 @@ function init() {
 
   // Close panel
   document.getElementById('pcl').addEventListener('click', closePanel);
+  bindHadithApi({ openHadith, clearPath, backToHadith });
 
   animate();
   loadData();

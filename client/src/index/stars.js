@@ -51,9 +51,11 @@ export function buildStars() {
   const positions = new Float32Array(vis.length * 3);
   const colors = new Float32Array(vis.length * 3);
   const sizes = new Float32Array(vis.length);
+  const hi = new Float32Array(vis.length);
 
   state.idxMap = {};
   state.posMap = {};
+  state.indexOfId = {};
 
   vis.forEach((n, i) => {
     const p = getPos(n);
@@ -62,6 +64,8 @@ export function buildStars() {
     positions[i * 3 + 2] = p.z;
     state.posMap[n.id] = p;
     state.idxMap[i] = n.id;
+    state.indexOfId[n.id] = i;
+    if (state.pathIds && state.pathIds.has(n.id)) hi[i] = 1;
     const c = new THREE.Color(GC_HEX[n.generation] || 0xc9a84c);
     colors[i * 3] = c.r;
     colors[i * 3 + 1] = c.g;
@@ -72,12 +76,14 @@ export function buildStars() {
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geo.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
   geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+  geo.setAttribute('aHi', new THREE.BufferAttribute(hi, 1));
 
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uSelected: { value: -1 },
       uHovered: { value: -1 },
+      uDim: { value: state.pathIds ? 1 : 0 },
     },
     vertexShader,
     fragmentShader,
@@ -88,4 +94,21 @@ export function buildStars() {
 
   state.starPoints = new THREE.Points(geo, mat);
   state.scene.add(state.starPoints);
+}
+
+/** Mark the given narrator ids as highlighted (hadith path) and dim the rest. */
+export function setHighlight(ids) {
+  state.pathIds = ids && ids.size ? ids : null;
+  if (!state.starPoints) return;
+  const attr = state.starPoints.geometry.getAttribute('aHi');
+  const arr = attr.array;
+  arr.fill(0);
+  if (state.pathIds) for (const id of state.pathIds) { const i = state.indexOfId[id]; if (i !== undefined) arr[i] = 1; }
+  attr.needsUpdate = true;
+  state.starPoints.material.uniforms.uDim.value = state.pathIds ? 1 : 0;
+}
+
+/** World position of a narrator even when filtered out of the sky. */
+export function positionOf(n) {
+  return state.posMap[n.id] || getPos(n);
 }

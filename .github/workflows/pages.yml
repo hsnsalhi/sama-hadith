@@ -31,11 +31,14 @@ jobs:
       - name: Install
         run: npm ci && (cd client && npm ci)
 
-      - name: Export database snapshot
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: node server/scripts/export-static.js
+      - name: Cache hadith source editions
+        uses: actions/cache@v4
+        with:
+          path: .cache/hadith-api
+          key: hadith-api-editions-v1
+
+      - name: Build dataset (isnad graphs, narrators, transmissions)
+        run: node server/scripts/build-dataset.js
 
       - name: Build client (static data mode)
         env:

@@ -17,11 +17,11 @@ export function handleMouseMove(e) {
     const nid = state.idxMap[idx];
     state.hovId = nid;
     state.starPoints.material.uniforms.uHovered.value = idx;
-    const n = state.narrators.find(x => x.id === nid);
+    const n = state.narById.get(nid);
     if (n) {
       document.getElementById('ttn').textContent = n.name_ar;
       document.getElementById('tts').textContent =
-        (n.death_ah || '?') + ' هـ - ' + (GL[n.generation] || n.generation) + (n.origin ? ' - ' + n.origin : '');
+        (n.death_ah || '?') + (n.death_estimated ? '~' : '') + ' هـ - ' + (GL[n.generation] || n.generation) + (n.origin ? ' - ' + n.origin : '');
       tt.style.display = 'block';
       tt.style.left = (e.clientX + 12) + 'px';
       tt.style.top = (e.clientY - 8) + 'px';
@@ -47,7 +47,7 @@ export function handleClick(e, prevX, prevY) {
   const hits = state.raycaster.intersectObject(state.starPoints);
 
   if (hits.length) {
-    const n = state.narrators.find(x => x.id === state.idxMap[hits[0].index]);
+    const n = state.narById.get(state.idxMap[hits[0].index]);
     if (n) openPanel(n);
   }
   // Don't close panel on empty clicks — user must click the ✕ button to deselect
