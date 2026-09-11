@@ -1,5 +1,5 @@
 import '../styles/narrator.css';
-import { GCS, GL } from '../lib/constants.js';
+import { GCS, GL, kindOf } from '../lib/constants.js';
 import { getCoords } from '../lib/utils.js';
 import { getNarratorById, getTransmissionsByNarrator, getHadith, getNarratorMap, getHadithRowsByNarrator } from '../lib/api.js';
 
@@ -101,7 +101,7 @@ async function main() {
         <details class="hgroup" ${i === 0 ? 'open' : ''}><summary>${name} <span>${ar(rows.length)}</span></summary>
         ${rows.map(r => `<div class="hadith-item" data-h="${r.id}">
             <div class="hadith-text hadith-snippet">${r.snippet ? r.snippet + '…' : '<i>النص غير متوفر في المصدر</i>'}</div>
-            <div class="hadith-meta"><span class="hadith-tag">${name} ${ar(r.num)}</span><span class="hadith-tag">${ar(r.chain)} رواة</span><a class="hadith-tag hadith-go" href="index.html?hadith=${encodeURIComponent(r.id)}">مسار الإسناد ↗</a></div>
+            <div class="hadith-meta"><span class="hadith-tag">${name} ${ar(r.num)}</span>${kindOf(r.kind) ? `<span class="hadith-tag" style="color:${kindOf(r.kind).col}" title="${kindOf(r.kind).title}">${kindOf(r.kind).label}</span>` : ''}<span class="hadith-tag">${ar(r.chain)} رواة</span><a class="hadith-tag hadith-go" href="index.html?hadith=${encodeURIComponent(r.id)}">مسار الإسناد ↗</a></div>
           </div>`).join('')}
         </details>`).join('');
       list.querySelectorAll('.hadith-item[data-h]').forEach(el => el.addEventListener('click', async e => {

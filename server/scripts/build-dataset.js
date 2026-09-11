@@ -377,6 +377,28 @@ function dateAndClassify(hadiths, ents) {
   }
 }
 
+// ── 7b. Kind of report (classical terminology) ──────────────────────────────
+// marfu  : the chain ends at the Prophet ﷺ
+// mawquf : it stops at a companion (his word or deed)
+// maqtu  : it stops at a successor (tabi'i)
+// balagh : "بلغه أنّ…" — a report reaching the compiler without chain (Muwatta)
+// ray    : opinion / later narrator's statement
+const BALAGH_RE = /^(?:،\s*)?(?:انه بلغه|بلغه ان|بلغني|بلغنا|انه سمع من يقول|انه سمع اهل العلم)/;
+function classify(h, ents) {
+  const g = h.graph;
+  if (h.noText) return null;
+  if (g.reachesProphet) return 'marfu';
+  const matn = cleanName(h.matn_ar.slice(0, 60));
+  if (BALAGH_RE.test(matn)) return 'balagh';
+  const hasTeacher = new Set(g.edges.map(e => e.student));
+  const leaves = [...g.nodes.keys()].filter(k => !hasTeacher.has(k));
+  const gens = leaves.map(k => ents.get(k)?.gen).filter(Boolean);
+  if (gens.includes('sahabi')) return 'mawquf';
+  if (gens.includes('tabii')) return 'maqtu';
+  return 'ray';
+}
+const KIND_CODE = { marfu: 0, mawquf: 1, maqtu: 2, balagh: 3, ray: 4 };
+
 // ── 8/9. Assemble & write ───────────────────────────────────────────────────
 
 async function writeJson(rel, data) {
@@ -403,6 +425,15 @@ async function main() {
   const res = resolveNames(hadiths);
   log(`relatives resolved: ${res.relResolved}/${res.relTotal} · short names expanded: ${res.shortExpanded}/${res.shortTotal}`);
   const { ref, canon } = loadReferences();
+  // "الربيع بن نافع أبو توبة" and "الربيع بن نافع" are the same person: fold the kunya-suffixed form onto the base form
+  {
+    const keys = new Set();
+    for (const h of hadiths) for (const k of h.graph.nodes.keys()) keys.add(k);
+    for (const k of keys) {
+      const m = k.match(/^(.+ بن .+?) (?:ابو|ام) [^ ]+$/);
+      if (m && keys.has(m[1]) && !canon.has(k)) canon.set(k, canon.get(m[1]) || m[1]);
+    }
+  }
   // apply aliases inside the graphs so ids resolve to the canonical entity
   for (const h of hadiths) {
     const g = h.graph;
@@ -412,6 +443,26 @@ async function main() {
     for (const e of g.edges) { if (canon.has(e.student)) e.student = canon.get(e.student); if (canon.has(e.teacher)) e.teacher = canon.get(e.teacher); }
     g.edges = g.edges.filter((e, i, arr) => e.student !== e.teacher && arr.findIndex(x => x.student === e.student && x.teacher === e.teacher) === i);
     g.nodes = nodes;
+  }
+  // "… عن نافع، أنّ ابن عمر كان يصلي": the report is Ibn Umar's → attach him after the last narrator (quote link)
+  {
+    const sahabiKeys = new Set([...ref].filter(([, r]) => r.gen === 'sahabi').map(([k]) => k));
+    let attached = 0;
+    for (const h of hadiths) {
+      const g = h.graph; if (!g.edges.length || g.reachesProphet) continue;
+      const toks = cleanName(h.matn_ar.slice(0, 80)).split(' ');
+      if (toks[0] !== 'ان' && toks[0] !== 'وان') continue;
+      let found = null;
+      for (let len = 4; len >= 1; len--) { const cand = toks.slice(1, 1 + len).join(' '); const ck = canon.get(cand) || cand; if (sahabiKeys.has(ck) || sahabiKeys.has(cand)) { found = ck; break; } }
+      if (!found) continue;
+      const hasTeacher = new Set(g.edges.map(e => e.student));
+      const leaves = [...g.nodes.keys()].filter(k => !hasTeacher.has(k));
+      if (!leaves.length || leaves.includes(found) || g.nodes.has(found)) continue;
+      g.nodes.set(found, { key: found, raw: found, display: found, depth: Infinity });
+      for (const l of leaves) g.edges.push({ student: l, teacher: found, connector: 'ان', type: 'quote' });
+      attached++;
+    }
+    log(`matn subjects attached as final link (companion's deed/word): ${attached}`);
   }
   const ents = buildEntities(hadiths, ref, canon);
   dateAndClassify(hadiths, ents);
@@ -465,6 +516,7 @@ async function main() {
   const byColl = new Map();
   for (const h of loaded) (byColl.get(h.coll) || byColl.set(h.coll, []).get(h.coll)).push(h);
   let hadithsWithIsnad = 0;
+  const kindCounts = {};
   // full-text index over the whole matn: word → ordinals (position in `searchIds`), sharded by first letter
   const searchIds = [];
   const postings = new Map();
@@ -489,8 +541,10 @@ async function main() {
         if (g.edges.length) hadithsWithIsnad++;
         const hasTeacher = new Set(g.edges.map(e => e.student));
         if (!h.noText) { indexWords(h, searchIds.length); searchIds.push(h.id); }
+        const kind = classify(h, ents);
+        if (kind) kindCounts[kind] = (kindCounts[kind] || 0) + 1;
         return {
-          id: h.id, coll: c.code, num: h.num, ref: h.ref, no_text: h.noText ? true : undefined,
+          id: h.id, coll: c.code, num: h.num, ref: h.ref, no_text: h.noText ? true : undefined, kind,
           section: h.ref ? { number: h.ref.book, name_en: sections[c.code]?.[String(h.ref.book)] || null } : null,
           grades: h.grades, isnad_ar: h.isnad_ar, matn_ar: h.matn_ar, text_en: h.text_en,
           isnad: {
@@ -503,7 +557,7 @@ async function main() {
         };
       });
       await writeJson(`hadiths/${c.code}/${i / CHUNK}.json`, chunk);
-      for (const h of chunk) index.push([h.id, h.num, h.no_text ? '' : displayForm(h.matn_ar).slice(0, 120), h.isnad.nodes.length, h.no_text ? 1 : 0]);
+      for (const h of chunk) index.push([h.id, h.num, h.no_text ? '' : displayForm(h.matn_ar).slice(0, 120), h.isnad.nodes.length, h.no_text ? 1 : 0, h.kind ? KIND_CODE[h.kind] : -1]);
     }
     await writeJson(`hadiths/index/${c.code}.json`, index);
   }
@@ -532,12 +586,14 @@ async function main() {
     connector_types: [...connIndex.keys()].map(connectorType),
     shards: SHARDS,
     entries_without_text: noText.map(h => h.id),
+    kinds: kindCounts, kind_codes: KIND_CODE,
     search: { letters: searchLetters, ids: searchIds.length, words: postings.size },
     narrators: narrators.length, narrators_reference_dated: refDated, narrators_dated: dated,
     transmissions: trans.size, hadiths: loaded.length, hadiths_with_text: hadiths.length, hadiths_with_isnad: hadithsWithIsnad,
     isnads_inherited_tail: inherited, isnads_inherited_head: inheritedHead, isnads_inherited_whole: inheritedAll, hadiths_without_chain: stillEmpty.length,
     relatives_resolved: res.relResolved, short_names_expanded: res.shortExpanded,
   });
+  log(`kinds: ${JSON.stringify(kindCounts)}`);
   log(`narrators ${narrators.length} (reference-dated ${refDated}, dated ${dated}) · transmissions ${trans.size} · hadiths ${loaded.length} (with text ${hadiths.length}, with isnad ${hadithsWithIsnad}) · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
 

@@ -79,6 +79,7 @@ const CONNECTORS = new Map([
   ['انبانا', 'direct'], ['انباني', 'direct'], ['انباه', 'direct'],
   ['سمعت', 'direct'], ['سمعنا', 'direct'], ['سمع', 'direct'],
   ['حدثنيه', 'direct'], ['حدثناه', 'direct'], ['اخبرنيه', 'direct'], ['اخبرناه', 'direct'], ['حدثتنيه', 'direct'], ['انبانيه', 'direct'],
+  ['حدثكم', 'direct'], ['اخبركم', 'direct'], ['حدثك', 'direct'], ['اخبرك', 'direct'], ['انباكم', 'direct'],
   ['ثنا', 'direct'], ['ثني', 'direct'],
   ['قرا', 'direct'], ['قرات', 'direct'], ['قري', 'direct'], ['كتب', 'direct'], // قرأ علينا / قرأت على / قُرئ على / كتب إليّ
   ['روي', 'quote'], ['رواه', 'quote'], ['يرويه', 'quote'], ['زاد', 'quote'], ['قال لي', 'direct'], ['قال لنا', 'direct'],
@@ -133,7 +134,8 @@ const THEOPHORIC = new Set(['عبد', 'عبيد']);
 const THEO_TAIL = new Set(['ربه', 'مناف', 'شمس', 'عمرو', 'قيس', 'يزيد', 'المطلب', 'كلال', 'ياليل', 'ود', 'مناه', 'يغوث', 'نهم', 'خير']);
 const theoComplement = w => w !== undefined && AR.test(w) && (w === 'الله' || THEO_TAIL.has(w) || (w.startsWith('ال') && !NAME_END.has(w))) && !CONNECTORS.has(w);
 const PATRONYM = new Set(['بن', 'ابن', 'بنت', 'ابنه', 'مولي']);
-const REVERSE = new Set(['اخبره', 'حدثه', 'اخبرته', 'حدثته', 'اخبرهم', 'حدثهم', 'اخبراه', 'حدثاه', 'اخبرها', 'حدثها', 'اخبرني', 'حدثني', 'اخبرنا', 'حدثنا']);
+const REVERSE = new Set(['اخبره', 'حدثه', 'اخبرته', 'حدثته', 'اخبرهم', 'حدثهم', 'اخبراه', 'حدثاه', 'اخبرها', 'حدثها', 'اخبرني', 'حدثني', 'اخبرنا', 'حدثنا', 'حدثاهم', 'اخبراهم', 'حدثوهم', 'اخبروهم', 'حدثاكم', 'حدثوه', 'اخبروه', 'انباه', 'انباهم', 'انبانا', 'انباني']);
+const FIRST_PERSON = new Set(['حدثني', 'حدثنا', 'اخبرني', 'اخبرنا', 'انباني', 'انبانا', 'حدثتني', 'اخبرتني', 'حدثتنا', 'اخبرتنا']);
 const ACCUSATIVE_CONNECTORS = new Set(['سمعت', 'سمعنا', 'سمع', 'ان']);
 const RELATIVES = new Set(['ابي', 'امي', 'جدي', 'عمي', 'خالي', 'اخي', 'ابيه', 'ابيها', 'جده', 'جدها', 'امه', 'امها', 'عمه', 'عمته', 'خاله', 'خالته', 'اخيه', 'اخته', 'مولاه', 'مولاته', 'ابنه', 'ابنته', 'زوجه', 'زوجته', 'جدته', 'اخيها']);
 
@@ -199,6 +201,7 @@ function readName(tokens, i, nameStarts, { noExtra = false } = {}) {
   let extra = 0;
   while (j < n) {
     const u = tokens[j];
+    if (u === '،' && tokens[j + 1] === 'مولي' && j + 2 < n && AR.test(tokens[j + 2]) && !connectorOf(tokens[j + 2]) && !NAME_END.has(tokens[j + 2])) { j += 1; continue; } // "ثابت، مولى عبد الرحمن"
     if (PATRONYM.has(u)) {
       const off = tokens[j + 1] === '،' && j + 2 < n && AR.test(tokens[j + 2]) && !NAME_END.has(tokens[j + 2]) && !connectorOf(tokens[j + 2]) ? 2 : 1; // "بن، نمير"
       const w = tokens[j + off];
@@ -217,8 +220,10 @@ function readName(tokens, i, nameStarts, { noExtra = false } = {}) {
       break;
     }
     if (PUNCT.test(u) || connectorOf(u) || NAME_END.has(u) || FILLERS.has(u) || REVERSE.has(u) || !AR.test(u)) break;
+    if (u === 'علي' || u === 'عليه' || u === 'عليها') break; // preposition after a name ("عمر على المنبر"); "علي" as a given name is a head, "بن علي" a patronym
     if (u[0] === 'و' && u.length > 2 && (nameStarts.has(u.slice(1)) || NAME_STARTS.has(u.slice(1)))) break; // "، وابو كريب" → sibling
     if (THEOPHORIC.has(u) && theoComplement(tokens[j + 1])) { out.push(u, tokens[j + 1]); j += 2; extra = 0; continue; } // الحميدي عبد الله …
+    if (KUNYA.has(u) && out.length >= 1 && u !== 'ام' && word(j + 1) && !REVERSE.has(tokens[j + 1]) && !KUNYA.has(tokens[j + 1])) { out.push(u === 'ابا' || u === 'ابي' ? 'ابو' : u, tokens[j + 1]); j += 2; extra = 0; continue; } // الربيع بن نافع أبو توبة، سعيد أبي شجاع
     if (u.startsWith('ال')) { out.push(u); j += 1; continue; }         // nisba / laqab
     if (extra < 1 && !noExtra) { out.push(u); j += 1; extra += 1; continue; } // one extra given word (صالح السمان …)
     break;
@@ -303,6 +308,10 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
     const t = tokens[i];
 
     if (t === 'ح') { frontier = [null]; prevFrontier = [null]; i++; continue; } // tahwil: new chain from the compiler
+    if (t === '-' && edges.length) { // "- قال زهير وكان ثقة -": aside without transmission → skip it
+      let k = i + 1; while (k < n && k < i + 12 && tokens[k] !== '-') k++;
+      if (k < n && tokens[k] === '-') { const inner = tokens.slice(i + 1, k); if (!inner.some((w, x) => connectorAt(inner, x)) && !inner.includes('يعني') && !inner.includes('هو')) { i = k + 1; continue; } }
+    }
 
     // "، هو ابن ابي كثير" / "، يعني ابن زيد" / "، يعني الثوري" → clarifies the previous name
     if ((t === 'هو' || t === 'وهو' || t === 'يعني') && lastName && nodes.has(lastName)) {
@@ -310,6 +319,7 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
       if (tokens[k] === 'ابن' && k + 1 < n && AR.test(tokens[k + 1]) && (!NAME_END.has(tokens[k + 1]) || KUNYA.has(tokens[k + 1])) && !connectorOf(tokens[k + 1])) {
         add = ['بن', tokens[k + 1]]; k += 2;
         if ((KUNYA.has(tokens[k - 1]) || THEOPHORIC.has(tokens[k - 1])) && k < n && AR.test(tokens[k])) { add.push(tokens[k]); k += 1; }
+        while (k < n && AR.test(tokens[k]) && tokens[k].startsWith('ال') && !NAME_END.has(tokens[k]) && !connectorOf(tokens[k])) { add.push(tokens[k]); k += 1; } // … بن عمرو الرقي
       }
       else if (t === 'يعني' && k < n && AR.test(tokens[k]) && !NAME_END.has(tokens[k]) && !connectorOf(tokens[k]) && !FILLERS.has(tokens[k]) && !NOT_NAME_START.has(tokens[k])) { add = [tokens[k]]; k += 1; }
       if (add) {
@@ -381,6 +391,36 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
           if (!frontier.includes(key)) frontier.push(key);
         }
         i = nm.next; continue;
+      }
+    }
+
+    // "حدثنا أبو حفص، عمر بن يزيد السياري": full name in apposition to a bare kunya → same person
+    if (edges.length && frontier.length === 1 && frontier[0] && /^ابو [^ ]+$/.test(frontier[0]) && isNameStart(t) && !connectorAt(tokens, i)) {
+      const nm = readName(tokens, i, nameStarts, { noExtra: true });
+      if (nm && nm.tokens.includes('بن')) {
+        const oldKey = frontier[0];
+        const newKey = cleanName(oldKey + ' ' + nm.tokens.join(' '));
+        if (!nodes.has(newKey)) {
+          const node = nodes.get(oldKey); nodes.delete(oldKey); node.key = newKey; node.raw += ' ' + nm.tokens.join(' '); node.display = displayForm(node.display + ' ' + spanOf(i, nm.next)); nodes.set(newKey, node);
+          for (const e of edges) { if (e.student === oldKey) e.student = newKey; if (e.teacher === oldKey) e.teacher = newKey; }
+          frontier = [newKey]; lastName = newKey;
+        }
+        i = nm.next; stop = i; continue;
+      }
+    }
+    // inverted order: "ابن خثيم حدثني عن أبي الزبير" → the frontier heard from ابن خثيم, who continues the chain
+    if (edges.length && frontier.some(f => f !== null) && isNameStart(t) && !connectorAt(tokens, i)) {
+      const nm = readName(tokens, i, nameStarts, { noExtra: true });
+      const k = nm ? skipFillers(nm.next) : -1;
+      if (nm && k < n && FIRST_PERSON.has(tokens[k])) {
+        const key0 = cleanName(nm.tokens.join(' '));
+        if (key0 && !compilerKeys.has(key0)) {
+          const key = distinctKey(key0, frontier);
+          addNode(key, nm.tokens.join(' '), displayForm(spanOf(i, nm.next)));
+          for (const s of frontier) addEdge(s, key, tokens[k]);
+          prevFrontier = frontier; frontier = [key]; lastConnector = tokens[k]; lastName = key;
+          i = k + 1; stop = i; continue; // the connector's own object follows ("… حدثني عن أبي الزبير")
+        }
       }
     }
 
@@ -482,7 +522,7 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
     }
   }
 
-  const after = tokens.slice(stop, stop + 16).join(' ');
+  const after = tokens.slice(stop, stop + 24).join(' ');
   const reachesProphet = edges.length > 0 && PROPHET.test(after);
   const isnadEnd = stop > 0 ? ends[stop - 1] : 0;                 // in `normalized`
   const cut = stop > 0 ? map[ends[stop - 1]] ?? text.length : 0;  // in `text`

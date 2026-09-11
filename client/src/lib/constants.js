@@ -83,3 +83,13 @@ export const GEO_CITIES = {
   'قرطبة': { lat: 37.9, lng: -4.7 }, 'واسط': { lat: 32.5, lng: 45.8 },
   'الموصل': { lat: 36.3, lng: 43.1 }, 'حران': { lat: 36.9, lng: 39.0 },
 };
+
+// Kind of report (classical terminology), by code used in the data
+export const KINDS = [
+  { key: 'marfu', label: 'مرفوع', title: 'ينتهي إلى النبي ﷺ', col: '#f0d080' },
+  { key: 'mawquf', label: 'موقوف', title: 'ينتهي إلى صحابي: قوله أو فعله', col: '#f5d77a' },
+  { key: 'maqtu', label: 'مقطوع', title: 'ينتهي إلى تابعي', col: '#7ab8f5' },
+  { key: 'balagh', label: 'بلاغ', title: 'بلغ المؤلِّف بلا إسناد', col: '#c07af5' },
+  { key: 'ray', label: 'رأي', title: 'قول راوٍ متأخر أو رأي فقهي', col: '#9aa' },
+];
+export const kindOf = code => KINDS[code] || null;

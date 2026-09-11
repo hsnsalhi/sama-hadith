@@ -282,3 +282,5 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 .hgroup summary span { color: rgba(201,168,76,.4); font-size: 10px; }
 #sr { max-height: 60vh; }
 canvas.tl-dots { position: absolute; inset: 0; pointer-events: none; }
+.kind { display: inline-block; font-family: 'Cairo', sans-serif; font-size: 9px; padding: 0 6px; border-radius: 8px; color: var(--k, var(--gold)); border: 0.5px solid color-mix(in srgb, var(--k, var(--gold)) 45%, transparent); background: color-mix(in srgb, var(--k, var(--gold)) 10%, transparent); vertical-align: middle; margin-right: 4px; }
+.kind.big { font-size: 11px; padding: 1px 9px; }

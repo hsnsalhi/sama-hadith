@@ -74,7 +74,7 @@ export async function getIndexRowMap() {
   if (rowMap) return rowMap;
   const lists = await getAllHadithIndexes();
   rowMap = new Map();
-  for (const { coll, rows } of lists) for (const r of rows) rowMap.set(r[0], { id: r[0], coll: coll.code, collName: coll.name_ar, num: r[1], snippet: r[2], chain: r[3], noText: !!r[4] });
+  for (const { coll, rows } of lists) for (const r of rows) rowMap.set(r[0], { id: r[0], coll: coll.code, collName: coll.name_ar, num: r[1], snippet: r[2], chain: r[3], noText: !!r[4], kind: r[5] ?? -1 });
   return rowMap;
 }
 

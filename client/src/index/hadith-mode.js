@@ -4,7 +4,7 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { state } from './state.js';
-import { GC_HEX, GCS, GL } from '../lib/constants.js';
+import { GC_HEX, GCS, GL, KINDS, kindOf } from '../lib/constants.js';
 import { setHighlight, positionOf } from './stars.js';
 import { updateTimelineRange } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
@@ -73,7 +73,7 @@ function renderResults(sr, append = false) {
   const slice = lastResults.slice(shown, shown + PAGE);
   const html = slice.map(r => `
     <div class="sri hr${r.noText ? ' notext' : ''}" data-h="${r.id}">
-      <span class="sri-c">${r.collName} <b>${toArabicDigits(r.num)}</b>${r.noText ? ' <em>النص غير متوفر</em>' : ''}</span>
+      <span class="sri-c">${r.collName} <b>${toArabicDigits(r.num)}</b>${r.noText ? ' <em>النص غير متوفر</em>' : ''}${kindOf(r.kind) ? ` <span class="kind" style="--k:${kindOf(r.kind).col}" title="${kindOf(r.kind).title}">${kindOf(r.kind).label}</span>` : ''}</span>
       <span class="sri-t">${r.snippet || '—'}</span>
       <span class="sri-k" title="عدد الرواة">${toArabicDigits(r.chain)}</span>
     </div>`).join('');
@@ -288,7 +288,8 @@ async function renderPanel(h) {
   const grades = (h.grades || []).filter(g => g.grade).map(g => `<span class="tag gr" title="${g.name}">${g.grade}</span>`).join('');
   document.getElementById('pdot').style.cssText = 'display:none';
   document.getElementById('pgt').textContent = collectionTitle(h.coll);
-  document.getElementById('pn').textContent = 'حديث رقم ' + toArabicDigits(h.num);
+  const kd = KINDS.find(k => k.key === h.kind);
+  document.getElementById('pn').innerHTML = 'حديث رقم ' + toArabicDigits(h.num) + (kd ? ` <span class="kind big" style="--k:${kd.col}" title="${kd.title}">${kd.label}</span>` : '');
   document.getElementById('pl').textContent = h.section?.name_en ? `${h.section.name_en} · كتاب ${toArabicDigits(h.section.number)}` : (h.ref ? `كتاب ${toArabicDigits(h.ref.book)} · حديث ${toArabicDigits(h.ref.hadith)}` : '');
   document.getElementById('pb').innerHTML = `
     <div class="hnav"><button id="h-prev" class="cb">‹ السابق</button><button id="h-next" class="cb">التالي ›</button></div>
