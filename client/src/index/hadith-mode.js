@@ -12,7 +12,7 @@ import { openPanel } from './panel.js';
 import { getAllHadithIndexes, getHadith, getHadithNeighbours, getManifest, getIndexRowMap, searchHadiths } from '../lib/api.js';
 
 const NUM_AR = '٠١٢٣٤٥٦٧٨٩';
-export const toArabicDigits = s => String(s).replace(/\d/g, d => NUM_AR[d]);
+export const toArabicDigits = s => String(s); // Western digits (0-9) by request
 const stripAr = s => (s || '').replace(/[ؐ-ًؚ-ٰٟۖ-ۭـ]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ى/g, 'ي').replace(/ة/g, 'ه').toLowerCase();
 
 // ── DOM: label layer for the path ──────────────────────────────────────────

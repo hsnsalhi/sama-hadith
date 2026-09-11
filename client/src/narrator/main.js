@@ -4,7 +4,7 @@ import { getCoords } from '../lib/utils.js';
 import { getNarratorById, getTransmissionsByNarrator, getHadith, getNarratorMap, getHadithRowsByNarrator } from '../lib/api.js';
 
 const NUM_AR = '٠١٢٣٤٥٦٧٨٩';
-const ar = s => String(s ?? '').replace(/\d/g, d => NUM_AR[d]);
+const ar = s => String(s ?? '');
 const COLL_NAMES = { bukhari: 'البخاري', muslim: 'مسلم', abudawud: 'أبو داود', tirmidhi: 'الترمذي', nasai: 'النسائي', ibnmajah: 'ابن ماجه', malik: 'الموطأ' };
 import { initBg } from './background.js';
 import { drawMap } from './map.js';

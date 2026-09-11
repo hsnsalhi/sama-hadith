@@ -52,9 +52,9 @@ async function loadData() {
   setLS('تجهيز فهرس الأحاديث...', 80);
   await initHadithMode();
 
-  document.getElementById('stn').textContent = state.narrators.length.toLocaleString('ar-EG');
-  document.getElementById('stl').textContent = state.transmissions.length.toLocaleString('ar-EG');
-  document.getElementById('sth').textContent = (manifest.hadiths_with_isnad || manifest.hadiths).toLocaleString('ar-EG');
+  document.getElementById('stn').textContent = state.narrators.length.toLocaleString('en-US');
+  document.getElementById('stl').textContent = state.transmissions.length.toLocaleString('en-US');
+  document.getElementById('sth').textContent = (manifest.hadiths_with_isnad || manifest.hadiths).toLocaleString('en-US');
 
   setLS('بناء الكون ثلاثي الأبعاد...', 92);
   await new Promise(r => setTimeout(r, 300));

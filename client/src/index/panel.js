@@ -6,7 +6,7 @@ import { updateGeoAxis } from './geo-axis.js';
 import { getHadithRowsByNarrator } from '../lib/api.js';
 
 const NUM_AR = '٠١٢٣٤٥٦٧٨٩';
-const ar = s => String(s ?? '').replace(/\d/g, d => NUM_AR[d]);
+const ar = s => String(s ?? '');
 const COLL_NAMES = { bukhari: 'البخاري', muslim: 'مسلم', abudawud: 'أبو داود', tirmidhi: 'الترمذي', nasai: 'النسائي', ibnmajah: 'ابن ماجه', malik: 'الموطأ' };
 
 // Lazily bound to avoid a circular import at module-evaluation time
