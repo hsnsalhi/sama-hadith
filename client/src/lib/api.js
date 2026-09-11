@@ -68,6 +68,48 @@ export async function getAllHadithIndexes() {
   return colls.map((c, i) => ({ coll: c, rows: lists[i] }));
 }
 
+/** Map hadith id → index row [id, num, snippet, chainSize, noText] across all collections. */
+let rowMap = null;
+export async function getIndexRowMap() {
+  if (rowMap) return rowMap;
+  const lists = await getAllHadithIndexes();
+  rowMap = new Map();
+  for (const { coll, rows } of lists) for (const r of rows) rowMap.set(r[0], { id: r[0], coll: coll.code, collName: coll.name_ar, num: r[1], snippet: r[2], chain: r[3], noText: !!r[4] });
+  return rowMap;
+}
+
+// ── Full-text search over the whole matn ─────────────────────────────────
+const stripAr = s => (s || '').replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ى/g, 'ي').replace(/ة/g, 'ه');
+const stem = w => w.replace(/^(?:وال|فال|بال|كال|لل|ال|و|ف|ب|ل|ك|س)(?=..)/, '').replace(/(?:ها|هم|هن|كم|كن|نا|ون|ين|ات|ان|ه|ي|ك|ت)$/, '');
+async function postingsOf(word) {
+  const m = await getManifest();
+  const key = word[0] === 'ا' && word.length > 1 ? word.slice(0, 2) : word[0];
+  const entry = (m.search?.letters || []).find(([l]) => l === key);
+  if (!entry) return null;
+  const shard = await load(`search/${entry[1]}.json`);
+  return shard[word] || null;
+}
+/**
+ * AND search: every query word (or its stem) must occur in the matn.
+ * Returns hadith ids in collection order.
+ */
+export async function searchHadiths(query) {
+  const words = stripAr(query).toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+  if (!words.length) return [];
+  const ids = await load('search/ids.json');
+  let acc = null;
+  for (const w of words) {
+    const exact = await postingsOf(w);
+    const st = stem(w);
+    const stemmed = st.length >= 2 && st !== w ? await postingsOf(st) : null;
+    const set = new Set([...(exact || []), ...(stemmed || [])]);
+    if (!set.size) return [];
+    acc = acc ? new Set([...acc].filter(o => set.has(o))) : set;
+    if (!acc.size) return [];
+  }
+  return [...acc].sort((a, b) => a - b).map(o => ids[o]);
+}
+
 export function splitHadithId(id) {
   const i = id.indexOf(':');
   return { coll: id.slice(0, i), num: id.slice(i + 1) };
@@ -99,10 +141,17 @@ export async function getHadithIdsByNarrator(narratorId) {
   return shard[String(narratorId)] || [];
 }
 
-/** Hadith records for a narrator (first `limit`), grouped fetches by chunk. */
-export async function getHadiths({ narratorId, limit = 30, offset = 0 } = {}) {
+/** Hadith records for a narrator (all by default), grouped fetches by chunk. */
+export async function getHadiths({ narratorId, limit = Infinity, offset = 0 } = {}) {
   if (!narratorId) return [];
   const ids = (await getHadithIdsByNarrator(narratorId)).slice(offset, offset + limit);
   const out = await Promise.all(ids.map(id => getHadith(id)));
   return out.filter(Boolean);
+}
+
+/** Lightweight rows (number, snippet) for every hadith of a narrator, in collection order. */
+export async function getHadithRowsByNarrator(narratorId) {
+  const [ids, rows, colls] = await Promise.all([getHadithIdsByNarrator(narratorId), getIndexRowMap(), getCollections()]);
+  const order = new Map(colls.map((c, i) => [c.code, i]));
+  return ids.map(id => rows.get(id)).filter(Boolean).sort((a, b) => (order.get(a.coll) - order.get(b.coll)) || (parseFloat(a.num) - parseFloat(b.num)));
 }

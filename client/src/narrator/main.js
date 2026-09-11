@@ -1,7 +1,7 @@
 import '../styles/narrator.css';
 import { GCS, GL } from '../lib/constants.js';
 import { getCoords } from '../lib/utils.js';
-import { getNarratorById, getTransmissionsByNarrator, getHadiths, getNarratorMap, getHadithIdsByNarrator } from '../lib/api.js';
+import { getNarratorById, getTransmissionsByNarrator, getHadith, getNarratorMap, getHadithRowsByNarrator } from '../lib/api.js';
 
 const NUM_AR = '٠١٢٣٤٥٦٧٨٩';
 const ar = s => String(s ?? '').replace(/\d/g, d => NUM_AR[d]);
@@ -25,20 +25,21 @@ async function main() {
   if (!id) { showNotFound(); return; }
 
   try {
-    const [n, transData, hadithData, narMap, hadithIds] = await Promise.all([
+    const [n, transData, hadithRows, narMap] = await Promise.all([
       getNarratorById(id),
       getTransmissionsByNarrator(id),
-      getHadiths({ narratorId: id, limit: 30 }),
+      getHadithRowsByNarrator(id),
       getNarratorMap(),
-      getHadithIdsByNarrator(id),
     ]);
+    const hadithIds = hadithRows.map(r => r.id);
 
     if (!n) { showNotFound(); return; }
     const col = GCS[n.generation] || '#c9a84c';
 
     const byWeight = (a, b) => b.count - a.count;
-    const teachers = (transData || []).filter(t => t.student_id == id).sort(byWeight).map(t => narMap.get(t.teacher_id)).filter(Boolean);
-    const students = (transData || []).filter(t => t.teacher_id == id).sort(byWeight).map(t => narMap.get(t.student_id)).filter(Boolean);
+    const teacherRows = (transData || []).filter(t => t.student_id == id).sort(byWeight).map(t => ({ n: narMap.get(t.teacher_id), w: t.count })).filter(x => x.n);
+    const studentRows = (transData || []).filter(t => t.teacher_id == id).sort(byWeight).map(t => ({ n: narMap.get(t.student_id), w: t.count })).filter(x => x.n);
+    const teachers = teacherRows.map(x => x.n), students = studentRows.map(x => x.n);
 
     document.title = 'سماء الحديث · ' + n.name_ar;
 
@@ -81,24 +82,39 @@ async function main() {
       setTimeout(() => drawIsnad(n, teachers, students), 100);
     }
 
-    // HADITHS
-    if (hadithData && hadithData.length > 0) {
+    // TEACHERS / STUDENTS — complete lists
+    const personRow = ({ n: x, w }) => `<a class="person-row" href="narrator.html?id=${x.id}"><i style="background:${GCS[x.generation] || '#c9a84c'}"></i><span class="person-name">${x.name_ar}</span><span class="person-meta">${w > 1 ? '×' + ar(w) + ' · ' : ''}${x.death_ah ? ar(x.death_ah) + ' هـ' + (x.death_estimated ? '~' : '') : ''}</span></a>`;
+    if (teacherRows.length || studentRows.length) {
+      document.getElementById('sec-people').style.display = 'block';
+      document.getElementById('teachers-list').innerHTML = teacherRows.length ? `<div class="people-title">شيوخه <span>${ar(teacherRows.length)}</span></div>` + teacherRows.map(personRow).join('') : '';
+      document.getElementById('students-list').innerHTML = studentRows.length ? `<div class="people-title">تلاميذه <span>${ar(studentRows.length)}</span></div>` + studentRows.map(personRow).join('') : '';
+    }
+
+    // HADITHS — every hadith in whose isnad the narrator appears, grouped by collection; click to load the full text
+    if (hadithRows.length) {
       document.getElementById('sec-hadiths').style.display = 'block';
+      document.querySelector('#sec-hadiths .section-title').textContent = `أحاديثه (${ar(hadithRows.length)})`;
       const list = document.getElementById('hadiths-list');
-      list.innerHTML = hadithData.map(h => {
+      const byColl = new Map();
+      for (const r of hadithRows) (byColl.get(r.collName) || byColl.set(r.collName, []).get(r.collName)).push(r);
+      list.innerHTML = [...byColl].map(([name, rows], i) => `
+        <details class="hgroup" ${i === 0 ? 'open' : ''}><summary>${name} <span>${ar(rows.length)}</span></summary>
+        ${rows.map(r => `<div class="hadith-item" data-h="${r.id}">
+            <div class="hadith-text hadith-snippet">${r.snippet ? r.snippet + '…' : '<i>النص غير متوفر في المصدر</i>'}</div>
+            <div class="hadith-meta"><span class="hadith-tag">${name} ${ar(r.num)}</span><span class="hadith-tag">${ar(r.chain)} رواة</span><a class="hadith-tag hadith-go" href="index.html?hadith=${encodeURIComponent(r.id)}">مسار الإسناد ↗</a></div>
+          </div>`).join('')}
+        </details>`).join('');
+      list.querySelectorAll('.hadith-item[data-h]').forEach(el => el.addEventListener('click', async e => {
+        if (e.target.closest('a')) return;
+        if (el.dataset.loaded) { el.classList.toggle('collapsed'); return; }
+        el.dataset.loaded = 1;
+        const h = await getHadith(el.dataset.h);
+        if (!h) return;
         const grade = (h.grades || []).find(g => g.grade)?.grade;
-        const gradeClass = grade?.includes('صحيح') || grade?.toLowerCase().includes('sahih') ? 'hadith-grade-sahih' : grade?.includes('حسن') || grade?.toLowerCase().includes('hasan') ? 'hadith-grade-hasan' : '';
-        return `<a class="hadith-item" href="index.html?hadith=${encodeURIComponent(h.id)}" title="تتبّع مسار الإسناد في السماء">
-          ${h.isnad_ar ? `<div class="hadith-isnad">${h.isnad_ar}</div>` : ''}
-          <div class="hadith-text">${h.matn_ar || ''}</div>
-          <div class="hadith-meta">
-            <span class="hadith-tag">${COLL_NAMES[h.coll] || h.coll} ${ar(h.num)}</span>
-            ${h.section?.name_en ? `<span class="hadith-tag">${h.section.name_en}</span>` : ''}
-            ${grade ? `<span class="hadith-tag ${gradeClass}">${grade}</span>` : ''}
-            <span class="hadith-tag hadith-go">مسار الإسناد ↗</span>
-          </div>
-        </a>`;
-      }).join('') + (hadithIds.length > hadithData.length ? `<div class="hadith-more">يظهر ${ar(hadithData.length)} من ${ar(hadithIds.length)} حديثاً ورد فيها هذا الراوي</div>` : '');
+        el.querySelector('.hadith-snippet').innerHTML = `${h.isnad_ar ? `<div class="hadith-isnad">${h.isnad_ar}</div>` : ''}<div>${h.matn_ar || ''}</div>${h.text_en ? `<div class="hadith-en">${h.text_en}</div>` : ''}`;
+        if (h.section?.name_en) el.querySelector('.hadith-meta').insertAdjacentHTML('afterbegin', `<span class="hadith-tag">${h.section.name_en}</span>`);
+        if (grade) el.querySelector('.hadith-meta').insertAdjacentHTML('afterbegin', `<span class="hadith-tag hadith-grade-sahih">${grade}</span>`);
+      }));
     }
 
     // RIJAL

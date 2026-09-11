@@ -21,8 +21,11 @@ npm run build          # données + client
 ```
 
 Fichiers produits : `manifest.json`, `narrators.json`, `transmissions.json` (lignes `[maître, élève, n, directs]`),
-`hadiths/index/<recueil>.json` (recherche), `hadiths/<recueil>/<bloc>.json` (200 hadiths complets avec leur graphe d'isnad),
-`narrators/h/<shard>.json` (hadiths de chaque narrateur).
+`hadiths/index/<recueil>.json` (liste + extrait), `hadiths/<recueil>/<bloc>.json` (200 hadiths complets avec leur graphe d'isnad),
+`narrators/h/<shard>.json` (hadiths de chaque narrateur), `search/<lettre>.json` (index plein texte des matns : mot → hadiths).
+
+Rien n'est tronqué : tous les narrateurs sont dans le ciel, toutes les transmissions, tous les hadiths (les 408 entrées
+sans texte dans la source sont conservées et signalées), et la recherche porte sur l'intégralité des matns.
 
 ## Option A · GitHub Pages (sans serveur)
 

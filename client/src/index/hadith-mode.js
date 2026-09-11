@@ -9,7 +9,7 @@ import { setHighlight, positionOf } from './stars.js';
 import { updateTimelineRange } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
 import { openPanel } from './panel.js';
-import { getAllHadithIndexes, getHadith, getHadithNeighbours, getManifest, splitHadithId } from '../lib/api.js';
+import { getAllHadithIndexes, getHadith, getHadithNeighbours, getManifest, getIndexRowMap, searchHadiths } from '../lib/api.js';
 
 const NUM_AR = '٠١٢٣٤٥٦٧٨٩';
 export const toArabicDigits = s => String(s).replace(/\d/g, d => NUM_AR[d]);
@@ -26,7 +26,6 @@ let labelItems = [];    // { el, pos: Vector3, kind }
 let collections = [];   // from manifest
 let connectors = [];    // connector vocabulary
 let connectorTypes = []; // direct | indirect | quote
-let flatIndex = null;   // [{id, coll, num, snippet, norm}]
 let collFilter = null;  // collection code or null
 let flyTimer = null;
 
@@ -67,52 +66,60 @@ export function setMode(mode) {
   si.focus();
 }
 
-async function ensureIndex() {
-  if (flatIndex) return flatIndex;
-  const sr = document.getElementById('sr');
-  sr.innerHTML = `<div class="sri-empty">جارٍ تحميل فهرس الأحاديث…</div>`;
+const PAGE = 100;
+let lastResults = [], shown = 0;
+
+function renderResults(sr, append = false) {
+  const slice = lastResults.slice(shown, shown + PAGE);
+  const html = slice.map(r => `
+    <div class="sri hr${r.noText ? ' notext' : ''}" data-h="${r.id}">
+      <span class="sri-c">${r.collName} <b>${toArabicDigits(r.num)}</b>${r.noText ? ' <em>النص غير متوفر</em>' : ''}</span>
+      <span class="sri-t">${r.snippet || '—'}</span>
+      <span class="sri-k" title="عدد الرواة">${toArabicDigits(r.chain)}</span>
+    </div>`).join('');
+  shown += slice.length;
+  const more = shown < lastResults.length ? `<button class="sri-more" id="sr-more">عرض المزيد (${toArabicDigits(lastResults.length - shown)} متبقية)</button>` : '';
+  if (append) { sr.querySelector('#sr-more')?.remove(); sr.insertAdjacentHTML('beforeend', html + more); }
+  else sr.innerHTML = `<div class="sri-count">${toArabicDigits(lastResults.length)} نتيجة</div>` + html + more;
   sr.style.display = 'block';
-  const lists = await getAllHadithIndexes();
-  flatIndex = [];
-  for (const { coll, rows } of lists) for (const r of rows) flatIndex.push({ id: r[0], coll: coll.code, collName: coll.name_ar, num: r[1], snippet: r[2], chain: r[3], norm: stripAr(r[2]) });
-  return flatIndex;
+  sr.querySelectorAll('.sri[data-h]:not([data-bound])').forEach(el => { el.dataset.bound = 1; el.addEventListener('click', () => { sr.style.display = 'none'; openHadith(el.dataset.h); }); });
+  sr.querySelector('#sr-more')?.addEventListener('click', () => renderResults(sr, true));
 }
 
+let searchSeq = 0;
 export async function runHadithSearch(qRaw) {
   const sr = document.getElementById('sr');
   const q = (qRaw || '').trim();
   if (!q && !collFilter) { sr.style.display = 'none'; return; }
-  const idx = await ensureIndex();
+  const seq = ++searchSeq;
+  sr.innerHTML = `<div class="sri-empty">جارٍ البحث…</div>`; sr.style.display = 'block';
+  const rows = await getIndexRowMap();
   const numMatch = q.match(/^(\D*?)\s*([\d٠-٩]+(?:\.\d+)?)$/u);
-  const wantNum = numMatch ? numMatch[2].replace(/[٠-٩]/g, d => NUM_AR.indexOf(d)) : null;
-  const collWord = numMatch ? stripAr(numMatch[1]) : '';
-  const words = wantNum ? [] : stripAr(q).split(/\s+/).filter(w => w.length > 1);
-
   let res = [];
-  for (const r of idx) {
-    if (collFilter && r.coll !== collFilter) continue;
-    if (wantNum) {
+  if (numMatch) {
+    const wantNum = numMatch[2].replace(/[٠-٩]/g, d => NUM_AR.indexOf(d));
+    const collWord = stripAr(numMatch[1]);
+    for (const r of rows.values()) {
+      if (collFilter && r.coll !== collFilter) continue;
       if (r.num !== wantNum && !r.num.startsWith(wantNum + '.')) continue;
       if (collWord && !stripAr(r.collName).includes(collWord)) continue;
-    } else if (words.length) {
-      if (!words.every(w => r.norm.includes(w))) continue;
+      res.push(r);
     }
-    res.push(r);
-    if (res.length >= 60) break;
+  } else if (q) {
+    const ids = await searchHadiths(q);              // full matn, every word required
+    if (seq !== searchSeq) return;
+    res = ids.map(id => rows.get(id)).filter(r => r && (!collFilter || r.coll === collFilter));
+  } else {
+    res = [...rows.values()].filter(r => r.coll === collFilter);
   }
-  if (!res.length) { sr.innerHTML = `<div class="sri-empty">لا نتائج</div>`; sr.style.display = 'block'; return; }
-  sr.innerHTML = res.map(r => `
-    <div class="sri hr" data-h="${r.id}">
-      <span class="sri-c">${r.collName} <b>${toArabicDigits(r.num)}</b></span>
-      <span class="sri-t">${r.snippet || '—'}</span>
-      <span class="sri-k" title="عدد الرواة">${toArabicDigits(r.chain)}</span>
-    </div>`).join('');
-  sr.style.display = 'block';
-  sr.querySelectorAll('.sri[data-h]').forEach(el => el.addEventListener('click', () => { sr.style.display = 'none'; openHadith(el.dataset.h); }));
+  if (seq !== searchSeq) return;
+  if (!res.length) { sr.innerHTML = `<div class="sri-empty">لا نتائج</div>`; return; }
+  lastResults = res; shown = 0;
+  renderResults(sr);
 }
 
 async function randomHadith() {
-  const idx = await ensureIndex();
+  const idx = [...(await getIndexRowMap()).values()];
   const pool = idx.filter(r => (!collFilter || r.coll === collFilter) && r.chain >= 3);
   const pick = pool[Math.floor(Math.random() * pool.length)];
   document.getElementById('sr').style.display = 'none';
@@ -138,6 +145,7 @@ export async function openHadith(id, { fly = true } = {}) {
 
   const pts = [...ids].map(i => state.narById.get(i)).filter(Boolean).map(positionOf);
   if (fly && pts.length) fitCamera(pts);
+  if (h.no_text) { updateTimelineRange(null); return; }
   const deaths = [...ids].map(i => state.narById.get(i)?.death_ah).filter(Boolean);
   if (deaths.length) updateTimelineRange(Math.min(...deaths), Math.max(...deaths), collectionTitle(h.coll) + ' ' + toArabicDigits(h.num), '#f0d080');
   updateGeoAxis(null);
@@ -284,12 +292,13 @@ async function renderPanel(h) {
   document.getElementById('pl').textContent = h.section?.name_en ? `${h.section.name_en} · كتاب ${toArabicDigits(h.section.number)}` : (h.ref ? `كتاب ${toArabicDigits(h.ref.book)} · حديث ${toArabicDigits(h.ref.hadith)}` : '');
   document.getElementById('pb').innerHTML = `
     <div class="hnav"><button id="h-prev" class="cb">‹ السابق</button><button id="h-next" class="cb">التالي ›</button></div>
+    ${h.no_text ? `<div class="note warn">هذا الرقم موجود في المصدر لكن نصّه غير متوفر فيه؛ لا إسناد ولا متن يمكن عرضهما.</div>` : ''}
     ${grades ? `<div class="ps"><div class="pst">الحكم</div>${grades}</div>` : ''}
     ${h.isnad.inherited === 'all' ? `<div class="note">هذه الفقرة بلا إسناد مستقل في المصدر؛ المسار المعروض هو إسناد الحديث السابق.</div>` : h.isnad.inherited === 'tail' ? `<div class="note">«بهذا الإسناد»: تكملة المسار مأخوذة من الحديث السابق (الخطوط المنقّطة الخافتة).</div>` : h.isnad.inherited === 'head' ? `<div class="note">يبدأ النص بـ«قال فلان» تتمةً للحديث السابق؛ بداية المسار مأخوذة منه (الخطوط المنقّطة الخافتة).</div>` : ''}
     ${h.isnad.edges.some(e => connectorTypes[e[2]] === 'quote') ? `<div class="note">يبدأ المسار بـ«قال فلان» دون سماع مصرَّح: رابطة معلَّقة (خط منقّط رفيع).</div>` : ''}
-    <div class="ps"><div class="pst">سلسلة الرواة${h.isnad.reaches_prophet ? ' · تنتهي إلى النبي ﷺ' : ''}</div><div class="chain">${chainHtml}${h.isnad.reaches_prophet ? '<div class="lvl-conn"><em>↓</em></div><div class="lvl"><span class="nchip prophet">رسول الله ﷺ</span></div>' : ''}</div></div>
+    ${h.no_text ? '' : `<div class="ps"><div class="pst">سلسلة الرواة${h.isnad.reaches_prophet ? ' · تنتهي إلى النبي ﷺ' : ''}</div><div class="chain">${chainHtml}${h.isnad.reaches_prophet ? '<div class="lvl-conn"><em>↓</em></div><div class="lvl"><span class="nchip prophet">رسول الله ﷺ</span></div>' : ''}</div></div>`}
     ${h.isnad_ar ? `<div class="ps"><div class="pst">الإسناد</div><div class="isnad-txt">${h.isnad_ar}</div></div>` : ''}
-    <div class="ps"><div class="pst">المتن</div><div class="matn-txt">${h.matn_ar || '—'}</div></div>
+    ${h.no_text ? '' : `<div class="ps"><div class="pst">المتن</div><div class="matn-txt">${h.matn_ar || '—'}</div></div>`}
     ${h.text_en ? `<div class="ps"><div class="pst en-toggle" id="en-toggle">English ▸</div><div class="en-txt" id="en-txt" hidden>${h.text_en}</div></div>` : ''}
     <div class="ps"><div class="pst">مشاركة</div><input class="share" readonly value="${location.origin}${location.pathname}?hadith=${h.id}"></div>
   `;

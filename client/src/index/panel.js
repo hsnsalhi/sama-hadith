@@ -3,7 +3,7 @@ import { GCS, GL } from '../lib/constants.js';
 import { buildSelLines, flyTo } from './selection.js';
 import { updateTimeline } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
-import { getHadiths, getHadithIdsByNarrator } from '../lib/api.js';
+import { getHadithRowsByNarrator } from '../lib/api.js';
 
 const NUM_AR = '٠١٢٣٤٥٦٧٨٩';
 const ar = s => String(s ?? '').replace(/\d/g, d => NUM_AR[d]);
@@ -34,7 +34,7 @@ export function openPanel(n, { keepPath = false } = {}) {
   const teachers = rel.filter(t => t.student_id === n.id).map(t => ({ n: state.narById.get(t.teacher_id), w: t.count })).filter(x => x.n).sort((a, b) => b.w - a.w);
   const students = rel.filter(t => t.teacher_id === n.id).map(t => ({ n: state.narById.get(t.student_id), w: t.count })).filter(x => x.n).sort((a, b) => b.w - a.w);
   const item = ({ n: x, w }) => `<div class="pl-item" data-narrator-id="${x.id}"><div class="pl-d" style="background:${GCS[x.generation]};box-shadow:0 0 4px ${GCS[x.generation]}"></div><span class="pl-n">${x.name_ar}</span><span class="pl-e">${w > 1 ? '×' + ar(w) + ' · ' : ''}${x.death_ah ? ar(x.death_ah) + 'هـ' : ''}</span></div>`;
-  const list = (arr, max = 12) => arr.slice(0, max).map(item).join('') + (arr.length > max ? `<div class="pl-more">و${ar(arr.length - max)} آخرون…</div>` : '');
+  const list = arr => arr.map(item).join('');
 
   document.getElementById('pb').innerHTML = `
     ${state.hadith && hadithApi ? `<button id="back-hadith" class="cb wide">↩ العودة إلى الحديث</button>` : ''}
@@ -63,15 +63,16 @@ export function openPanel(n, { keepPath = false } = {}) {
 
 async function loadPanelHadiths(id) {
   try {
-    const [rows, ids] = await Promise.all([getHadiths({ narratorId: id, limit: 12 }), getHadithIdsByNarrator(id)]);
+    const rows = await getHadithRowsByNarrator(id);
     const box = document.querySelector('#panel-hadiths');
     if (!box || state.selId !== id) return;
     if (!rows.length) { box.querySelector('.pl-more').textContent = 'لا أحاديث مسندة'; return; }
-    box.innerHTML = `<div class="pst">أحاديثه (${ar(ids.length)})</div>` + rows.map(h => `
-      <div class="hc hclick" data-h="${h.id}">
-        <div class="ht">${(h.matn_ar || h.isnad_ar || '').slice(0, 160)}${(h.matn_ar || '').length > 160 ? '…' : ''}</div>
-        <div class="hm">${COLL_NAMES[h.coll] || h.coll} ${ar(h.num)}${h.section?.name_en ? ' · ' + h.section.name_en : ''} · <span class="hm-link">تتبّع الإسناد ↗</span></div>
-      </div>`).join('') + (ids.length > rows.length ? `<a class="pl-more" href="narrator.html?id=${id}" target="_blank">و${ar(ids.length - rows.length)} أخرى في الفيشة الكاملة ↗</a>` : '');
+    const byColl = new Map();
+    for (const r of rows) (byColl.get(r.collName) || byColl.set(r.collName, []).get(r.collName)).push(r);
+    box.innerHTML = `<div class="pst">أحاديثه (${ar(rows.length)})</div>` + [...byColl].map(([name, list], i) => `
+      <details class="hgroup" ${i === 0 ? 'open' : ''}><summary>${name} <span>${ar(list.length)}</span></summary>
+      ${list.map(r => `<div class="hc hclick" data-h="${r.id}"><div class="ht">${r.snippet || '<i>النص غير متوفر</i>'}</div><div class="hm">${name} ${ar(r.num)} · <span class="hm-link">تتبّع الإسناد ↗</span></div></div>`).join('')}
+      </details>`).join('');
     box.querySelectorAll('.hclick').forEach(el => el.addEventListener('click', () => hadithApi?.openHadith(el.dataset.h)));
   } catch (e) {
     console.warn('hadiths load failed', e);

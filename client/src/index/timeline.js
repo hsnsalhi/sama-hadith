@@ -50,18 +50,31 @@ export function buildTimeline() {
   labelsEl.style.position = 'relative';
   labelsEl.style.height = '16px';
 
-  // Dots
+  // Dots: every narrator, drawn on a canvas (thousands of DOM nodes would be too heavy)
   track.querySelectorAll('.tl-dot').forEach(d => d.remove());
-  const vis = state.narrators.filter(n => (state.filter === 'all' || n.generation === state.filter) && n.death_ah)
-    .sort((a, b) => (b.hadith_count || 0) - (a.hadith_count || 0)).slice(0, 600);
-  vis.forEach(n => {
-    const dot = document.createElement('div');
-    dot.className = 'tl-dot';
-    dot.style.cssText = `left:${tlPct(n.death_ah)}%;background:${GCS[n.generation]};box-shadow:0 0 3px ${GCS[n.generation]};`;
-    dot.title = n.name_ar;
-    dot.addEventListener('click', () => openPanel(n));
-    track.appendChild(dot);
-  });
+  let cv = track.querySelector('canvas.tl-dots');
+  if (!cv) { cv = document.createElement('canvas'); cv.className = 'tl-dots'; track.insertBefore(cv, track.firstChild.nextSibling); }
+  const drawDots = () => {
+    const W = track.clientWidth || 800, H = track.clientHeight || 26;
+    cv.width = W * devicePixelRatio; cv.height = H * devicePixelRatio; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    const ctx = cv.getContext('2d'); ctx.scale(devicePixelRatio, devicePixelRatio); ctx.clearRect(0, 0, W, H);
+    const vis = state.narrators.filter(n => (state.filter === 'all' || n.generation === state.filter) && n.death_ah);
+    // stack dots per pixel column so density shows as height
+    const cols = new Map();
+    for (const n of vis) { const x = Math.round(tlPct(n.death_ah) / 100 * W); const arr = cols.get(x) || cols.set(x, []).get(x); arr.push(n); }
+    for (const [x, arr] of cols) {
+      arr.sort((a, b) => (b.hadith_count || 0) - (a.hadith_count || 0));
+      arr.forEach((n, i) => {
+        const y = H / 2 + (i % 2 ? 1 : -1) * Math.min(H / 2 - 1, Math.floor(i / 2) * 1.6);
+        ctx.fillStyle = GCS[n.generation] || '#c9a84c';
+        ctx.globalAlpha = i === 0 ? 0.9 : 0.35;
+        ctx.beginPath(); ctx.arc(x, y, i === 0 ? 1.6 : 1, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+    ctx.globalAlpha = 1;
+  };
+  drawDots();
+  if (!track._tlResize) { track._tlResize = true; window.addEventListener('resize', drawDots); }
 
   track.addEventListener('mousemove', tlHover);
   track.addEventListener('mouseleave', tlLeave);

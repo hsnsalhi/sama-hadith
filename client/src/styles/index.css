@@ -272,3 +272,13 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 .pl-more { display: block; font-family: 'Cairo', sans-serif; font-size: 10px; color: rgba(201,168,76,.4); padding: 4px 8px; text-decoration: none; }
 .iv small { font-size: 9px; color: rgba(201,168,76,.4); }
 .note { font-family: 'Cairo', sans-serif; font-size: 10px; line-height: 1.6; color: rgba(240,208,128,.7); background: rgba(201,168,76,.06); border: 0.5px solid rgba(201,168,76,.18); border-radius: 6px; padding: 6px 9px; margin-bottom: 8px; }
+.sri-count { font-family: 'Cairo', sans-serif; font-size: 10px; color: rgba(201,168,76,.45); padding: 6px 14px 2px; }
+.sri-more { display: block; width: 100%; padding: 8px; background: rgba(201,168,76,.06); border: none; border-top: 0.5px solid rgba(201,168,76,.15); color: var(--gold); font-family: 'Cairo', sans-serif; font-size: 11px; cursor: pointer; }
+.sri-more:hover { background: rgba(201,168,76,.12); }
+.sri.notext .sri-c em { font-style: normal; font-size: 9px; color: rgba(245,150,120,.7); }
+.note.warn { color: rgba(245,170,140,.85); border-color: rgba(245,150,120,.3); background: rgba(245,150,120,.06); }
+.hgroup { margin-bottom: 6px; }
+.hgroup summary { cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 11px; color: rgba(201,168,76,.7); padding: 5px 0; }
+.hgroup summary span { color: rgba(201,168,76,.4); font-size: 10px; }
+#sr { max-height: 60vh; }
+canvas.tl-dots { position: absolute; inset: 0; pointer-events: none; }

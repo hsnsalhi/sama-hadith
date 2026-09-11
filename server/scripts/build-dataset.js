@@ -388,13 +388,15 @@ async function writeJson(rel, data) {
 async function main() {
   const t0 = Date.now();
   const { hadiths: loaded, sections } = await loadAll();
-  // entries with no text in the source carry nothing (no matn, no isnad): keep them out, but list them
-  const excluded = loaded.filter(h => !h.text.trim()).map(h => h.id);
+  // entries with no text in the source: kept (numbering stays complete) but flagged; they cannot carry a chain
+  const noText = loaded.filter(h => !h.text.trim());
+  for (const h of noText) h.noText = true;
   const hadiths = loaded.filter(h => h.text.trim());
-  log(`entries without text excluded: ${excluded.length}`);
+  log(`entries without text in the source: ${noText.length} (kept, flagged)`);
   const nameStarts = parseAll(hadiths);
   const { inherited, inheritedAll, inheritedHead } = inheritIsnads(hadiths);
   log(`isnads inherited from previous hadith: ${inherited} (tail) + ${inheritedHead} (head) + ${inheritedAll} (whole)`);
+  for (const h of noText) { h.graph = { nodes: new Map(), edges: [], reachesProphet: false }; h.isnad_ar = ''; h.matn_ar = ''; }
   const stillEmpty = hadiths.filter(h => !h.graph.edges.length);
   log(`hadiths without any chain: ${stillEmpty.length}`);
   for (const h of stillEmpty.slice(0, 30)) log(`   [${h.id}] ${cleanName(h.text).slice(0, 110)}`);
@@ -461,8 +463,22 @@ async function main() {
 
   // hadith chunks + indexes
   const byColl = new Map();
-  for (const h of hadiths) (byColl.get(h.coll) || byColl.set(h.coll, []).get(h.coll)).push(h);
+  for (const h of loaded) (byColl.get(h.coll) || byColl.set(h.coll, []).get(h.coll)).push(h);
   let hadithsWithIsnad = 0;
+  // full-text index over the whole matn: word → ordinals (position in `searchIds`), sharded by first letter
+  const searchIds = [];
+  const postings = new Map();
+  const STOP = new Set(['من', 'في', 'علي', 'الي', 'عن', 'ان', 'او', 'ما', 'لا', 'ثم', 'قال', 'قالت', 'قالوا', 'كان', 'كانت', 'الله', 'رسول', 'النبي', 'صلي', 'عليه', 'وسلم', 'يا', 'هو', 'هي', 'هذا', 'هذه', 'ذلك', 'الذي', 'التي', 'به', 'له', 'لها', 'لهم', 'بها', 'فيه', 'فيها', 'عليها', 'عليهم', 'اذا', 'اذ', 'حتي', 'كل', 'بن', 'ابن', 'ابو', 'ابي', 'انه', 'انها', 'اني', 'انا', 'نحن', 'هم', 'كما', 'لم', 'لن', 'قد', 'ولا', 'وما', 'فلا', 'اما', 'انما', 'الا', 'بل', 'مع', 'عند', 'بين', 'حين', 'يوم', 'ليله', 'رجل', 'ناس', 'شيء', 'ثم', 'فقال', 'فقالت', 'وقال', 'قلت', 'يقول', 'كانوا', 'كنا', 'كنت', 'وهو', 'وهي', 'وان', 'فان', 'ولم', 'فلم', 'اذ', 'حديث', 'رضي', 'عنه', 'عنها', 'ابن']);
+  const stem = w => w.replace(/^(?:وال|فال|بال|كال|لل|ال|و|ف|ب|ل|ك|س)(?=..)/, '').replace(/(?:ها|هم|هن|كم|كن|نا|ون|ين|ات|ان|ه|ي|ك|ت)$/, '');
+  const indexWords = (h, ord) => {
+    const words = new Set();
+    for (const w0 of cleanName(h.matn_ar || h.text).split(' ')) {
+      if (w0.length < 2 || STOP.has(w0)) continue;
+      words.add(w0);
+      const st = stem(w0); if (st.length >= 2 && st !== w0) words.add(st);
+    }
+    for (const w of words) (postings.get(w) || postings.set(w, []).get(w)).push(ord);
+  };
   for (const c of COLLECTIONS) {
     const arr = (byColl.get(c.code) || []).sort((a, b) => a.sortKey - b.sortKey);
     const index = [];
@@ -472,8 +488,9 @@ async function main() {
         const nodeIds = [...g.nodes.keys()].map(k => idOf(k)).filter(Boolean);
         if (g.edges.length) hadithsWithIsnad++;
         const hasTeacher = new Set(g.edges.map(e => e.student));
+        if (!h.noText) { indexWords(h, searchIds.length); searchIds.push(h.id); }
         return {
-          id: h.id, coll: c.code, num: h.num, ref: h.ref,
+          id: h.id, coll: c.code, num: h.num, ref: h.ref, no_text: h.noText ? true : undefined,
           section: h.ref ? { number: h.ref.book, name_en: sections[c.code]?.[String(h.ref.book)] || null } : null,
           grades: h.grades, isnad_ar: h.isnad_ar, matn_ar: h.matn_ar, text_en: h.text_en,
           isnad: {
@@ -486,10 +503,20 @@ async function main() {
         };
       });
       await writeJson(`hadiths/${c.code}/${i / CHUNK}.json`, chunk);
-      for (const h of chunk) index.push([h.id, h.num, displayForm(h.matn_ar).slice(0, 120), h.isnad.nodes.length]);
+      for (const h of chunk) index.push([h.id, h.num, h.no_text ? '' : displayForm(h.matn_ar).slice(0, 120), h.isnad.nodes.length, h.no_text ? 1 : 0]);
     }
     await writeJson(`hadiths/index/${c.code}.json`, index);
   }
+
+  // search shards by first letter
+  // shard key: first letter, or first two letters for words starting with alef (very frequent)
+  const shardKey = w => w[0] === 'ا' && w.length > 1 ? w.slice(0, 2) : w[0];
+  const shardsByLetter = new Map();
+  for (const [w, ords] of postings) { const l = shardKey(w); (shardsByLetter.get(l) || shardsByLetter.set(l, {}).get(l))[w] = ords; }
+  await writeJson('search/ids.json', searchIds);
+  const searchLetters = [];
+  for (const [l, obj] of shardsByLetter) { const name = [...l].map(ch => ch.codePointAt(0).toString(16)).join('-'); searchLetters.push([l, name]); await writeJson(`search/${name}.json`, obj); }
+  log(`search index: ${postings.size} words, ${searchLetters.length} shards`);
 
   // per-narrator hadith ids, sharded
   const shards = Array.from({ length: SHARDS }, () => ({}));
@@ -504,13 +531,14 @@ async function main() {
     connectors: [...connIndex.keys()],
     connector_types: [...connIndex.keys()].map(connectorType),
     shards: SHARDS,
-    excluded_no_text: excluded,
+    entries_without_text: noText.map(h => h.id),
+    search: { letters: searchLetters, ids: searchIds.length, words: postings.size },
     narrators: narrators.length, narrators_reference_dated: refDated, narrators_dated: dated,
-    transmissions: trans.size, hadiths: hadiths.length, hadiths_with_isnad: hadithsWithIsnad,
+    transmissions: trans.size, hadiths: loaded.length, hadiths_with_text: hadiths.length, hadiths_with_isnad: hadithsWithIsnad,
     isnads_inherited_tail: inherited, isnads_inherited_head: inheritedHead, isnads_inherited_whole: inheritedAll, hadiths_without_chain: stillEmpty.length,
     relatives_resolved: res.relResolved, short_names_expanded: res.shortExpanded,
   });
-  log(`narrators ${narrators.length} (reference-dated ${refDated}, dated ${dated}) · transmissions ${trans.size} · hadiths ${hadiths.length} (with isnad ${hadithsWithIsnad}) · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  log(`narrators ${narrators.length} (reference-dated ${refDated}, dated ${dated}) · transmissions ${trans.size} · hadiths ${loaded.length} (with text ${hadiths.length}, with isnad ${hadithsWithIsnad}) · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
