@@ -244,7 +244,7 @@ function fitCamera(points) {
   points.forEach(p => center.add(p)); center.multiplyScalar(1 / points.length);
   let r = 0; points.forEach(p => { r = Math.max(r, p.distanceTo(center)); });
   const fov = state.camera.fov * Math.PI / 180;
-  const dist = Math.max(90, Math.min(900, (r / Math.tan(fov / 2)) * 1.35 + 40));
+  const dist = Math.max(90, Math.min(1400, (r / Math.tan(fov / 2)) * 1.35 + 40));
   state.targetSpherical.radius = dist;
   const start = state.panTarget.clone();
   let t = 0;
@@ -254,7 +254,7 @@ function fitCamera(points) {
     const e = 1 - Math.pow(1 - t, 3);
     state.panTarget.lerpVectors(start, center, e);
   }, 16);
-  document.getElementById('zv').textContent = Math.round(350 / dist * 100) + '%';
+  document.getElementById('zv').textContent = Math.round(620 / dist * 100) + '%';
 }
 
 // ── Panel ──────────────────────────────────────────────────────────────────

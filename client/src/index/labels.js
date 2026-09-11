@@ -16,8 +16,8 @@ export function updateLabels() {
 
   const vis = state.narrators.filter(n => state.filter === 'all' || n.generation === state.filter);
   const camDist = state.spherical.radius;
-  const showAll = camDist < 180;
-  const showSome = camDist < 320;
+  const showAll = camDist < 320;
+  const showSome = camDist < 700;
 
   const projected = [];
   vis.forEach(n => {
@@ -53,7 +53,7 @@ export function updateLabels() {
 
     const isSel = n.id === state.selId;
     const isHov = n.id === state.hovId;
-    const opacity = isSel ? 1 : isHov ? 0.9 : showAll ? 0.55 : 0.7;
+    const opacity = isSel ? 1 : isHov ? 1 : showAll ? 0.85 : 0.95;
     const fontSize = isSel ? 14 : isHov ? 12 : 10;
     const offsetY = isSel ? 22 : isHov ? 20 : 16;
 

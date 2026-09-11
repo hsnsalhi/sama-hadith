@@ -59,7 +59,7 @@ export function initControls() {
   el.addEventListener('wheel', e => {
     e.preventDefault();
     state.targetSpherical.radius *= (e.deltaY > 0 ? 1.12 : 0.89);
-    state.targetSpherical.radius = Math.max(30, Math.min(2000, state.targetSpherical.radius));
+    state.targetSpherical.radius = Math.max(30, Math.min(2600, state.targetSpherical.radius));
     updateZoomLabel();
   }, { passive: false });
 
@@ -95,7 +95,7 @@ export function initControls() {
         e.touches[0].clientY - e.touches[1].clientY
       );
       state.targetSpherical.radius *= tDist / d;
-      state.targetSpherical.radius = Math.max(30, Math.min(2000, state.targetSpherical.radius));
+      state.targetSpherical.radius = Math.max(30, Math.min(2600, state.targetSpherical.radius));
       tDist = d; updateZoomLabel();
       const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -121,18 +121,18 @@ export function initControls() {
 }
 
 export function updateZoomLabel() {
-  const pct = Math.round(350 / Math.max(state.targetSpherical.radius, 1) * 100);
+  const pct = Math.round(620 / Math.max(state.targetSpherical.radius, 1) * 100);
   document.getElementById('zv').textContent = pct + '%';
 }
 
 export function doZoom(f) {
   state.targetSpherical.radius *= f;
-  state.targetSpherical.radius = Math.max(30, Math.min(2000, state.targetSpherical.radius));
+  state.targetSpherical.radius = Math.max(30, Math.min(2600, state.targetSpherical.radius));
   updateZoomLabel();
 }
 
 export function resetCam() {
-  state.targetSpherical.set(350, Math.PI / 2, 0);
+  state.targetSpherical.set(620, Math.PI / 2, 0);
   state.panTarget.set(0, 0, 0);
   updateZoomLabel();
 }

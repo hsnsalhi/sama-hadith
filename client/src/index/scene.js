@@ -7,8 +7,8 @@ export function initThree() {
   state.clock = new THREE.Clock();
   state.mouse = new THREE.Vector2();
 
-  state.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 3000);
-  state.camera.position.set(0, 0, 350);
+  state.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 5000);
+  state.camera.position.set(0, 0, 620);
 
   state.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   state.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));

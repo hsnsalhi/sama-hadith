@@ -6,12 +6,22 @@ import { clearLabels } from './labels.js';
 import vertexShader from '../shaders/star.vert.glsl';
 import fragmentShader from '../shaders/star.frag.glsl';
 
+export const WORLD_W = 900; // width of the time axis in world units (was 400: too dense)
+
+// estimated death years cluster on a few interpolated values: spread them by ±5 years (their real uncertainty)
+function displayYear(n) {
+  const y = n.death_ah || 1;
+  if (!n.death_estimated) return y;
+  const seed = (n.id * 40503) >>> 0;
+  return y + ((seed % 1000) / 1000 - 0.5) * 10;
+}
+
 export function getPos3D(n) {
-  const x = (((n.death_ah || 1) - state.ERA_MIN) / (state.ERA_MAX - state.ERA_MIN)) * 400 - 200;
+  const x = ((displayYear(n) - state.ERA_MIN) / (state.ERA_MAX - state.ERA_MIN)) * WORLD_W - WORLD_W / 2;
   const z = GEN_Z[n.generation] || 0;
   const seed = (n.id * 2654435761) >>> 0;
   const geoY = getGeoY(n.origin);
-  const baseY = geoY !== null ? geoY : ((seed % 6000) / 6000 - 0.5) * 80;
+  const baseY = geoY !== null ? geoY : ((seed % 6000) / 6000 - 0.5) * 160;
   const jx = ((seed % 997) / 997 - 0.5) * 20;
   const jy = ((seed % 503) / 503 - 0.5) * 18;
   const jz = ((seed % 1013) / 1013 - 0.5) * 20;
@@ -19,10 +29,10 @@ export function getPos3D(n) {
 }
 
 export function getPos2D(n) {
-  const x = (((n.death_ah || 1) - state.ERA_MIN) / (state.ERA_MAX - state.ERA_MIN)) * 400 - 200;
+  const x = ((displayYear(n) - state.ERA_MIN) / (state.ERA_MAX - state.ERA_MIN)) * WORLD_W - WORLD_W / 2;
   const geoY = getGeoY(n.origin);
   const seed = (n.id * 2654435761) >>> 0;
-  const baseY = geoY !== null ? geoY : ((seed % 6000) / 6000 - 0.5) * 80;
+  const baseY = geoY !== null ? geoY : ((seed % 6000) / 6000 - 0.5) * 160;
   const jy = ((seed % 503) / 503 - 0.5) * 18;
   return new THREE.Vector3(x, baseY + jy, 0);
 }
