@@ -19,7 +19,7 @@
 import { mkdir, writeFile, readFile, rm, access } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseIsnadGraph, cleanName, displayForm } from './lib/isnad-graph.js';
+import { parseIsnadGraph, cleanName, displayForm, connectorType } from './lib/isnad-graph.js';
 import { loadReference } from './lib/reference-loader.js';
 import { EXTRA_NARRATORS } from './lib/reference-extra.js';
 
@@ -30,14 +30,16 @@ const OUT = resolve(args.out || resolve(__dirname, '../../client/public/data'));
 const CDN = 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions';
 
 export const COLLECTIONS = [
-  { code: 'bukhari', edition: 'bukhari', name_ar: 'البخاري', title_ar: 'صحيح البخاري', compiler: 'البخاري', compilerDeath: 256 },
-  { code: 'muslim', edition: 'muslim', name_ar: 'مسلم', title_ar: 'صحيح مسلم', compiler: 'مسلم', compilerDeath: 261 },
-  { code: 'abudawud', edition: 'abudawud', name_ar: 'أبو داود', title_ar: 'سنن أبي داود', compiler: 'ابو داود', compilerDeath: 275 },
-  { code: 'tirmidhi', edition: 'tirmidhi', name_ar: 'الترمذي', title_ar: 'جامع الترمذي', compiler: 'الترمذي', compilerDeath: 279 },
-  { code: 'nasai', edition: 'nasai', name_ar: 'النسائي', title_ar: 'سنن النسائي', compiler: 'النسايي', compilerDeath: 303 },
-  { code: 'ibnmajah', edition: 'ibnmajah', name_ar: 'ابن ماجه', title_ar: 'سنن ابن ماجه', compiler: 'ابن ماجه', compilerDeath: 273 },
-  { code: 'malik', edition: 'malik', name_ar: 'الموطأ', title_ar: 'موطأ مالك', compiler: 'مالك', compilerDeath: 179 },
+  { code: 'bukhari', edition: 'bukhari', name_ar: 'البخاري', title_ar: 'صحيح البخاري', compiler: 'البخاري', compilerDisplay: 'البخاري', compilerDeath: 256, aliases: ['ابو عبد الله', 'محمد بن اسماعيل'] },
+  { code: 'muslim', edition: 'muslim', name_ar: 'مسلم', title_ar: 'صحيح مسلم', compiler: 'مسلم', compilerDisplay: 'مسلم', compilerDeath: 261, aliases: ['ابو الحسين', 'مسلم بن الحجاج'] },
+  { code: 'abudawud', edition: 'abudawud', name_ar: 'أبو داود', title_ar: 'سنن أبي داود', compiler: 'ابو داود', compilerDisplay: 'أبو داود', compilerDeath: 275, aliases: ['سليمان بن الاشعث'] },
+  { code: 'tirmidhi', edition: 'tirmidhi', name_ar: 'الترمذي', title_ar: 'جامع الترمذي', compiler: 'الترمذي', compilerDisplay: 'الترمذي', compilerDeath: 279, aliases: ['ابو عيسي', 'محمد بن عيسي'] },
+  { code: 'nasai', edition: 'nasai', name_ar: 'النسائي', title_ar: 'سنن النسائي', compiler: 'النسايي', compilerDisplay: 'النسائي', compilerDeath: 303, aliases: ['ابو عبد الرحمن', 'احمد بن شعيب'] },
+  { code: 'ibnmajah', edition: 'ibnmajah', name_ar: 'ابن ماجه', title_ar: 'سنن ابن ماجه', compiler: 'ابن ماجه', compilerDisplay: 'ابن ماجه', compilerDeath: 273, aliases: ['ابو عبد الله', 'محمد بن يزيد'] },
+  // The Muwatta reaches us through Yahya al-Laythi: he is the root, Malik the first link ("حدثني يحيى عن مالك")
+  { code: 'malik', edition: 'malik', name_ar: 'الموطأ', title_ar: 'موطأ مالك', compiler: 'يحيي بن يحيي الليثي', compilerDisplay: 'يحيى بن يحيى الليثي', compilerDeath: 234, aliases: ['يحيي', 'يحيي بن يحيي'] },
 ];
+const compilerKeysOf = c => new Set([c.compiler, ...c.aliases]);
 const CHUNK = 200;
 const SHARDS = 64;
 const PROPHET_YEAR = 11;
@@ -89,8 +91,9 @@ function parseAll(hadiths) {
   const first = new Map();
   for (const h of hadiths) for (const k of parseIsnadGraph(h.text).nodes.keys()) { const w = k.split(' ')[0]; first.set(w, (first.get(w) || 0) + 1); }
   const nameStarts = new Set([...first].filter(([, n]) => n >= 3).map(([w]) => w));
+  const keysByColl = Object.fromEntries(COLLECTIONS.map(c => [c.code, compilerKeysOf(c)]));
   for (const h of hadiths) {
-    const g = parseIsnadGraph(h.text, nameStarts);
+    const g = parseIsnadGraph(h.text, nameStarts, { compilerKeys: keysByColl[h.coll] });
     h.graph = { nodes: g.nodes, edges: g.edges, reachesProphet: g.reachesProphet };
     h.isnad_ar = g.isnad_ar; h.matn_ar = g.matn_ar;
   }
@@ -101,14 +104,52 @@ function parseAll(hadiths) {
 
 const REF_RE = /(?:بهذا الاسناد|بهذا الحديث|باسناده|باسناد|بالاسناد|في هذا الاسناد|^(?:،\s*)?(?:بمثله|مثله|نحوه|بمعناه|بمثل حديث|بنحو حديث|مثل حديث|نحو حديث|بمثل|بنحو|بهذا)(?= |$))/;
 function inheritIsnads(hadiths) {
-  let inherited = 0;
+  let inherited = 0, inheritedAll = 0, inheritedHead = 0;
   const byColl = new Map();
   for (const h of hadiths) (byColl.get(h.coll) || byColl.set(h.coll, []).get(h.coll)).push(h);
   for (const list of byColl.values()) {
     list.sort((a, b) => a.sortKey - b.sortKey);
     for (let i = 1; i < list.length; i++) {
       const h = list[i], g = h.graph;
-      if (!g.edges.length || g.reachesProphet) continue;
+      if (g.reachesProphet) continue;
+      // a) no isnad at all (fragment continuing the previous entry, "وبإسناده قال…"): take the previous isnad entirely
+      if (!g.edges.length) {
+        if (!h.text.trim()) continue;
+        for (let back = 1; back <= 3 && i - back >= 0; back++) {
+          const prev = list[i - back].graph;
+          if (!prev.edges.length) continue;
+          for (const [k, node] of prev.nodes) g.nodes.set(k, { ...node, depth: Infinity });
+          for (const e of prev.edges) g.edges.push({ ...e, inherited: true });
+          g.reachesProphet = prev.reachesProphet;
+          g.inheritedAll = true;
+          inheritedAll++;
+          break;
+        }
+        continue;
+      }
+      // c) "قال عروة: ولقد حدثتني عائشة…": a suspended start whose speaker sits in the previous isnad → attach it there
+      const rootQuotes = g.edges.filter(e => e.student === null && (e.type === 'quote'));
+      if (rootQuotes.length && rootQuotes.length === g.edges.filter(e => e.student === null).length) {
+        let done = false;
+        for (let back = 1; back <= 3 && i - back >= 0 && !done; back++) {
+          const prev = list[i - back].graph;
+          for (const rq of rootQuotes) {
+            if (!prev.nodes.has(rq.teacher)) continue;
+            // ancestors of the speaker in the previous isnad (path from its ROOT down to the speaker)
+            const stack = [rq.teacher], seen = new Set(), picked = [];
+            while (stack.length) {
+              const k = stack.pop(); if (seen.has(k)) continue; seen.add(k);
+              for (const e of prev.edges) if (e.teacher === k) { picked.push(e); if (e.student !== null) stack.push(e.student); }
+            }
+            if (!picked.length) continue;
+            for (const e of picked) { if (e.student !== null && !g.nodes.has(e.student)) g.nodes.set(e.student, { ...prev.nodes.get(e.student), depth: Infinity }); g.edges.push({ ...e, inherited: true }); }
+            g.edges = g.edges.filter(e => e !== rq);
+            inheritedHead++; done = true;
+          }
+        }
+        if (done) continue;
+      }
+      // b) "… عن الأعمش بهذا الإسناد": complete the tail from the previous isnad
       const around = cleanName(h.isnad_ar.slice(-50)) + ' ‖ ' + cleanName(h.matn_ar.slice(0, 50));
       if (!REF_RE.test(around.split(' ‖ ')[1]) && !/(?:بهذا الاسناد|بهذا الحديث|باسناده|بالاسناد)/.test(around)) continue;
       // leaves of the current graph
@@ -134,7 +175,7 @@ function inheritIsnads(hadiths) {
       }
     }
   }
-  return inherited;
+  return { inherited, inheritedAll, inheritedHead };
 }
 
 // ── 4/5. Name resolution ────────────────────────────────────────────────────
@@ -260,7 +301,7 @@ function buildEntities(hadiths, ref, canon) {
     return e;
   };
   // compilers
-  for (const c of COLLECTIONS) { const e = get(c.compiler); e.compiler = c.code; e.displays.set(c.name_ar === 'الموطأ' ? 'مالك بن أنس' : c.name_ar, 1e9); }
+  for (const c of COLLECTIONS) { const e = get(c.compiler); e.compiler = c.code; e.displays.set(c.compilerDisplay, 1e9); }
   for (const h of hadiths) {
     const g = h.graph;
     for (const [k, node] of g.nodes) {
@@ -346,10 +387,17 @@ async function writeJson(rel, data) {
 
 async function main() {
   const t0 = Date.now();
-  const { hadiths, sections } = await loadAll();
+  const { hadiths: loaded, sections } = await loadAll();
+  // entries with no text in the source carry nothing (no matn, no isnad): keep them out, but list them
+  const excluded = loaded.filter(h => !h.text.trim()).map(h => h.id);
+  const hadiths = loaded.filter(h => h.text.trim());
+  log(`entries without text excluded: ${excluded.length}`);
   const nameStarts = parseAll(hadiths);
-  const inherited = inheritIsnads(hadiths);
-  log(`isnads inherited from previous hadith: ${inherited}`);
+  const { inherited, inheritedAll, inheritedHead } = inheritIsnads(hadiths);
+  log(`isnads inherited from previous hadith: ${inherited} (tail) + ${inheritedHead} (head) + ${inheritedAll} (whole)`);
+  const stillEmpty = hadiths.filter(h => !h.graph.edges.length);
+  log(`hadiths without any chain: ${stillEmpty.length}`);
+  for (const h of stillEmpty.slice(0, 30)) log(`   [${h.id}] ${cleanName(h.text).slice(0, 110)}`);
   const res = resolveNames(hadiths);
   log(`relatives resolved: ${res.relResolved}/${res.relTotal} · short names expanded: ${res.shortExpanded}/${res.shortTotal}`);
   const { ref, canon } = loadReferences();
@@ -430,9 +478,10 @@ async function main() {
           grades: h.grades, isnad_ar: h.isnad_ar, matn_ar: h.matn_ar, text_en: h.text_en,
           isnad: {
             nodes: nodeIds,
-            edges: g.edges.map(e => [e.student ? idOf(e.student) : idOf(c.compiler), idOf(e.teacher), connId(e.connector), e.inherited ? 1 : 0]).filter(e => e[0] && e[1]),
+            edges: g.edges.map(e => [e.student ? idOf(e.student) : idOf(c.compiler), idOf(e.teacher), connId(e.connector), e.inherited ? 1 : 0]).filter(e => e[0] && e[1] && e[0] !== e[1]),
             companions: [...g.nodes.keys()].filter(k => !hasTeacher.has(k)).map(idOf).filter(Boolean),
             reaches_prophet: g.reachesProphet,
+            inherited: g.inheritedAll ? 'all' : g.edges.some(e => e.inherited && e.student === null) ? 'head' : g.edges.some(e => e.inherited) ? 'tail' : null,
           },
         };
       });
@@ -453,10 +502,13 @@ async function main() {
     version: 2,
     collections: COLLECTIONS.map(c => ({ code: c.code, name_ar: c.name_ar, title_ar: c.title_ar, hadiths: (byColl.get(c.code) || []).length, chunk: CHUNK })),
     connectors: [...connIndex.keys()],
+    connector_types: [...connIndex.keys()].map(connectorType),
     shards: SHARDS,
+    excluded_no_text: excluded,
     narrators: narrators.length, narrators_reference_dated: refDated, narrators_dated: dated,
     transmissions: trans.size, hadiths: hadiths.length, hadiths_with_isnad: hadithsWithIsnad,
-    isnads_inherited: inherited, relatives_resolved: res.relResolved, short_names_expanded: res.shortExpanded,
+    isnads_inherited_tail: inherited, isnads_inherited_head: inheritedHead, isnads_inherited_whole: inheritedAll, hadiths_without_chain: stillEmpty.length,
+    relatives_resolved: res.relResolved, short_names_expanded: res.shortExpanded,
   });
   log(`narrators ${narrators.length} (reference-dated ${refDated}, dated ${dated}) · transmissions ${trans.size} · hadiths ${hadiths.length} (with isnad ${hadithsWithIsnad}) · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }

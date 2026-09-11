@@ -25,6 +25,7 @@ let lineObjects = [];   // THREE objects added to the scene
 let labelItems = [];    // { el, pos: Vector3, kind }
 let collections = [];   // from manifest
 let connectors = [];    // connector vocabulary
+let connectorTypes = []; // direct | indirect | quote
 let flatIndex = null;   // [{id, coll, num, snippet, norm}]
 let collFilter = null;  // collection code or null
 let flyTimer = null;
@@ -36,6 +37,7 @@ export async function initHadithMode() {
   const m = await getManifest();
   collections = m.collections;
   connectors = m.connectors;
+  connectorTypes = m.connector_types || [];
 
   const chips = document.getElementById('sw-colls');
   chips.innerHTML = `<button class="chip on" data-c="">الكل</button>` +
@@ -157,13 +159,14 @@ function collectionTitle(code) { return collections.find(c => c.code === code)?.
 
 // Lines: solid for direct transmission (حدثنا…), dashed for "عن", faint dashed for inherited edges
 function buildLines(h) {
-  const groups = { direct: [], indirect: [], inherited: [] };
+  const groups = { direct: [], indirect: [], quote: [], inherited: [] };
   for (const [s, t, c, inh] of h.isnad.edges) {
     const a = state.narById.get(s), b = state.narById.get(t);
     if (!a || !b) continue;
     const pa = positionOf(a), pb = positionOf(b);
     const ca = new THREE.Color(GC_HEX[a.generation] || 0xc9a84c), cb = new THREE.Color(GC_HEX[b.generation] || 0xc9a84c);
-    const kind = inh ? 'inherited' : connectors[c] === 'عن' ? 'indirect' : 'direct';
+    const ty = connectorTypes[c] || (connectors[c] === 'عن' ? 'indirect' : 'direct');
+    const kind = inh ? 'inherited' : ty === 'indirect' ? 'indirect' : ty === 'quote' ? 'quote' : 'direct';
     groups[kind].push({ pa, pb, ca, cb });
   }
   const make = (segs, { width, opacity, dashed, glow }) => {
@@ -187,7 +190,8 @@ function buildLines(h) {
   };
   make(groups.direct, { width: 2.6, opacity: 0.95, dashed: false, glow: true });
   make(groups.indirect, { width: 2.2, opacity: 0.85, dashed: true, glow: true });
-  make(groups.inherited, { width: 1.4, opacity: 0.45, dashed: true, glow: false });
+  make(groups.quote, { width: 1.6, opacity: 0.6, dashed: true, glow: false });      // معلَّق / قال فلان
+  make(groups.inherited, { width: 1.4, opacity: 0.45, dashed: true, glow: false }); // بهذا الإسناد (from the previous hadith)
 }
 
 function buildLabels(h, ids) {
@@ -281,6 +285,8 @@ async function renderPanel(h) {
   document.getElementById('pb').innerHTML = `
     <div class="hnav"><button id="h-prev" class="cb">‹ السابق</button><button id="h-next" class="cb">التالي ›</button></div>
     ${grades ? `<div class="ps"><div class="pst">الحكم</div>${grades}</div>` : ''}
+    ${h.isnad.inherited === 'all' ? `<div class="note">هذه الفقرة بلا إسناد مستقل في المصدر؛ المسار المعروض هو إسناد الحديث السابق.</div>` : h.isnad.inherited === 'tail' ? `<div class="note">«بهذا الإسناد»: تكملة المسار مأخوذة من الحديث السابق (الخطوط المنقّطة الخافتة).</div>` : h.isnad.inherited === 'head' ? `<div class="note">يبدأ النص بـ«قال فلان» تتمةً للحديث السابق؛ بداية المسار مأخوذة منه (الخطوط المنقّطة الخافتة).</div>` : ''}
+    ${h.isnad.edges.some(e => connectorTypes[e[2]] === 'quote') ? `<div class="note">يبدأ المسار بـ«قال فلان» دون سماع مصرَّح: رابطة معلَّقة (خط منقّط رفيع).</div>` : ''}
     <div class="ps"><div class="pst">سلسلة الرواة${h.isnad.reaches_prophet ? ' · تنتهي إلى النبي ﷺ' : ''}</div><div class="chain">${chainHtml}${h.isnad.reaches_prophet ? '<div class="lvl-conn"><em>↓</em></div><div class="lvl"><span class="nchip prophet">رسول الله ﷺ</span></div>' : ''}</div></div>
     ${h.isnad_ar ? `<div class="ps"><div class="pst">الإسناد</div><div class="isnad-txt">${h.isnad_ar}</div></div>` : ''}
     <div class="ps"><div class="pst">المتن</div><div class="matn-txt">${h.matn_ar || '—'}</div></div>
