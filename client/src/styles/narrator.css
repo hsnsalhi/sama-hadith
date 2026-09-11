@@ -49,7 +49,7 @@ body { background: var(--bg); color: rgba(201,168,76,.85); font-family: 'Cairo',
 #stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
 .stat-card { background: var(--card); border: 0.5px solid rgba(201,168,76,.1); border-radius: 12px; padding: 16px; text-align: center; }
 .stat-val { font-size: 26px; font-weight: 600; color: var(--gold); line-height: 1; }
-.stat-lbl { font-size: 10px; opacity: .4; margin-top: 5px; letter-spacing: 1px; }
+.stat-lbl { font-size: 11px; opacity: .8; margin-top: 5px; letter-spacing: 1px; }
 
 /* SECTION */
 .section { margin-bottom: 28px; }
