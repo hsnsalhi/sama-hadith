@@ -297,7 +297,7 @@ function buildEntities(hadiths, ref, canon) {
   const get = key0 => {
     const key = canon.get(key0) || key0;
     let e = ents.get(key);
-    if (!e) { e = { key, displays: new Map(), count: 0, colls: new Set(), estimates: [], votes: { sahabi: 0, tabii: 0, muhaddith: 0 }, hadiths: [] }; ents.set(key, e); }
+    if (!e) { e = { key, displays: new Map(), count: 0, colls: new Set(), estimates: [], depths: [], votes: { sahabi: 0, tabii: 0, muhaddith: 0 }, hadiths: [] }; ents.set(key, e); }
     return e;
   };
   // compilers
@@ -351,6 +351,7 @@ function dateAndClassify(hadiths, ents) {
     for (const [k, d] of depth) {
       if (k === '∅') continue;
       const e = ents.get(k);
+      (e.depths ||= []).push(d);
       if (e.dated === 'reference') continue;
       // nearest anchors above (smaller depth) and below (greater depth)
       let up = null, down = null;
@@ -495,6 +496,7 @@ async function main() {
     generation: e.gen,
     death_ah: e.death ?? null,
     death_estimated: e.dated !== 'reference',
+    depth: e.compiler ? 0 : e.depths.length ? Math.round(e.depths.reduce((a, b) => a + b, 0) / e.depths.length * 100) / 100 : null, // mean position in isnads: 0 = compiler, ~6 = companion
     origin: e.origin || null,
     reliability: e.reliability || null,
     hadith_count: e.hadiths.length,

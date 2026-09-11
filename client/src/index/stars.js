@@ -16,15 +16,21 @@ function displayYear(n) {
   return y + ((seed % 1000) / 1000 - 0.5) * 10;
 }
 
+// depth axis: mean position in the isnads (0 = compiler side, ~6 = companion side), continuous — no gap between layers
+function depthZ(n) {
+  if (n.depth == null) return GEN_Z[n.generation] || 0;
+  return 150 - Math.min(7, Math.max(0, n.depth)) * 42;
+}
+
 export function getPos3D(n) {
   const x = ((displayYear(n) - state.ERA_MIN) / (state.ERA_MAX - state.ERA_MIN)) * WORLD_W - WORLD_W / 2;
-  const z = GEN_Z[n.generation] || 0;
+  const z = depthZ(n);
   const seed = (n.id * 2654435761) >>> 0;
   const geoY = getGeoY(n.origin);
   const baseY = geoY !== null ? geoY : ((seed % 6000) / 6000 - 0.5) * 160;
   const jx = ((seed % 997) / 997 - 0.5) * 20;
   const jy = ((seed % 503) / 503 - 0.5) * 18;
-  const jz = ((seed % 1013) / 1013 - 0.5) * 20;
+  const jz = ((seed % 1013) / 1013 - 0.5) * 42; // half a depth level: blends integer mean depths into a continuum
   return new THREE.Vector3(x + jx, baseY + jy, z + jz);
 }
 
