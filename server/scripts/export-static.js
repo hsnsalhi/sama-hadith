@@ -17,7 +17,7 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
   process.exit(1);
 }
 
-const { getNarrators, getTransmissionsAmong, getHadiths } = await import('../src/services/supabase.js');
+const { getNarrators, getTransmissionsAmong, getHadiths, getAllRows } = await import('../src/services/supabase.js');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(__dirname, '../../client/public/data');
@@ -56,7 +56,36 @@ await Promise.all(Array.from({ length: CONCURRENCY }, async () => {
 }));
 log(`  ${withHadiths} narrators with hadiths`);
 
+// ── Full raw dump (all rows, all columns) — source for the hadith path view ──
+log('raw dump: narrators…');
+const allNarrators = await getAllRows('narrators');
+await mkdir(resolve(OUT, 'raw/hadiths'), { recursive: true });
+await writeFile(resolve(OUT, 'raw/narrators.json'), JSON.stringify(allNarrators));
+log(`  ${allNarrators.length} narrators`);
+
+log('raw dump: transmissions…');
+const allTransmissions = await getAllRows('transmissions');
+await writeFile(resolve(OUT, 'raw/transmissions.json'), JSON.stringify(allTransmissions));
+log(`  ${allTransmissions.length} transmissions`);
+
+log('raw dump: hadiths…');
+const RAW_CHUNK = 1000;
+let rawChunks = 0, rawHadiths = 0;
+{
+  let buffer = [];
+  const flush = async () => {
+    if (!buffer.length) return;
+    await writeFile(resolve(OUT, 'raw/hadiths', `${rawChunks}.json`), JSON.stringify(buffer));
+    rawChunks++; buffer = [];
+  };
+  const rows = await getAllRows('hadiths', { onPage: n => { if (n % 5000 === 0) log(`  ${n} hadiths…`); } });
+  rawHadiths = rows.length;
+  for (let i = 0; i < rows.length; i += RAW_CHUNK) { buffer = rows.slice(i, i + RAW_CHUNK); await flush(); }
+}
+log(`  ${rawHadiths} hadiths in ${rawChunks} chunks`);
+
 await writeFile(resolve(OUT, 'manifest.json'), JSON.stringify({
+  raw: { narrators: allNarrators.length, transmissions: allTransmissions.length, hadiths: rawHadiths, hadith_chunks: rawChunks },
   generated_at: new Date().toISOString(),
   narrators: narrators.length,
   transmissions: transmissions.length,

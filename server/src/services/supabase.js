@@ -98,3 +98,22 @@ export async function getTransmissionsAmong(ids) {
   const seen = new Set();
   return out.filter(t => (seen.has(t.id) ? false : (seen.add(t.id), true)));
 }
+
+/** Every row of a table, all columns, paginated by primary key. */
+export async function getAllRows(table, { select = '*', pageSize = 1000, onPage } = {}) {
+  const out = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(select)
+      .order('id', { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    out.push(...data);
+    onPage?.(out.length);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return out;
+}
