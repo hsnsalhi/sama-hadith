@@ -25,6 +25,8 @@ import { EXTRA_NARRATORS } from './lib/reference-extra.js';
 import { BIOS } from './lib/reference-bios.js';
 import { loadTaqrib, loadTahdhib, matchRijal, matchSource, taqribDeath, nameVocabulary, trimFullName, displayFromRaw, LAYER_NAMES } from './lib/taqrib.js';
 import { SOURCES, fetchSource, loadSource, OPENITI_LICENCE } from './lib/openiti.js';
+import { fillMissingTexts, SUPPLEMENT } from './lib/fill-text.js';
+import { tokenize, stem, shardKey } from '../../client/src/lib/search-norm.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, arr) => a.startsWith('--') ? [a.slice(2), arr[i + 1]] : []).filter(x => x.length));
@@ -32,6 +34,7 @@ const CACHE = resolve(args.cache || resolve(__dirname, '../../.cache/hadith-api'
 const OUT = resolve(args.out || resolve(__dirname, '../../client/public/data'));
 const RIJAL = resolve(__dirname, '../data/openiti');
 const CACHE_OPENITI = resolve(args.cache || resolve(__dirname, '../../.cache/hadith-api'), '../openiti');
+const CACHE_HJ = resolve(args.cache || resolve(__dirname, '../../.cache/hadith-api'), '../hadith-json');
 const CDN = 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions';
 
 export const COLLECTIONS = [
@@ -70,24 +73,29 @@ async function fetchEdition(file) {
 async function loadAll() {
   const hadiths = [];
   const sections = {};
+  const filled = [];
   for (const c of COLLECTIONS) {
     const ara = await fetchEdition(`ara-${c.edition}.json`);
     const eng = await fetchEdition(`eng-${c.edition}.min.json`);
     const enByNum = new Map(eng.hadiths.map(h => [String(h.hadithnumber), h]));
     sections[c.code] = ara.metadata?.sections || {};
+    const recs = [];
     for (const h of ara.hadiths) {
       const num = String(h.hadithnumber);
       const en = enByNum.get(num);
-      hadiths.push({
+      recs.push({
         id: `${c.code}:${num}`, coll: c.code, num, sortKey: Number(h.hadithnumber),
         text: h.text || '', text_en: en?.text || '',
         grades: (h.grades || []).map(g => ({ name: g.name, grade: g.grade })),
         ref: h.reference ? { book: h.reference.book, hadith: h.reference.hadith } : null,
       });
     }
-    log(`${c.code}: ${ara.hadiths.length} hadiths`);
+    const got = await fillMissingTexts(recs, c.edition, CACHE_HJ, log);
+    filled.push(...got);
+    hadiths.push(...recs);
+    log(`${c.code}: ${ara.hadiths.length} hadiths${got.length ? ` (${got.length} texts completed from ${SUPPLEMENT.name})` : ''}`);
   }
-  return { hadiths, sections };
+  return { hadiths, sections, filled };
 }
 
 // ── 2. Parse ────────────────────────────────────────────────────────────────
@@ -645,7 +653,7 @@ async function main() {
   const t0 = Date.now();
   let mergeCount = 0, vocabSize = 0;
   const bookStats = [];
-  const { hadiths: loaded, sections } = await loadAll();
+  const { hadiths: loaded, sections, filled: filledTexts } = await loadAll();
   // entries with no text in the source: kept (numbering stays complete) but flagged; they cannot carry a chain
   const noText = loaded.filter(h => !h.text.trim());
   for (const h of noText) h.noText = true;
@@ -875,18 +883,23 @@ async function main() {
   {
     const aliasesOf = new Map();
     for (const [alias, target] of canon) (aliasesOf.get(target) || aliasesOf.set(target, []).get(target)).push(alias);
-    const compatible = (key, name) => { const kw = key.split(' '), nw = name.split(' '); if (kw[0] === 'ابن' && kw.length === 2) return nw.some((x, i) => x === 'بن' && nw[i + 1] === kw[1]); return kw.every(x => nw.includes(x)); };
+    // "ابن ابي ليلي" fits "عبد الرحمن بن ابي ليلي": the words after "ابن" must follow a "بن" of the name, in order
+    const compatible = (key, name) => { const kw = key.split(' '), nw = name.split(' '); if (kw[0] === 'ابن' && kw.length >= 2) return nw.some((x, i) => x === 'بن' && kw.slice(1).every((y, j) => nw[i + 1 + j] === y)); return kw.every(x => nw.includes(x)); };
     let full = 0;
     for (const e of ents.values()) {
       if (e.compiler) { e.fullName = COLLECTIONS.find(c => c.code === e.compiler).compilerFull; continue; }
+      const shown = cleanName([...e.displays].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0]?.[0] || e.key);
       const cands = [];
       if (e.taqrib) cands.push([e.taqrib.name, e.taqrib.raw]);
       if (e.tahdhib) cands.push([e.tahdhib.name, e.tahdhib.text]);
       for (const src of ['kamal', 'kashif', 'siyar', 'mizan', 'jarh', 'thiqat', 'tarikh', 'sacd', 'ijli', 'majruhin', 'shahin', 'isaba', 'usd', 'istiab', 'nuaym']) { const n = e.notices?.find(x => x.src === src); if (n) cands.push([n.entry.name, n.entry.text]); }
       for (const [nm, raw] of cands) {
-        const clean = cleanName(nm); if (!clean || ![e.key, ...(aliasesOf.get(e.key) || [])].some(k => compatible(k, clean))) continue;
+        const clean = cleanName(nm); if (!clean) continue;
+        const fits = [e.key, ...(aliasesOf.get(e.key) || [])].filter(k => compatible(k, clean)); if (!fits.length) continue;
         const trimmed = trimFullName(clean);
-        if (trimmed.split(' ').length <= e.key.split(' ').length && trimmed !== e.key) continue; // no shorter than what we have
+        // the dictionary must add to the name the isnads use most ("ابو هريره" → "ابو هريره الدوسي"); a truncated or repeated form is no gain
+        const tw = trimmed.split(' ');
+        if (tw.length < 2 || /^(?:بن|بنت|ابو|ابي|ام|عبد)$/.test(tw[tw.length - 1]) || tw.length <= shown.split(' ').length) continue;
         const disp = displayFromRaw(raw, trimmed);
         if (disp) { e.fullName = disp; full++; break; }
       }
@@ -962,12 +975,9 @@ async function main() {
   // full-text index over the whole matn: word → ordinals (position in `searchIds`), sharded by first letter
   const searchIds = [];
   const postings = new Map();
-  const STOP = new Set(['من', 'في', 'علي', 'الي', 'عن', 'ان', 'او', 'ما', 'لا', 'ثم', 'قال', 'قالت', 'قالوا', 'كان', 'كانت', 'الله', 'رسول', 'النبي', 'صلي', 'عليه', 'وسلم', 'يا', 'هو', 'هي', 'هذا', 'هذه', 'ذلك', 'الذي', 'التي', 'به', 'له', 'لها', 'لهم', 'بها', 'فيه', 'فيها', 'عليها', 'عليهم', 'اذا', 'اذ', 'حتي', 'كل', 'بن', 'ابن', 'ابو', 'ابي', 'انه', 'انها', 'اني', 'انا', 'نحن', 'هم', 'كما', 'لم', 'لن', 'قد', 'ولا', 'وما', 'فلا', 'اما', 'انما', 'الا', 'بل', 'مع', 'عند', 'بين', 'حين', 'يوم', 'ليله', 'رجل', 'ناس', 'شيء', 'ثم', 'فقال', 'فقالت', 'وقال', 'قلت', 'يقول', 'كانوا', 'كنا', 'كنت', 'وهو', 'وهي', 'وان', 'فان', 'ولم', 'فلم', 'اذ', 'حديث', 'رضي', 'عنه', 'عنها', 'ابن']);
-  const stem = w => w.replace(/^(?:وال|فال|بال|كال|لل|ال|و|ف|ب|ل|ك|س)(?=..)/, '').replace(/(?:ها|هم|هن|كم|كن|نا|ون|ين|ات|ان|ه|ي|ك|ت)$/, '');
   const indexWords = (h, ord) => {
     const words = new Set();
-    for (const w0 of cleanName(h.matn_ar || h.text).split(' ')) {
-      if (w0.length < 2 || STOP.has(w0)) continue;
+    for (const w0 of tokenize(h.text)) { // isnad and matn alike, same tokenizer as the browser
       words.add(w0);
       const st = stem(w0); if (st.length >= 2 && st !== w0) words.add(st);
     }
@@ -988,7 +998,7 @@ async function main() {
         return {
           id: h.id, coll: c.code, num: h.num, ref: h.ref, no_text: h.noText ? true : undefined, kind,
           section: h.ref ? { number: h.ref.book, name_en: sections[c.code]?.[String(h.ref.book)] || null } : null,
-          grades: h.grades, isnad_ar: h.isnad_ar, matn_ar: h.matn_ar, text_en: h.text_en,
+          grades: h.grades, isnad_ar: h.isnad_ar, matn_ar: h.matn_ar, text_en: h.text_en, text_src: h.text_src,
           isnad: {
             nodes: nodeIds,
             edges: g.edges.map(e => [e.student ? idOf(e.student) : idOf(c.compiler), idOf(e.teacher), connId(e.connector), e.inherited ? 1 : 0]).filter(e => e[0] && e[1] && e[0] !== e[1]),
@@ -1006,7 +1016,6 @@ async function main() {
 
   // search shards by first letter
   // shard key: first letter, or first two letters for words starting with alef (very frequent)
-  const shardKey = w => w[0] === 'ا' && w.length > 1 ? w.slice(0, 2) : w[0];
   const shardsByLetter = new Map();
   for (const [w, ords] of postings) { const l = shardKey(w); (shardsByLetter.get(l) || shardsByLetter.set(l, {}).get(l))[w] = ords; }
   await writeJson('search/ids.json', searchIds);
@@ -1041,7 +1050,7 @@ async function main() {
     narrators_by_generation: narrators.reduce((a, n) => { a[n.generation] = (a[n.generation] || 0) + 1; return a; }, {}),
     layer_names: LAYER_NAMES,
     sources: {
-      hadith: { name: 'fawazahmed0/hadith-api', url: 'https://github.com/fawazahmed0/hadith-api', editions: COLLECTIONS.map(c => ({ code: c.code, ara: `ara-${c.edition}.json`, eng: `eng-${c.edition}.min.json`, hadiths: (byColl.get(c.code) || []).length, without_text: noText.filter(h => h.coll === c.code).length })) },
+      hadith: { name: 'fawazahmed0/hadith-api', url: 'https://github.com/fawazahmed0/hadith-api', editions: COLLECTIONS.map(c => ({ code: c.code, ara: `ara-${c.edition}.json`, eng: `eng-${c.edition}.min.json`, hadiths: (byColl.get(c.code) || []).length, without_text: noText.filter(h => h.coll === c.code).length, completed: filledTexts.filter(id => id.startsWith(c.code + ':')).length })), supplement: { ...SUPPLEMENT, completed: filledTexts.length, ids: filledTexts } },
       rijal: { name: 'OpenITI', url: 'https://github.com/OpenITI', licence: OPENITI_LICENCE, books: bookStats, taqrib: { entries: taqrib.length, with_grade: taqrib.filter(t => t.grade).length, with_layer: taqrib.filter(t => t.layer).length, with_death: taqrib.filter(t => t.death != null).length }, tahdhib: { entries: tahdhib.length, with_teachers: tahdhib.filter(t => t.teachers.length).length, with_students: tahdhib.filter(t => t.students.length).length } },
       reference: { legacy: 88, extra: EXTRA_NARRATORS.length, bios: Object.keys(BIOS).length, ref_keys: ref.size },
     },

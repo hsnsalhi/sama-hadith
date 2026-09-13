@@ -343,7 +343,7 @@ function resolveRelative(word, prevName) {
 
 export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = new Set(), _retry = false } = {}) {
   const { normalized: normalized0, map } = normalizeWithMap(text || '');
-  const normalized = normalized0.replace(NOISE_PHRASES, m => '¤' + ' '.repeat(m.length - 1));
+  const normalized = normalized0.replace(NOISE_PHRASES, m => '¤' + ' '.repeat(m.length - 1)).replace(/(?<=(?:^| )(?:ابن|بن|ابو|ابي|عبد|عبيد|ام))،/g, ' '); // "وابن، بشار": a stray comma inside a name (same length: the char map stays valid)
   const { tokens, starts, ends } = tokenize(normalized);
   const n = tokens.length;
   const spanOf = (from, to) => text.slice(map[starts[from]], map[ends[to - 1] ] ?? text.length); // original text of tokens[from..to)
@@ -678,10 +678,11 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
 
   const after = tokens.slice(stop, stop + 24).join(' ');
   const reachesProphet = edges.length > 0 && PROPHET.test(after);
-  const isnadEnd = stop > 0 ? ends[stop - 1] : 0;                 // in `normalized`
-  const cut = stop > 0 ? map[ends[stop - 1]] ?? text.length : 0;  // in `text`
+  // the matn starts at its first token: an honorific replaced by '¤' spans several source chars, so the end of the last isnad token is not a safe cut
+  const isnadEnd = stop > 0 ? (stop < n ? starts[stop] : normalized.length) : 0;                 // in `normalized`
+  const cut = stop > 0 ? (stop < n ? map[starts[stop]] ?? text.length : text.length) : 0;      // in `text`
   const isnad_ar = text.slice(0, cut).trim();
-  const matn_ar = text.slice(cut).replace(/^[\s،:.\-]+/, '').trim();
+  const matn_ar = text.slice(cut).replace(/^[\s،:.\-–—\u200f\u200e]+/, '').trim();
   return { nodes, edges, leaves, reachesProphet, isnadEnd, normalized, isnad_ar, matn_ar };
 }
 

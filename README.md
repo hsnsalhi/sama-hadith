@@ -17,7 +17,7 @@
 
 ### المصادر
 
-- نصوص الأحاديث: الطبعات الرقمية لمشروع [hadith-api](https://github.com/fawazahmed0/hadith-api).
+- نصوص الأحاديث: الطبعات الرقمية لمشروع [hadith-api](https://github.com/fawazahmed0/hadith-api)؛ النصوص الفارغة فيها تُكمَل، حين تتأكد المطابقة، من [hadith-json](https://github.com/AhmedBaset/hadith-json) (sunnah.com).
 - تراجم الرواة: نصوص مشروع [OpenITI](https://github.com/OpenITI) (الرخصة CC BY-NC-SA 4.0)، تُحمَّل عند البناء وتُقرأ آلياً.
 - قوائم مرجعية مدقّقة لأشهر الرواة (تواريخ الوفاة والطبقات والبلدان).
 
@@ -46,7 +46,7 @@ Live site: <https://hsnsalhi.github.io/sama-hadith/>
 
 ### Data and method
 
-1. The seven collections (vocalised Arabic text and English translation) are downloaded from [hadith-api](https://github.com/fawazahmed0/hadith-api).
+1. The seven collections (vocalised Arabic text and English translation) are downloaded from [hadith-api](https://github.com/fawazahmed0/hadith-api); entries whose text is empty there are completed, when the alignment is certain, from [hadith-json](https://github.com/AhmedBaset/hadith-json) (sunnah.com).
 2. Each isnād is parsed word by word: transmission verbs give the direction, a grammar of the Arabic name (kunya, "ibn", nisba, laqab) reads the names, and the frequent constructions are handled (taḥwīl "ح", groups of teachers speaking in turn, relatives "ʿan abīhi", references to the previous chain).
 3. Names are normalised and disambiguated: a bare given name is resolved from its neighbours in the chain, from the teacher/student lists of the biographical dictionaries, and from the plausibility of dates; a word is accepted as a name only if the dictionaries know it.
 4. The biographical dictionaries are downloaded from [OpenITI](https://github.com/OpenITI) at build time and read automatically (name, sigla of the six books, year of death, teachers, students, verdicts); each entry is aligned with a narrator by name, sigla, date and shared neighbours.
@@ -86,7 +86,7 @@ Site : <https://hsnsalhi.github.io/sama-hadith/>
 
 ### Données et méthode
 
-1. Les sept recueils (texte arabe vocalisé et traduction anglaise) sont téléchargés depuis [hadith-api](https://github.com/fawazahmed0/hadith-api).
+1. Les sept recueils (texte arabe vocalisé et traduction anglaise) sont téléchargés depuis [hadith-api](https://github.com/fawazahmed0/hadith-api) ; les entrées dont le texte y est vide sont complétées, quand l'alignement est certain, depuis [hadith-json](https://github.com/AhmedBaset/hadith-json) (sunnah.com).
 2. Chaque isnād est lu mot à mot : les verbes de transmission donnent la direction, une grammaire du nom arabe (kunya, « ibn », nisba, laqab) lit les noms, et les constructions fréquentes sont traitées (taḥwīl « ح », groupes de maîtres parlant tour à tour, parents « ʿan abīhi », renvois à la chaîne précédente).
 3. Les noms sont normalisés et désambiguïsés : un prénom nu est résolu d'après ses voisins dans la chaîne, d'après les listes de maîtres et d'élèves des dictionnaires, et d'après la vraisemblance des dates ; un mot n'est accepté comme nom que si les dictionnaires le connaissent.
 4. Les dictionnaires biographiques sont téléchargés depuis [OpenITI](https://github.com/OpenITI) au moment du build et lus automatiquement (nom, sigles des six livres, année de décès, maîtres, élèves, jugements) ; chaque notice est alignée sur un transmetteur par le nom, les sigles, la date et les voisins communs.

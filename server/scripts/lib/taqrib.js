@@ -100,6 +100,11 @@ export function loadTaqrib(path) {
  * Lookup keys of an entry → strength (3 full name, 2 patronymic prefix / kunya, 1 weak forms).
  * "صهيب ابو الصهباء البكري البصري" → صهيب ابو الصهباء البكري البصري (3), ابو الصهباء (2), ابو الصهباء البكري (2), صهيب البكري (1)
  */
+/** A cleaned name that is only a given name ("محمد", "عبد الله"): no patronymic, no kunya, no nisba. Such an entry cannot be told from its namesakes by the name. */
+export const bareEntryName = clean => !!clean && !clean.split(' ').some(w => ['بن', 'بنت', 'ابن', 'ابو', 'ام', 'ابي'].includes(w) || (w.startsWith('ال') && w !== 'الله' && w !== 'الرحمن'));
+const bareCache = new WeakMap();
+const isBareEntry = t => { let v = bareCache.get(t); if (v === undefined) { v = bareEntryName(cleanName(t.name)); bareCache.set(t, v); } return v; };
+
 export function entryKeys(e) {
   const keys = new Map();
   const put = (k, s) => { if (k && (!keys.has(k) || keys.get(k) < s)) keys.set(k, s); };
@@ -114,7 +119,7 @@ export function entryKeys(e) {
     if (!['عبد', 'عبيد', 'بن', 'ابي'].includes(w[i + 1])) put(`${w[i]} ${w[i + 1]}`, 2); else if (w[i + 2]) put(`${w[i]} ${w[i + 1]} ${w[i + 2]}`, 2);
     if (w[i + 2] && w[i + 2].startsWith('ال')) put(`${w[i]} ${w[i + 1]} ${w[i + 2]}`, 2);
   }
-  if (idx.length && w[idx[0] + 1]) { const f = w.slice(idx[0] + 1, idx[0] + 3).join(' '); if (!['ابي', 'عبد', 'عبيد', 'ام', 'ابو'].includes(w[idx[0] + 1])) put(`ابن ${w[idx[0] + 1]}`, 1); else if (w[idx[0] + 2]) put(`ابن ${f}`, 1); }
+  for (const i of idx) if (w[i + 1]) { const f = w.slice(i + 1, i + 3).join(' '); if (!['ابي', 'عبد', 'عبيد', 'ام', 'ابو'].includes(w[i + 1])) put(`ابن ${w[i + 1]}`, 1); else if (w[i + 2]) put(`ابن ${f}`, 1); } // the shorthand names any ancestor
   const nisba = [...w].reverse().find(t => t.startsWith('ال') && t.length > 3 && t !== 'الله' && !GENERIC_NISBA.has(t));
   if (nisba && w[0] !== nisba && w[0] !== 'ابو' && w[0] !== 'ام') put(`${w[0]} ${nisba}`, 1);
   for (const t of w) if (t.startsWith('ال') && t.length >= 6 && !GENERIC_NISBA.has(t) && t !== 'الله') put(t, 1);
@@ -178,11 +183,11 @@ const LAYER_MID = { 1: 55, 2: 90, 3: 110, 4: 130, 5: 145, 6: 150, 7: 170, 8: 190
 export function taqribDeath(t, hint) {
   if (t.death == null) return null;
   if (t.centuryExplicit || t.death >= 100) return t.death;
-  const target = hint ?? (t.layer ? LAYER_MID[t.layer] : null);
+  const target = t.layer ? LAYER_MID[t.layer] : hint;
   if (target == null) return t.death;
-  let best = t.death, bd = Infinity;
-  for (const c of [0, 100, 200, 300]) { const d = Math.abs(t.death + c - target); if (d < bd) { bd = d; best = t.death + c; } }
-  return best;
+  const ranked = [0, 100, 200, 300].map(c => ({ y: t.death + c, d: Math.abs(t.death + c - target) })).sort((a, b) => a.d - b.d);
+  if (t.layer && hint != null && ranked[1].d - ranked[0].d < 25) return Math.abs(ranked[0].y - hint) <= Math.abs(ranked[1].y - hint) ? ranked[0].y : ranked[1].y; // "ستين" in the 3rd layer: 60 or 160? the estimate decides
+  return ranked[0].y;
 }
 
 /** Words of the names known to the rijāl books (entry heads only: the teacher/student lists are noisier). */
@@ -213,16 +218,29 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
   const iTaq = index(taqrib), iTah = index(tahdhib);
   const cands = (idx, e) => {
     const seen = new Map();
-    for (const k of [e.key, ...(aliases.get(e.key) || [])]) for (const [entry, s] of idx.get(k) || []) if (!seen.has(entry) || seen.get(entry) < s) seen.set(entry, s);
+    for (const k of [e.key, ...(aliases.get(e.key) || [])]) for (const [entry, s] of idx.get(k) || []) if (!isBareEntry(entry) && (!seen.has(entry) || seen.get(entry) < s)) seen.set(entry, s);
     return [...seen];
   };
+  const headCount = new Map(); // given name → how many Tahdhīb entries begin with it (a rare name identifies, a common one pools)
+  for (const t of tahdhib) { const w = cleanName(t.name).split(' ')[0]; if (w) headCount.set(w, (headCount.get(w) || 0) + 1); }
+  const bareGiven = k => !k.includes(' ') && !/^(?:ابو|ابن|ام|ال)/.test(k);
   const stats = { tahdhib: 0, taqrib: 0, tahdhibAmbiguous: 0, taqribAmbiguous: 0, both: 0 };
-  const pick = ranked => {
+  // "ابن X" names any descendant of X: among namesakes tied on evidence, the one cited by far more collections wins, else the direct son
+  const directSon = (t, key) => { const m = key.match(/^ابن (.+)$/); if (!m) return false; const w = cleanName(t.name).split(' '); const i = w.indexOf('بن'); return i > 0 && w.slice(i + 1, i + 1 + m[1].split(' ').length).join(' ') === m[1]; };
+  const pick = (ranked, key = '') => {
     if (!ranked.length) return null;
     const [best, second] = ranked;
     if (best.strength <= 1 && best.s < 3) return null;                 // a weak key ("ابن شهاب", "سفيان الهلالي") needs corroboration
+    if (best.strength <= 1 && best.overlap != null && best.overlap < 2 && ranked.length > 1) return null; // several namesakes: the company must speak
     if (ranked.length === 1) return best.s >= 1 || best.strength >= 2 ? best : null;
-    return best.s >= 2 && best.s >= second.s + 1 ? best : null;
+    if (best.s >= 2 && best.s >= second.s + 1) return best;
+    if (best.s === second.s && key.startsWith('ابن ') && best.strength <= 1 && second.strength <= 1) {
+      if (best.e.colls.length >= second.e.colls.length + 2) return best;
+      if (second.e.colls.length >= best.e.colls.length + 2) return second;
+      const d1 = directSon(best.e, key), d2 = directSon(second.e, key);
+      if (d1 !== d2 && !ranked.slice(2).some(r => r.s === best.s)) return d1 ? best : second;
+    }
+    return null;
   };
   // a candidate whose death year contradicts the entity's own dating is discarded
   const dateOk = (t, e) => { if (t.death == null || e.death == null) return true; const d = Math.abs(taqribDeath(t, e.death) - e.death); return d <= (e.dated === 'reference' ? 3 : 40); };
@@ -239,10 +257,10 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
         for (const nm of [...t.teachers, ...t.students]) { const k = cleanName(nm); if (!k) continue; if (nb.has(k) || nbArr.some(x => compatible(k, x))) overlap++; if (overlap >= 4) break; }
         s += overlap;
         if (strength === 3) s += 1;
-        return { e: t, s, strength };
+        return { e: t, s, strength, overlap };
       }).sort((a, b) => b.s - a.s);
-      let best = pick(ranked);
-      if (!best && ranked.length && !e.key.includes(' bn ')) { const [b, s2] = ranked; const overlap = b.s - (b.strength === 3 ? 1 : 0) - (b.e.colls.length && b.e.colls.some(c => collsE.has(c)) ? 2 : 0); if (overlap >= 3 && (!s2 || b.s >= s2.s + 2)) best = b; } // "كريب", "الجريري": the company decides
+      let best = pick(ranked, e.key);
+      if (!best && ranked.length && !e.key.includes(' بن ') && (!bareGiven(e.key) || (headCount.get(e.key) || 0) <= 3)) { const [b, s2] = ranked; const overlap = b.s - (b.strength === 3 ? 1 : 0) - (b.e.colls.length && b.e.colls.some(c => collsE.has(c)) ? 2 : 0); if (overlap >= 3 && (!s2 || b.s >= s2.s + 2)) best = b; } // "كريب", "الجريري": the company decides
       if (best) { e.tahdhib = best.e; stats.tahdhib++; } else if (ranked.length > 1) stats.tahdhibAmbiguous++;
     }
     {
@@ -258,7 +276,7 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
         if (e.tahdhib) { const a = cleanName(t.name), b = cleanName(e.tahdhib.name); if (compatible(a, b) && (!t.colls.length || !e.tahdhib.colls.length || t.colls.join() === e.tahdhib.colls.join())) s += 2; }
         return { e: t, s, strength };
       }).sort((a, b) => b.s - a.s);
-      const best = pick(ranked);
+      const best = pick(ranked, e.key);
       if (best) { e.taqrib = best.e; stats.taqrib++; } else if (ranked.length > 1) stats.taqribAmbiguous++;
     }
   }
@@ -333,7 +351,7 @@ export function matchSource(ents, aliases, entries, srcId, { companions = false 
     if (companions && e.gen !== 'sahabi' && e.layer !== 1) continue; // a dictionary of companions only speaks of companions
     const keys = [e.key, ...(aliases.get(e.key) || [])];
     const seen = new Map();
-    for (const k of keys) for (const [t, st] of idx.get(k) || []) if (!seen.has(t) || seen.get(t) < st) seen.set(t, st);
+    for (const k of keys) for (const [t, st] of idx.get(k) || []) if (!isBareEntry(t) && (!seen.has(t) || seen.get(t) < st)) seen.set(t, st);
     // through the Taqrīb / Tahdhīb entry already found: same head word and compatible name
     const anchorNames = [e.taqrib && cleanName(e.taqrib.name), e.tahdhib && cleanName(e.tahdhib.name)].filter(Boolean);
     for (const an of anchorNames) for (const t of heads.get(an.split(' ')[0]) || []) { const tn = cleanName(t.name); if ((compat(an, tn) || compat(tn, an)) && !seen.has(t)) seen.set(t, 2); }
@@ -358,6 +376,7 @@ export function matchSource(ents, aliases, entries, srcId, { companions = false 
     if (ranked.length === 1) ok = (best.strength >= 2 && best.s >= 1) || best.s >= 3 || (best.strength === 3 && !bare && cleanName(best.t.name).split(' ').length >= 3);
     else ok = best.s >= 2 && best.s >= second.s + 2 && (best.strength >= 2 || best.s >= 4);
     if (bare && !anchorNames.length) ok = false;
+    if (/^(?:ابو|ام) [^ ]+$/.test(e.key) && !anchorNames.length && best.s < 4) ok = false; // "أبو حازم" alone names several men: the shared teachers and students must speak
     if (ok) { (e.notices ||= []).push({ src: srcId, entry: best.t }); stats.matched++; } else if (ranked.length > 1) stats.ambiguous++;
   }
   return stats;
@@ -371,11 +390,16 @@ const NISBA_STOP = new Set(['الفقيه', 'الحافظ', 'الامام', 'ا�
  * the nisbas/laqabs, and the kunya. "محمد بن مسلم بن عبيد الله بن عبد الله بن شهاب … القرشي الزهري ابو بكر الفقيه" → "محمد بن مسلم بن عبيد الله بن عبد الله القرشي الزهري ابو بكر"
  */
 export function trimFullName(clean, links = 3) {
-  const w = clean.split(' ').filter(Boolean);
+  let w = clean.split(' ').filter(Boolean);
+  if ((w[0] === 'ابو' || w[0] === 'ام') && w.length >= 4) { // a leading kunya followed by the name: "ابو حازم سلمه بن دينار" → "سلمه بن دينار ابو حازم"
+    const k = (w[1] === 'عبد' || w[1] === 'عبيد') && w[2] ? 3 : 2;
+    const rest = w.slice(k);
+    if (rest[0] && !rest[0].startsWith('ال') && rest[0] !== 'بن' && rest[0] !== 'بنت' && rest[0] !== 'ابو' && rest[0] !== 'ام' && (rest[1] === 'بن' || rest[1] === 'بنت' || rest[0] === 'عبد' || rest[0] === 'عبيد')) w = [...rest, ...w.slice(0, k)];
+  }
   const out = [];
   let i = 0, n = 0;
   const theo = k => (w[k] === 'عبد' || w[k] === 'عبيد') && w[k + 1];
-  const nameAt = k => theo(k) ? [w[k], w[k + 1]] : (w[k] === 'ابو' || w[k] === 'ابي' || w[k] === 'ام') && w[k + 1] ? (theo(k + 1) ? [w[k], w[k + 1], w[k + 2]] : [w[k], w[k + 1]]) : [w[k]];
+  const nameAt = k => theo(k) ? [w[k], w[k + 1]] : (w[k] === 'ابو' || w[k] === 'ابي' || w[k] === 'ام') && w[k + 1] && w[k + 1] !== 'بن' && w[k + 1] !== 'بنت' ? (theo(k + 1) ? [w[k], w[k + 1], w[k + 2]] : [w[k], w[k + 1]]) : [w[k]];
   let nm = nameAt(0); out.push(...nm); i = nm.length;
   while (i < w.length && (w[i] === 'بن' || w[i] === 'بنت') && w[i + 1]) {
     nm = nameAt(i + 1);
@@ -402,5 +426,9 @@ export function displayFromRaw(raw, clean) {
     if (nw[i] === target[j]) { out.push(words[i]); j++; }
     else if (out.length && nw[i] && (nw[i] === 'بن' || nw[i] === 'بنت') && target[j] !== 'بن' && target[j] !== 'بنت') continue;
   }
-  return j === target.length ? out.join(' ').replace(/^(?:ابي|ابا) /, 'أبو ') : null;
+  if (j === target.length) return out.join(' ').replace(/^(?:ابي|ابا) /, 'أبو ');
+  // not a subsequence (the kunya was moved after the nasab): render each word from its first occurrence
+  const used = new Set(), out2 = [];
+  for (const t of target) { const i = nw.findIndex((x, k) => x === t && !used.has(k)); if (i < 0) return null; used.add(i); out2.push(words[i]); }
+  return out2.join(' ').replace(/^(?:ابي|ابا) /, 'أبو ');
 }

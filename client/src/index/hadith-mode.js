@@ -106,9 +106,10 @@ export async function runHadithSearch(qRaw) {
       res.push(r);
     }
   } else if (q) {
-    const ids = await searchHadiths(q);              // full matn, every word required
+    const { ids, ignored, words } = await searchHadiths(q); // whole text, every word required (stop words ignored)
     if (seq !== searchSeq) return;
     res = ids.map(id => rows.get(id)).filter(r => r && (!collFilter || r.coll === collFilter));
+    if (!words.length) { sr.innerHTML = `<div class="sri-empty">الكلمات المكتوبة كلها شائعة جداً (${ignored.join('، ')}) — أضِف كلمة مميّزة من الحديث</div>`; return; }
   } else {
     res = [...rows.values()].filter(r => r.coll === collFilter);
   }
@@ -300,6 +301,7 @@ async function renderPanel(h) {
     ${h.no_text ? '' : `<div class="ps"><div class="pst">سلسلة الرواة${h.isnad.reaches_prophet ? ' · تنتهي إلى النبي ﷺ' : ''}</div><div class="chain">${chainHtml}${h.isnad.reaches_prophet ? '<div class="lvl-conn"><em>↓</em></div><div class="lvl"><span class="nchip prophet">رسول الله ﷺ</span></div>' : ''}</div></div>`}
     ${h.isnad_ar ? `<div class="ps"><div class="pst">الإسناد</div><div class="isnad-txt">${h.isnad_ar}</div></div>` : ''}
     ${h.no_text ? '' : `<div class="ps"><div class="pst">المتن</div><div class="matn-txt">${h.matn_ar || '—'}</div></div>`}
+    ${h.text_src === 'hadith-json' ? `<div class="ps note-src">النص ناقص في طبعة hadith-api، فأُكمل من <a href="https://github.com/AhmedBaset/hadith-json" target="_blank" rel="noopener">hadith-json</a> (sunnah.com)</div>` : ''}
     ${h.text_en ? `<div class="ps"><div class="pst en-toggle" id="en-toggle">English ▸</div><div class="en-txt" id="en-txt" hidden>${h.text_en}</div></div>` : ''}
     <div class="ps"><div class="pst">مشاركة</div><input class="share" readonly value="${location.origin}${location.pathname}?hadith=${h.id}"></div>
   `;

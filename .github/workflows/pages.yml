@@ -37,6 +37,7 @@ jobs:
           path: |
             .cache/hadith-api
             .cache/openiti
+            .cache/hadith-json
           key: hadith-api-editions-v1
 
       - name: Build dataset (isnad graphs, narrators, transmissions)

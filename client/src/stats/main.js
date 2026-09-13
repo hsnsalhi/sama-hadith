@@ -59,7 +59,9 @@ async function main() {
 
   <h2>المصادر</h2>
   <div class="card"><h3>نصوص الأحاديث</h3>
-    <p><b>${s.hadith?.name || 'fawazahmed0/hadith-api'}</b> — طبعات رقمية للكتب السبعة (النص العربي مشكولاً، والترجمة الإنجليزية)، تُحمَّل من الشبكة عند البناء. <a href="${s.hadith?.url || '#'}" target="_blank" rel="noopener">${s.hadith?.url || ''}</a></p></div>
+    <p><b>${s.hadith?.name || 'fawazahmed0/hadith-api'}</b> — طبعات رقمية للكتب السبعة (النص العربي مشكولاً، والترجمة الإنجليزية)، تُحمَّل من الشبكة عند البناء. <a href="${s.hadith?.url || '#'}" target="_blank" rel="noopener">${s.hadith?.url || ''}</a></p>    ${s.hadith?.supplement?.completed ? `<p class="note">${f(s.hadith.supplement.completed)} حديثاً نصُّها فارغ في هذه الطبعات أُكمل من <a href="${s.hadith.supplement.url}" target="_blank" rel="noopener">${s.hadith.supplement.name}</a> (مأخوذ من sunnah.com) بعد مطابقة الترقيمَين نصاً بنص؛ ما لم تتأكد مطابقته بقي بلا نص (${f(m.entries_without_text?.length)} حديثاً).</p>` : ''}
+    ${s.hadith?.supplement?.completed ? `<p class="note">${f(s.hadith.supplement.completed)} حديثاً نصُّها فارغ في هذه الطبعات أُكمل من <a href="${s.hadith.supplement.url}" target="_blank" rel="noopener">${s.hadith.supplement.name}</a> (مأخوذ من sunnah.com) بعد مطابقة الترقيمَين نصاً بنص؛ وما لم تتأكد مطابقته بقي بلا نص (${f(m.entries_without_text?.length)} حديثاً).</p>` : ''}
+  </div>
   <div class="card"><h3>تراجم الرواة</h3>
     <div class="tblwrap"><table><tr><th>الكتاب</th><th>المؤلف</th><th class="n">التراجم</th><th class="n">بسنة وفاة</th><th class="n">بقوائم الرواة</th><th class="n">بأحكام النقّاد</th><th class="n">راوٍ مطابَق</th></tr>
     ${(s.rijal?.books || []).map(b => `<tr><td>${b.title}</td><td>${b.author} (ت ${b.author_death} هـ)</td><td class="n">${f(b.entries)}</td><td class="n">${f(b.with_death)}</td><td class="n">${f(b.with_lists)}</td><td class="n">${f(b.with_verdicts)}</td><td class="n">${f(b.matched)}</td></tr>`).join('')}</table></div>

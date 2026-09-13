@@ -1,3 +1,4 @@
+import { STOP, normalizeText, stem, shardKey } from './search-norm.js';
 // Data layer over the static dataset produced by server/scripts/build-dataset.js
 // (client/public/data). Everything is lazy and cached for the page lifetime.
 const DATA = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/data`;
@@ -78,36 +79,56 @@ export async function getIndexRowMap() {
   return rowMap;
 }
 
-// ── Full-text search over the whole matn ─────────────────────────────────
-const stripAr = s => (s || '').replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ى/g, 'ي').replace(/ة/g, 'ه');
-const stem = w => w.replace(/^(?:وال|فال|بال|كال|لل|ال|و|ف|ب|ل|ك|س)(?=..)/, '').replace(/(?:ها|هم|هن|كم|كن|نا|ون|ين|ات|ان|ه|ي|ك|ت)$/, '');
-async function postingsOf(word) {
+// ── Full-text search over the whole text (isnad and matn) ─────────────────
+const shardCache = new Map();
+async function shardOf(word) {
+  const key = shardKey(word);
+  if (shardCache.has(key)) return shardCache.get(key);
   const m = await getManifest();
-  const key = word[0] === 'ا' && word.length > 1 ? word.slice(0, 2) : word[0];
   const entry = (m.search?.letters || []).find(([l]) => l === key);
-  if (!entry) return null;
-  const shard = await load(`search/${entry[1]}.json`);
-  return shard[word] || null;
+  const p = entry ? load(`search/${entry[1]}.json`) : Promise.resolve(null);
+  shardCache.set(key, p);
+  return p;
+}
+const MAX_PREFIX = 400;
+/**
+ * Hadiths containing one query word: its exact form (weight 3), its stem (2) or, when neither is
+ * indexed, the indexed words it is a prefix of (1) — so a partly typed word still finds something.
+ */
+async function ordinalsOf(word) {
+  const shard = await shardOf(word);
+  const hits = new Map(); // ordinal → weight
+  const add = (list, w) => { for (const o of list || []) if ((hits.get(o) || 0) < w) hits.set(o, w); };
+  if (shard?.[word]) add(shard[word], 3);
+  const st = stem(word);
+  if (st.length >= 2 && st !== word) { const sh = shardKey(st) === shardKey(word) ? shard : await shardOf(st); add(sh?.[st], 2); }
+  if (!hits.size && shard && word.length >= 3) {
+    let n = 0;
+    for (const w in shard) if (w.startsWith(word) && ++n <= MAX_PREFIX) add(shard[w], 1);
+  }
+  return hits;
 }
 /**
- * AND search: every query word (or its stem) must occur in the matn.
- * Returns hadith ids in collection order.
+ * AND search over the words of the query (stop words such as «لا», «ما», «حتى» are ignored, as
+ * they are not indexed). Results are ranked: exact words first, then stems, then prefixes; ties
+ * keep the order of the collections.
+ * @returns {{ ids: string[], ignored: string[], words: string[] }}
  */
 export async function searchHadiths(query) {
-  const words = stripAr(query).toLowerCase().split(/\s+/).filter(w => w.length >= 2);
-  if (!words.length) return [];
+  const all = normalizeText(query).split(' ').filter(w => w.length >= 2);
+  const words = all.filter(w => !STOP.has(w));
+  const ignored = all.filter(w => STOP.has(w));
+  if (!words.length) return { ids: [], ignored, words };
   const ids = await load('search/ids.json');
-  let acc = null;
+  let acc = null; // ordinal → score
   for (const w of words) {
-    const exact = await postingsOf(w);
-    const st = stem(w);
-    const stemmed = st.length >= 2 && st !== w ? await postingsOf(st) : null;
-    const set = new Set([...(exact || []), ...(stemmed || [])]);
-    if (!set.size) return [];
-    acc = acc ? new Set([...acc].filter(o => set.has(o))) : set;
-    if (!acc.size) return [];
+    const hits = await ordinalsOf(w);
+    if (!hits.size) return { ids: [], ignored, words };
+    if (!acc) acc = hits;
+    else { const next = new Map(); for (const [o, s] of acc) { const h = hits.get(o); if (h) next.set(o, s + h); } acc = next; }
+    if (!acc.size) return { ids: [], ignored, words };
   }
-  return [...acc].sort((a, b) => a - b).map(o => ids[o]);
+  return { ids: [...acc].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([o]) => ids[o]), ignored, words };
 }
 
 export function splitHadithId(id) {

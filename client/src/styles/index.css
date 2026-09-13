@@ -240,6 +240,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 .sri-c b { color: var(--silver); font-weight: 600; }
 .sri-t { font-family: 'Amiri', serif; font-size: 12px; color: rgba(223,228,234,.85); line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; }
 .sri-k { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 9px; color: rgba(223,228,234,.35); border: 0.5px solid rgba(201,168,76,.18); border-radius: 8px; padding: 1px 5px; }
+.note-src { font-size: 10px; color: var(--silver-dim, rgba(223,228,234,.45)); }
+.note-src a { color: inherit; text-decoration: underline dotted; }
 .sri-empty { padding: 12px; text-align: center; font-family: 'Cairo', sans-serif; font-size: 11px; color: rgba(223,228,234,.4); }
 
 #path-layer { position: fixed; inset: 0; pointer-events: none; z-index: 12; overflow: hidden; }
