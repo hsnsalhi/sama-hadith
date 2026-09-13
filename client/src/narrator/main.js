@@ -1,5 +1,5 @@
 import '../styles/narrator.css';
-import { GCS, GL, kindOf, KINDS } from '../lib/constants.js';
+import { GCS, GL, kindOf, KINDS, gradeAr, graderAr } from '../lib/constants.js';
 import { getCollections } from '../lib/api.js';
 import { getCoords } from '../lib/utils.js';
 import { getNarratorById, getTransmissionsByNarrator, getHadith, getNarratorMap, getHadithRowsByNarrator, getRijal, getManifest } from '../lib/api.js';
@@ -116,10 +116,10 @@ async function main() {
         el.dataset.loaded = 1;
         const h = await getHadith(el.dataset.h);
         if (!h) return;
-        const grade = (h.grades || []).find(g => g.grade)?.grade;
+        const gr = (h.grades || []).find(g => g.grade && gradeAr(g.grade));
         el.querySelector('.hadith-snippet').innerHTML = `${h.isnad_ar ? `<div class="hadith-isnad">${h.isnad_ar}</div>` : ''}<div>${h.matn_ar || ''}</div>${h.text_en ? `<div class="hadith-en">${h.text_en}</div>` : ''}`;
         if (h.section?.name_en) el.querySelector('.hadith-meta').insertAdjacentHTML('afterbegin', `<span class="hadith-tag">${h.section.name_en}</span>`);
-        if (grade) el.querySelector('.hadith-meta').insertAdjacentHTML('afterbegin', `<span class="hadith-tag hadith-grade-sahih">${grade}</span>`);
+        if (gr) el.querySelector('.hadith-meta').insertAdjacentHTML('afterbegin', `<span class="hadith-tag hadith-grade-sahih" title="حكم ${graderAr(gr.name)}">${gradeAr(gr.grade)}</span>`);
       }));
     }
 

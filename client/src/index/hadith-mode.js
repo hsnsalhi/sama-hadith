@@ -4,7 +4,7 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { state } from './state.js';
-import { GC_HEX, GCS, GL, KINDS, kindOf } from '../lib/constants.js';
+import { GC_HEX, GCS, GL, KINDS, kindOf, gradeAr, graderAr } from '../lib/constants.js';
 import { setHighlight, positionOf } from './stars.js';
 import { updateTimelineRange } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
@@ -285,7 +285,7 @@ async function renderPanel(h) {
     return `${i ? `<div class="lvl-conn">${conns.map(c => `<span>${c}</span>`).join('')}<em>↓</em></div>` : ''}<div class="lvl">${lvl.map(chip).join('')}</div>`;
   }).join('');
 
-  const grades = (h.grades || []).filter(g => g.grade).map(g => `<span class="tag gr" title="${g.name}">${g.grade}</span>`).join('');
+  const grades = (h.grades || []).filter(g => g.grade && gradeAr(g.grade)).map(g => `<span class="tag gr" title="حكم ${graderAr(g.name)}">${gradeAr(g.grade)}</span>`).join('');
   document.getElementById('pdot').style.cssText = 'display:none';
   document.getElementById('pgt').textContent = collectionTitle(h.coll);
   const kd = KINDS.find(k => k.key === h.kind);

@@ -93,3 +93,16 @@ export const KINDS = [
   { key: 'ray', label: 'رأي', title: 'قول راوٍ متأخر أو رأي فقهي', col: '#9aa' },
 ];
 export const kindOf = code => KINDS[code] || null;
+
+// Hadith grades and graders of the hadith-api editions, in Arabic
+const GRADE_WORDS = { sahih: 'صحيح', daif: 'ضعيف', 'da\'if': 'ضعيف', hasan: 'حسن', isnaad: 'الإسناد', isnad: 'الإسناد', sanad: 'الإسناد', lighairihi: 'لغيره', mauquf: 'موقوف', muquf: 'موقوف', maqtu: 'مقطوع', munkar: 'منكر', shadh: 'شاذ', mawdu: 'موضوع', maudu: 'موضوع', batil: 'باطل', mursal: 'مرسل', mutawatir: 'متواتر', hadith: 'حديث', matn: 'المتن', bukhari: 'البخاري', muslim: 'مسلم', and: 'و', very: 'جداً', gharib: 'غريب', 'mu\'allaq': 'معلّق', muallaq: 'معلّق' };
+const GRADERS = { 'al-albani': 'الألباني', 'zubair ali zai': 'زبير علي زئي', 'shuaib al arnaut': 'شعيب الأرناؤوط', 'abu ghuddah': 'عبد الفتاح أبو غدة', 'muhammad muhyi al-din abdul hamid': 'محمد محيي الدين عبد الحميد', 'muhammad fouad abd al-baqi': 'محمد فؤاد عبد الباقي', 'ahmad muhammad shakir': 'أحمد محمد شاكر', 'bashar awad maarouf': 'بشار عوّاد معروف', 'salim al-hilali': 'سليم الهلالي' };
+export function gradeAr(g) {
+  if (!g || g === '-') return '';
+  let s = g.replace(/\s*-\s*Agreed Upon/i, ' متفق عليه').replace(/\s*-\s*Bukhari And Muslim/i, ' رواه البخاري ومسلم');
+  const toks = s.split(/\s+/).map(t => { const m = t.match(/^([A-Za-z']+)(.*)$/); if (!m) return t; const w = GRADE_WORDS[m[1].toLowerCase()]; return w ? w + m[2] : t; });
+  s = toks.join(' ');
+  s = s.replace(/^الإسناد (صحيح|حسن|ضعيف)/, 'إسناده $1').replace(/(ضعيف) جداً|جداً (ضعيف)/, 'ضعيف جداً').replace(/^(صحيح|حسن|ضعيف) الإسناد/, '$1 الإسناد');
+  return s;
+}
+export function graderAr(name) { return GRADERS[(name || '').toLowerCase().trim()] || name || ''; }
