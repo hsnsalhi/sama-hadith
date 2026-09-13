@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { parseIsnadGraph, cleanName, displayForm, connectorType } from './lib/isnad-graph.js';
 import { loadReference } from './lib/reference-loader.js';
 import { EXTRA_NARRATORS } from './lib/reference-extra.js';
+import { BIOS } from './lib/reference-bios.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, arr) => a.startsWith('--') ? [a.slice(2), arr[i + 1]] : []).filter(x => x.length));
@@ -545,6 +546,11 @@ async function main() {
   for (const r of trans.values()) { teachersCount.set(r.student_id, (teachersCount.get(r.student_id) || 0) + 1); studentsCount.set(r.teacher_id, (studentsCount.get(r.teacher_id) || 0) + 1); }
 
   const collName = Object.fromEntries(COLLECTIONS.map(c => [c.code, c.name_ar]));
+  // per-narrator counts by collection and by kind of report
+  const kindByHadith = new Map(loaded.map(h => [h.id, classify(h, ents)]));
+  const collOf = id => id.slice(0, id.indexOf(':'));
+  // bios: by canonical key or by any alias pointing to it
+  const bioOf = e => { if (BIOS[e.key]) return BIOS[e.key]; for (const [alias, target] of canon) if (target === e.key && BIOS[alias]) return BIOS[alias]; return null; };
   const narrators = list.map(e => ({
     id: e.id,
     name_ar: [...e.displays].sort((a, b) => b[1] - a[1])[0][0],
@@ -553,6 +559,9 @@ async function main() {
     death_ah: e.death ?? null,
     death_estimated: e.dated !== 'reference',
     depth: e.compiler ? 0 : e.depths.length ? Math.round(e.depths.reduce((a, b) => a + b, 0) / e.depths.length * 100) / 100 : null, // mean position in isnads: 0 = compiler, ~6 = companion
+    coll_counts: e.hadiths.reduce((a, id) => { const c = collOf(id); a[c] = (a[c] || 0) + 1; return a; }, {}),
+    kind_counts: e.hadiths.reduce((a, id) => { const k = kindByHadith.get(id); if (k) a[k] = (a[k] || 0) + 1; return a; }, {}),
+    bio: bioOf(e),
     origin: e.origin || null,
     reliability: e.reliability || null,
     hadith_count: e.hadiths.length,
