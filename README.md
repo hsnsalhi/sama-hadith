@@ -63,7 +63,7 @@ The site is deployed to GitHub Pages by `.github/workflows/pages.yml` on every p
 
 ### Licences
 
-Code: MIT. Hadith texts: hadith-api (public domain sources). Biographical texts: OpenITI, CC BY-NC-SA 4.0, quoted with attribution.
+Code: no licence file yet (to be chosen by the author). Hadith texts: hadith-api (public domain sources). Biographical texts: OpenITI, CC BY-NC-SA 4.0, quoted with attribution.
 
 ---
 
@@ -103,4 +103,4 @@ Le site est déployé sur GitHub Pages par `.github/workflows/pages.yml` à chaq
 
 ### Licences
 
-Code : MIT. Textes des hadiths : hadith-api (sources du domaine public). Textes biographiques : OpenITI, CC BY-NC-SA 4.0, cités avec attribution.
+Code : pas encore de fichier de licence (au choix de l'auteur). Textes des hadiths : hadith-api (sources du domaine public). Textes biographiques : OpenITI, CC BY-NC-SA 4.0, cités avec attribution.
