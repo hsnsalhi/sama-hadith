@@ -23,13 +23,15 @@ import { parseIsnadGraph, cleanName, displayForm, connectorType, setNameVocab, n
 import { loadReference } from './lib/reference-loader.js';
 import { EXTRA_NARRATORS } from './lib/reference-extra.js';
 import { BIOS } from './lib/reference-bios.js';
-import { loadTaqrib, loadTahdhib, matchRijal, taqribDeath, nameVocabulary, LAYER_NAMES } from './lib/taqrib.js';
+import { loadTaqrib, loadTahdhib, matchRijal, matchSource, taqribDeath, nameVocabulary, LAYER_NAMES } from './lib/taqrib.js';
+import { SOURCES, fetchSource, loadSource, OPENITI_LICENCE } from './lib/openiti.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, arr) => a.startsWith('--') ? [a.slice(2), arr[i + 1]] : []).filter(x => x.length));
 const CACHE = resolve(args.cache || resolve(__dirname, '../../.cache/hadith-api'));
 const OUT = resolve(args.out || resolve(__dirname, '../../client/public/data'));
 const RIJAL = resolve(__dirname, '../data/openiti');
+const CACHE_OPENITI = resolve(args.cache || resolve(__dirname, '../../.cache/hadith-api'), '../openiti');
 const CDN = 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions';
 
 export const COLLECTIONS = [
@@ -515,7 +517,7 @@ function buildEntities(hadiths, ref, canon) {
 
 // ── 7. Dating & layers ──────────────────────────────────────────────────────
 
-const anchored = e => e.death != null && (e.dated === 'reference' || e.dated === 'taqrib');
+const anchored = e => e.death != null && (e.dated === 'reference' || e.dated === 'taqrib' || e.dated === 'rijal');
 function dateAndClassify(hadiths, ents) {
   for (const e of ents.values()) { e.estimates = []; e.depths = []; e.votes = { sahabi: 0, tabii: 0, muhaddith: 0 }; e.teacherRefGens = new Set(); if (!anchored(e) && e.dated !== 'reference') { if (e.dated === 'estimated') e.dated = null; } }
   for (const h of hadiths) {
@@ -612,6 +614,7 @@ async function writeJson(rel, data) {
 async function main() {
   const t0 = Date.now();
   let mergeCount = 0, vocabSize = 0;
+  const bookStats = [];
   const { hadiths: loaded, sections } = await loadAll();
   // entries with no text in the source: kept (numbering stays complete) but flagged; they cannot carry a chain
   const noText = loaded.filter(h => !h.text.trim());
@@ -810,6 +813,31 @@ async function main() {
       if (t.death != null && e.dated !== 'reference' && !e.compiler) { e.death = taqribDeath(t, e.death ?? null); e.dated = 'taqrib'; e.deathApprox = t.deathApprox; taqDeath++; }
     }
     log(`rijāl: Taqrīb ${taqrib.length} entries, Tahdhīb ${tahdhib.length} · matched Taqrīb ${st.taqrib} (ambiguous ${st.taqribAmbiguous}), Tahdhīb ${st.tahdhib} (ambiguous ${st.tahdhibAmbiguous}), both ${st.both} · dates from Taqrīb ${taqDeath}, layers ${taqGen}`);
+    // the other biographical dictionaries (OpenITI), aligned on the same entities
+    for (const src of SOURCES) {
+      let entries = [];
+      try { entries = loadSource(src, await fetchSource(src, CACHE_OPENITI)); } catch (err) { log(`source ${src.id} unavailable: ${err.message}`); continue; }
+      const stS = matchSource(ents, aliases, entries, src.id);
+      bookStats.push({ id: src.id, title: src.title, author: src.author, author_death: src.authorDeath, entries: entries.length, with_death: entries.filter(t => t.death != null).length, with_lists: entries.filter(t => t.teachers.length || t.students.length).length, with_verdicts: entries.filter(t => t.grades.length).length, matched: stS.matched, ambiguous: stS.ambiguous });
+      log(`source ${src.id}: ${entries.length} entries · matched ${stS.matched} (ambiguous ${stS.ambiguous})`);
+    }
+    // consolidation: a death year attested by the books when neither the reference lists nor the Taqrīb give one; a verdict when the Taqrīb has none
+    let rijalDeath = 0;
+    for (const e of ents.values()) {
+      if (!e.notices?.length) continue;
+      if (e.dated !== 'reference' && e.dated !== 'taqrib' && !e.compiler) {
+        const ds = e.notices.map(n => n.entry).filter(t => t.death != null && !t.deathApprox).map(t => taqribDeath({ death: t.death, centuryExplicit: t.death >= 100, layer: e.layer }, e.death ?? null));
+        if (ds.length) { e.death = Math.round(median(ds)); e.dated = 'rijal'; e.deathApprox = false; rijalDeath++; }
+      }
+      if (!e.reliability) {
+        // al-Dhahabī's own word in al-Kāshif first ("قلت: …"), otherwise the verdict most critics agree on
+        const kashif = e.notices.find(n => n.src === 'kashif');
+        const own = kashif?.entry.grades.find(g => g.critic === 'شمس الدين الذهبي');
+        if (own) e.reliability = own.verdict.replace(/ه$/, 'ة');
+        else { const vs = new Map(); for (const n of e.notices) for (const g of n.entry.grades) if (g.critic) vs.set(g.verdict, (vs.get(g.verdict) || 0) + 1); const top = [...vs].sort((a, b) => b[1] - a[1])[0]; if (top && top[1] >= 2) e.reliability = top[0].replace(/ه$/, 'ة'); }
+      }
+    }
+    log(`dates from the other books: ${rijalDeath}`);
     dateAndClassify(hadiths, ents);
   }
 
@@ -845,11 +873,12 @@ async function main() {
     name_latin: e.latin || null,
     generation: e.gen,
     death_ah: e.death ?? null,
-    death_estimated: !(e.dated === 'reference' || (e.dated === 'taqrib' && !e.deathApprox)),
-    death_source: e.dated === 'reference' ? 'reference' : e.dated === 'taqrib' ? (e.deathApprox ? 'taqrib_approx' : 'taqrib') : 'estimated',
+    death_estimated: !(e.dated === 'reference' || e.dated === 'rijal' || (e.dated === 'taqrib' && !e.deathApprox)),
+    death_source: e.dated === 'reference' ? 'reference' : e.dated === 'taqrib' ? (e.deathApprox ? 'taqrib_approx' : 'taqrib') : e.dated === 'rijal' ? 'rijal' : 'estimated',
     layer: e.layer || null,
     taqrib: e.taqrib ? { n: e.taqrib.n, grade: e.taqrib.gradeDisplay, layer: e.taqrib.layer, death: e.taqrib.death != null ? taqribDeath(e.taqrib, e.death ?? null) : null, approx: e.taqrib.deathApprox } : null,
     tahdhib: e.tahdhib ? { vol: e.tahdhib.vol, n: e.tahdhib.n } : null,
+    notices: e.notices?.length ? Object.fromEntries(e.notices.map(n => [n.src, `${n.entry.vol}:${n.entry.n}`])) : null,
     depth: e.compiler ? 0 : e.depths.length ? Math.round(e.depths.reduce((a, b) => a + b, 0) / e.depths.length * 100) / 100 : null, // mean position in isnads: 0 = compiler, ~6 = companion
     coll_counts: e.hadiths.reduce((a, id) => { const c = collOf(id); a[c] = (a[c] || 0) + 1; return a; }, {}),
     kind_counts: e.hadiths.reduce((a, id) => { const k = kindByHadith.get(id); if (k) a[k] = (a[k] || 0) + 1; return a; }, {}),
@@ -937,7 +966,8 @@ async function main() {
   for (let i = 0; i < SHARDS; i++) await writeJson(`narrators/h/${i}.json`, shards[i]);
   // per-narrator rijāl notices (Taqrīb line + Tahdhīb notice), sharded
   const rshards = Array.from({ length: SHARDS }, () => ({}));
-  for (const e of list) if (e.taqrib || e.tahdhib) rshards[e.id % SHARDS][e.id] = { taqrib: e.taqrib ? e.taqrib.raw : null, tahdhib: e.tahdhib ? e.tahdhib.text : null, teachers: e.tahdhib?.teachers || [], students: e.tahdhib?.students || [] };
+  for (const e of list) if (e.taqrib || e.tahdhib || e.notices?.length) rshards[e.id % SHARDS][e.id] = { taqrib: e.taqrib ? e.taqrib.raw : null, tahdhib: e.tahdhib ? e.tahdhib.text : null, teachers: e.tahdhib?.teachers || [], students: e.tahdhib?.students || [],
+    notices: (e.notices || []).map(n => ({ src: n.src, ref: `${n.entry.vol}:${n.entry.n}`, name: n.entry.name, death: n.entry.death, approx: n.entry.deathApprox, text: n.entry.text.length > 6000 ? n.entry.text.slice(0, 6000) + '…' : n.entry.text, teachers: n.entry.teachers.slice(0, 80), students: n.entry.students.slice(0, 80), grades: n.entry.grades })) };
   for (let i = 0; i < SHARDS; i++) await writeJson(`narrators/r/${i}.json`, rshards[i]);
 
   const dated = narrators.filter(n => n.death_ah).length, refDated = narrators.filter(n => !n.death_estimated).length;
@@ -952,13 +982,13 @@ async function main() {
     kinds: kindCounts, kind_codes: KIND_CODE,
     search: { letters: searchLetters, ids: searchIds.length, words: postings.size },
     narrators: narrators.length, narrators_reference_dated: refDated, narrators_dated: dated,
-    narrators_taqrib: narrators.filter(n => n.taqrib).length, narrators_tahdhib: narrators.filter(n => n.tahdhib).length,
+    narrators_taqrib: narrators.filter(n => n.taqrib).length, narrators_tahdhib: narrators.filter(n => n.tahdhib).length, narrators_with_notice: narrators.filter(n => n.taqrib || n.tahdhib || n.notices).length,
     narrators_by_death_source: narrators.reduce((a, n) => { a[n.death_source] = (a[n.death_source] || 0) + 1; return a; }, {}),
     narrators_by_generation: narrators.reduce((a, n) => { a[n.generation] = (a[n.generation] || 0) + 1; return a; }, {}),
     layer_names: LAYER_NAMES,
     sources: {
       hadith: { name: 'fawazahmed0/hadith-api', url: 'https://github.com/fawazahmed0/hadith-api', editions: COLLECTIONS.map(c => ({ code: c.code, ara: `ara-${c.edition}.json`, eng: `eng-${c.edition}.min.json`, hadiths: (byColl.get(c.code) || []).length, without_text: noText.filter(h => h.coll === c.code).length })) },
-      rijal: { name: 'OpenITI · 0852IbnHajarCasqalani', url: 'https://github.com/OpenITI/0875AH', licence: 'CC BY-NC-SA 4.0', taqrib: { entries: taqrib.length, with_grade: taqrib.filter(t => t.grade).length, with_layer: taqrib.filter(t => t.layer).length, with_death: taqrib.filter(t => t.death != null).length }, tahdhib: { entries: tahdhib.length, with_teachers: tahdhib.filter(t => t.teachers.length).length, with_students: tahdhib.filter(t => t.students.length).length } },
+      rijal: { name: 'OpenITI', url: 'https://github.com/OpenITI', licence: OPENITI_LICENCE, books: bookStats, taqrib: { entries: taqrib.length, with_grade: taqrib.filter(t => t.grade).length, with_layer: taqrib.filter(t => t.layer).length, with_death: taqrib.filter(t => t.death != null).length }, tahdhib: { entries: tahdhib.length, with_teachers: tahdhib.filter(t => t.teachers.length).length, with_students: tahdhib.filter(t => t.students.length).length } },
       reference: { legacy: 88, extra: EXTRA_NARRATORS.length, bios: Object.keys(BIOS).length, ref_keys: ref.size },
     },
     merges: mergeCount, name_vocabulary: vocabSize,

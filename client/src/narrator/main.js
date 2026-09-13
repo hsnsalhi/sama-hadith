@@ -124,7 +124,7 @@ async function main() {
     }
 
     // RIJAL — the full notice of Tahdhīb al-Tahdhīb (critics' statements, teachers, students)
-    if (rijal?.tahdhib) { document.getElementById('sec-rijal').style.display = 'block'; buildRijal(n, rijal); }
+    if (rijal && (rijal.tahdhib || rijal.notices?.length)) { document.getElementById('sec-rijal').style.display = 'block'; buildRijal(n, rijal); document.querySelector('#sec-rijal .section-title').textContent = `تراجمه في كتب الرجال (${(rijal.notices?.length || 0) + (rijal.tahdhib ? 1 : 0)})`; }
 
     // Hide loading
     const ld = document.getElementById('loading');
@@ -145,7 +145,7 @@ const KIND_LABEL = { marfu: 'مرفوعة إلى النبي ﷺ', mawquf: 'مو�
 const joinAr = (arr) => arr.length <= 1 ? arr.join('') : arr.slice(0, -1).join('، ') + ' و' + arr[arr.length - 1];
 const plural = (n, one, two, many, manyAcc) => n === 1 ? one : n === 2 ? two : n <= 10 ? `${n} ${many}` : `${n} ${manyAcc}`;
 
-const DEATH_SRC = { reference: 'من المصادر', taqrib: 'تقريب التهذيب', taqrib_approx: 'تقريب التهذيب (تقريباً)', estimated: 'تقديري من موقعه في الأسانيد' };
+const DEATH_SRC = { reference: 'من المصادر', taqrib: 'تقريب التهذيب', taqrib_approx: 'تقريب التهذيب (تقريباً)', rijal: 'كتب الرجال الأخرى', estimated: 'تقديري من موقعه في الأسانيد' };
 function renderBiography(n, teachers, students, hadithRows, trans, collections, rijal, layerNames) {
   const sec = document.getElementById('sec-bio');
   sec.style.display = 'block';

@@ -5,7 +5,7 @@ const f = n => Number(n || 0).toLocaleString('en-US');
 const pct = (a, b) => b ? (100 * a / b).toFixed(1) + '٪' : '—';
 const GEN = { sahabi: 'الصحابة', tabii: 'التابعون', muhaddith: 'المحدّثون وأتباع التابعين ومن بعدهم' };
 const KIND = { marfu: 'مرفوع إلى النبي ﷺ', mawquf: 'موقوف على صحابي', maqtu: 'مقطوع على تابعي', balagh: 'بلاغ (بلا إسناد)', ray: 'رأي أو قول متأخر' };
-const SRC = { reference: 'من قوائم المراجع المدقّقة', taqrib: 'من تقريب التهذيب (سنة مصرَّح بها)', taqrib_approx: 'من تقريب التهذيب (تقريبية: نحو/بعد/قبل)', estimated: 'تقديري بالاستيفاء بين المواقع في الأسانيد' };
+const SRC = { reference: 'من قوائم المراجع المدقّقة', taqrib: 'من تقريب التهذيب (سنة مصرَّح بها)', taqrib_approx: 'من تقريب التهذيب (تقريبية: نحو/بعد/قبل)', rijal: 'من كتب الرجال الأخرى (وسيط ما تذكره)', estimated: 'تقديري بالاستيفاء بين المواقع في الأسانيد' };
 
 const row = (k, v, extra = '') => `<tr><td>${k}</td><td class="n">${v}</td>${extra}</tr>`;
 
@@ -39,6 +39,7 @@ async function main() {
   <div class="card"><h3>مطابقة كتب الرجال</h3><table>
     ${row('راوٍ له ترجمة في تقريب التهذيب', f(m.narrators_taqrib), `<td class="n">${pct(m.narrators_taqrib, m.narrators)}</td>`)}
     ${row('راوٍ له ترجمة في تهذيب التهذيب', f(m.narrators_tahdhib), `<td class="n">${pct(m.narrators_tahdhib, m.narrators)}</td>`)}
+    ${row('راوٍ له ترجمة واحدة على الأقل في كتب الرجال', f(m.narrators_with_notice), `<td class="n">${pct(m.narrators_with_notice, m.narrators)}</td>`)}
   </table><p class="note">المطابقة آلية: بالاسم وأجزائه (الكنية، «فلان بن فلان»)، وبرموز الكتب التي روى فيها (ع، خ، م، د، ت، س، ق)، وبتوافق الطبقة وسنة الوفاة، وبالشيوخ والتلاميذ المشتركين. الحالات الملتبسة تُترك بلا مطابقة.</p></div>
 
   <h2>الأحاديث</h2>
@@ -60,6 +61,8 @@ async function main() {
   <div class="card"><h3>نصوص الأحاديث</h3>
     <p><b>${s.hadith?.name || 'fawazahmed0/hadith-api'}</b> — طبعات رقمية للكتب السبعة (النص العربي مشكولاً، والترجمة الإنجليزية)، تُحمَّل من الشبكة عند البناء. <a href="${s.hadith?.url || '#'}" target="_blank" rel="noopener">${s.hadith?.url || ''}</a></p></div>
   <div class="card"><h3>تراجم الرواة</h3>
+    <div class="tblwrap"><table><tr><th>الكتاب</th><th>المؤلف</th><th class="n">التراجم</th><th class="n">بسنة وفاة</th><th class="n">بقوائم الرواة</th><th class="n">بأحكام النقّاد</th><th class="n">راوٍ مطابَق</th></tr>
+    ${(s.rijal?.books || []).map(b => `<tr><td>${b.title}</td><td>${b.author} (ت ${b.author_death} هـ)</td><td class="n">${f(b.entries)}</td><td class="n">${f(b.with_death)}</td><td class="n">${f(b.with_lists)}</td><td class="n">${f(b.with_verdicts)}</td><td class="n">${f(b.matched)}</td></tr>`).join('')}</table></div>
     <p><b>تقريب التهذيب</b> لابن حجر العسقلاني (ت 852 هـ): ${f(s.rijal?.taqrib?.entries)} ترجمة، استُخرج منها الحكم لـ${f(s.rijal?.taqrib?.with_grade)} راوياً، والطبقة لـ${f(s.rijal?.taqrib?.with_layer)}، وسنة الوفاة لـ${f(s.rijal?.taqrib?.with_death)}.</p>
     <p><b>تهذيب التهذيب</b> لابن حجر: ${f(s.rijal?.tahdhib?.entries)} ترجمة موسّعة، منها ${f(s.rijal?.tahdhib?.with_teachers)} بقائمة «روى عن» و${f(s.rijal?.tahdhib?.with_students)} بقائمة «روى عنه».</p>
     <p class="note">النصان من مشروع <a href="${s.rijal?.url || '#'}" target="_blank" rel="noopener">OpenITI</a> (${s.rijal?.name || ''})، الرخصة ${s.rijal?.licence || 'CC BY-NC-SA 4.0'}. وهما نصوص رقمية مصحَّحة آلياً قد تحوي أخطاء طباعية؛ تُعرض كما هي مع ذكر رقم الترجمة.</p></div>

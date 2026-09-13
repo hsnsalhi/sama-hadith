@@ -312,3 +312,50 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
   return stats;
 }
 const contains3 = (name, aw) => { const nw = name.split(' '); const k = aw.slice(0, 3); outer: for (let i = 0; i + 3 <= nw.length; i++) { for (let j = 0; j < 3; j++) if (nw[i + j] !== k[j]) continue outer; return true; } return false; };
+
+
+/**
+ * Aligns the entries of any rijāl book (loaded by openiti.js) with the entities.
+ * Evidence: name keys, sigla, death year, teachers/students in common, and compatibility with the
+ * Taqrīb/Tahdhīb entry already matched. Sets e.notices = [{ src, entry }].
+ */
+export function matchSource(ents, aliases, entries, srcId) {
+  const idx = new Map();
+  for (const t of entries) for (const [k, st] of entryKeys(t)) (idx.get(k) || idx.set(k, []).get(k)).push([t, st]);
+  const heads = new Map();
+  for (const t of entries) { const w = cleanName(t.name).split(' ')[0]; if (w) (heads.get(w) || heads.set(w, []).get(w)).push(t); }
+  const prefixOf = (a, b) => { const x = a.split(' '), y = b.split(' '); if (x.length < 2 || y.length < 2) return false; const n = Math.min(x.length, y.length); for (let i = 0; i < n; i++) if (x[i] !== y[i]) return false; return true; };
+  const compat = (a, b) => a === b || prefixOf(a, b);
+  const stats = { matched: 0, ambiguous: 0 };
+  for (const e of ents.values()) {
+    const keys = [e.key, ...(aliases.get(e.key) || [])];
+    const seen = new Map();
+    for (const k of keys) for (const [t, st] of idx.get(k) || []) if (!seen.has(t) || seen.get(t) < st) seen.set(t, st);
+    // through the Taqrīb / Tahdhīb entry already found: same head word and compatible name
+    const anchorNames = [e.taqrib && cleanName(e.taqrib.name), e.tahdhib && cleanName(e.tahdhib.name)].filter(Boolean);
+    for (const an of anchorNames) for (const t of heads.get(an.split(' ')[0]) || []) { const tn = cleanName(t.name); if ((compat(an, tn) || compat(tn, an)) && !seen.has(t)) seen.set(t, 2); }
+    if (!seen.size) continue;
+    const bare = !e.key.includes(' ') && !/^(?:ابو|ابن|ام|ال)/.test(e.key);
+    const nb = e.neighbours || new Set(); const nbArr = [...nb];
+    const ranked = [...seen].map(([t, strength]) => {
+      let s = 0;
+      const tn = cleanName(t.name);
+      if (t.colls.length && e.colls && t.colls.some(c => e.colls.has(c))) s += 2;
+      if (t.death != null && e.death != null) { const d = Math.abs(taqribDeath({ death: t.death, centuryExplicit: t.death >= 100, layer: e.layer }, e.death) - e.death); if (d <= (e.dated === 'reference' || e.dated === 'taqrib' ? 3 : 40)) s += 1; else if (e.dated === 'reference' || e.dated === 'taqrib') s -= 3; }
+      let overlap = 0;
+      for (const nm of [...t.teachers, ...t.students]) { const k = cleanName(nm); if (!k) continue; if (nb.has(k) || nbArr.some(x => compat(k, x) || compat(x, k))) overlap++; if (overlap >= 4) break; }
+      s += overlap;
+      if (strength === 3) s += 1;
+      for (const an of anchorNames) if (compat(an, tn) || compat(tn, an)) { s += 3; break; }
+      return { t, s, strength };
+    }).filter(x => x.s >= 0).sort((a, b) => b.s - a.s);
+    if (!ranked.length) continue;
+    const [best, second] = ranked;
+    let ok = false;
+    if (ranked.length === 1) ok = (best.strength >= 2 && best.s >= 1) || best.s >= 3 || (best.strength === 3 && !bare && cleanName(best.t.name).split(' ').length >= 3);
+    else ok = best.s >= 2 && best.s >= second.s + 2 && (best.strength >= 2 || best.s >= 4);
+    if (bare && !anchorNames.length) ok = false;
+    if (ok) { (e.notices ||= []).push({ src: srcId, entry: best.t }); stats.matched++; } else if (ranked.length > 1) stats.ambiguous++;
+  }
+  return stats;
+}
