@@ -14,7 +14,7 @@ export function initSearch() {
     if (!q) { sr.style.display = 'none'; return; }
 
     const res = state.narrators
-      .filter(n => n.name_ar?.includes(q) || n.name_latin?.toLowerCase().includes(q.toLowerCase()))
+      .filter(n => n.name_ar?.includes(q) || n.name_short?.includes(q) || n.name_latin?.toLowerCase().includes(q.toLowerCase()))
       .slice(0, 10);
 
     if (!res.length) { sr.style.display = 'none'; return; }

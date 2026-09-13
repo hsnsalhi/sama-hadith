@@ -23,6 +23,10 @@
 
 النصوص الرقمية مصحّحة آلياً وقد تحوي أخطاء، والمطابقة بين الترجمة والراوي آلية؛ لذلك يُذكر دائماً اسم الكتاب ورقم الترجمة للتحقق.
 
+### الرخصة والمساهمة
+
+الموقع والشيفرة مفتوحان للجميع ولأي استعمال، بلا مقابل ولا شرط: الشيفرة برخصة **0BSD** (ملف `LICENSE`)، ومحتوى الموقع الذي أنشأه المشروع (النصوص والوثائق والصور والبيانات المستخرجة) بإهداء **CC0 1.0** إلى الملك العام (ملف `LICENSE-CONTENT`). أما النصوص المقتبسة من مصادر خارجية فتبقى على شروط أصحابها (طبعات hadith-api، ونصوص OpenITI برخصة CC BY-NC-SA 4.0). الاقتراحات والمساهمات تُطرح في [نقاشات المستودع على GitHub](https://github.com/hsnsalhi/sama-hadith/discussions).
+
 </div>
 
 ---
@@ -61,9 +65,9 @@ VITE_BASE=/sama-hadith/ npm run build   # static site in client/dist (sub-path f
 
 The site is deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main`. See `DEPLOY.md` for other hosts.
 
-### Licences
+### Licence and contributions
 
-Code: no licence file yet (to be chosen by the author). Hadith texts: hadith-api (public domain sources). Biographical texts: OpenITI, CC BY-NC-SA 4.0, quoted with attribution.
+The site and its code are open to everyone for any use, free of charge and without conditions: the code is released under **0BSD** (file `LICENSE`), and the content created by the project (texts, documentation, images, extracted data) is dedicated to the public domain under **CC0 1.0** (file `LICENSE-CONTENT`). Third-party texts keep their own terms: the hadith editions of hadith-api, and the OpenITI biographical texts (CC BY-NC-SA 4.0, quoted with attribution). Suggestions and contributions go to the [GitHub Discussions of the repository](https://github.com/hsnsalhi/sama-hadith/discussions).
 
 ---
 
@@ -101,6 +105,6 @@ VITE_BASE=/sama-hadith/ npm run build   # site statique dans client/dist (sous-c
 
 Le site est déployé sur GitHub Pages par `.github/workflows/pages.yml` à chaque push sur `main`. Voir `DEPLOY.md` pour les autres hébergements.
 
-### Licences
+### Licence et contributions
 
-Code : pas encore de fichier de licence (au choix de l'auteur). Textes des hadiths : hadith-api (sources du domaine public). Textes biographiques : OpenITI, CC BY-NC-SA 4.0, cités avec attribution.
+Le site et son code sont ouverts à tous et pour tout usage, gratuitement et sans condition : le code est sous licence **0BSD** (fichier `LICENSE`), et le contenu créé par le projet (textes, documentation, images, données extraites) est versé au domaine public sous **CC0 1.0** (fichier `LICENSE-CONTENT`). Les textes tiers gardent leurs propres conditions : les éditions de hadith-api et les textes biographiques d'OpenITI (CC BY-NC-SA 4.0, cités avec attribution). Suggestions et contributions se font dans les [discussions GitHub du dépôt](https://github.com/hsnsalhi/sama-hadith/discussions).

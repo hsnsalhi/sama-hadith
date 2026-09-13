@@ -60,7 +60,7 @@ export function updateLabels() {
     const d = document.createElement('div');
     d.className = 'lbl';
     d.setAttribute('dir', 'rtl');
-    d.textContent = n.name_ar;
+    d.textContent = n.name_short || n.name_ar;
     d.style.cssText = `position:absolute;left:${sx}px;top:${sy - offsetY}px;transform:translateX(-50%);opacity:${opacity};font-size:${fontSize}px;`;
     labelContainer.appendChild(d);
     state.labelDivs.push(d);

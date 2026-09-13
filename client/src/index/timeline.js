@@ -147,7 +147,7 @@ export function updateTimeline(narrator) {
 
   hlLabel.style.left = centerPct + '%';
   hlLabel.style.opacity = '1';
-  hlName.textContent = narrator.name_ar;
+  hlName.textContent = narrator.name_short || narrator.name_ar;
   hlName.style.color = col;
   hlName.style.textShadow = `0 0 10px ${col}`;
 

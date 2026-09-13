@@ -23,7 +23,7 @@ import { parseIsnadGraph, cleanName, displayForm, connectorType, setNameVocab, n
 import { loadReference } from './lib/reference-loader.js';
 import { EXTRA_NARRATORS } from './lib/reference-extra.js';
 import { BIOS } from './lib/reference-bios.js';
-import { loadTaqrib, loadTahdhib, matchRijal, matchSource, taqribDeath, nameVocabulary, LAYER_NAMES } from './lib/taqrib.js';
+import { loadTaqrib, loadTahdhib, matchRijal, matchSource, taqribDeath, nameVocabulary, trimFullName, displayFromRaw, LAYER_NAMES } from './lib/taqrib.js';
 import { SOURCES, fetchSource, loadSource, OPENITI_LICENCE } from './lib/openiti.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -35,14 +35,14 @@ const CACHE_OPENITI = resolve(args.cache || resolve(__dirname, '../../.cache/had
 const CDN = 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions';
 
 export const COLLECTIONS = [
-  { code: 'bukhari', edition: 'bukhari', name_ar: 'البخاري', title_ar: 'صحيح البخاري', compiler: 'البخاري', compilerDisplay: 'البخاري', compilerDeath: 256, aliases: ['ابو عبد الله', 'محمد بن اسماعيل'] },
-  { code: 'muslim', edition: 'muslim', name_ar: 'مسلم', title_ar: 'صحيح مسلم', compiler: 'مسلم', compilerDisplay: 'مسلم', compilerDeath: 261, aliases: ['ابو الحسين', 'مسلم بن الحجاج'] },
-  { code: 'abudawud', edition: 'abudawud', name_ar: 'أبو داود', title_ar: 'سنن أبي داود', compiler: 'ابو داود', compilerDisplay: 'أبو داود', compilerDeath: 275, aliases: ['سليمان بن الاشعث'] },
-  { code: 'tirmidhi', edition: 'tirmidhi', name_ar: 'الترمذي', title_ar: 'جامع الترمذي', compiler: 'الترمذي', compilerDisplay: 'الترمذي', compilerDeath: 279, aliases: ['ابو عيسي', 'محمد بن عيسي'] },
-  { code: 'nasai', edition: 'nasai', name_ar: 'النسائي', title_ar: 'سنن النسائي', compiler: 'النسايي', compilerDisplay: 'النسائي', compilerDeath: 303, aliases: ['ابو عبد الرحمن', 'احمد بن شعيب'] },
-  { code: 'ibnmajah', edition: 'ibnmajah', name_ar: 'ابن ماجه', title_ar: 'سنن ابن ماجه', compiler: 'ابن ماجه', compilerDisplay: 'ابن ماجه', compilerDeath: 273, aliases: ['ابو عبد الله', 'محمد بن يزيد'] },
+  { code: 'bukhari', edition: 'bukhari', name_ar: 'البخاري', title_ar: 'صحيح البخاري', compiler: 'البخاري', compilerDisplay: 'البخاري', compilerFull: 'محمد بن إسماعيل بن إبراهيم البخاري أبو عبد الله', compilerDeath: 256, aliases: ['ابو عبد الله', 'محمد بن اسماعيل'] },
+  { code: 'muslim', edition: 'muslim', name_ar: 'مسلم', title_ar: 'صحيح مسلم', compiler: 'مسلم', compilerDisplay: 'مسلم', compilerFull: 'مسلم بن الحجاج القشيري النيسابوري أبو الحسين', compilerDeath: 261, aliases: ['ابو الحسين', 'مسلم بن الحجاج'] },
+  { code: 'abudawud', edition: 'abudawud', name_ar: 'أبو داود', title_ar: 'سنن أبي داود', compiler: 'ابو داود', compilerDisplay: 'أبو داود', compilerFull: 'سليمان بن الأشعث السجستاني أبو داود', compilerDeath: 275, aliases: ['سليمان بن الاشعث'] },
+  { code: 'tirmidhi', edition: 'tirmidhi', name_ar: 'الترمذي', title_ar: 'جامع الترمذي', compiler: 'الترمذي', compilerDisplay: 'الترمذي', compilerFull: 'محمد بن عيسى بن سورة الترمذي أبو عيسى', compilerDeath: 279, aliases: ['ابو عيسي', 'محمد بن عيسي'] },
+  { code: 'nasai', edition: 'nasai', name_ar: 'النسائي', title_ar: 'سنن النسائي', compiler: 'النسايي', compilerDisplay: 'النسائي', compilerFull: 'أحمد بن شعيب بن علي النسائي أبو عبد الرحمن', compilerDeath: 303, aliases: ['ابو عبد الرحمن', 'احمد بن شعيب'] },
+  { code: 'ibnmajah', edition: 'ibnmajah', name_ar: 'ابن ماجه', title_ar: 'سنن ابن ماجه', compiler: 'ابن ماجه', compilerDisplay: 'ابن ماجه', compilerFull: 'محمد بن يزيد بن ماجه القزويني أبو عبد الله', compilerDeath: 273, aliases: ['ابو عبد الله', 'محمد بن يزيد'] },
   // The Muwatta reaches us through Yahya al-Laythi: he is the root, Malik the first link ("حدثني يحيى عن مالك")
-  { code: 'malik', edition: 'malik', name_ar: 'الموطأ', title_ar: 'موطأ مالك', compiler: 'يحيي بن يحيي الليثي', compilerDisplay: 'يحيى بن يحيى الليثي', compilerDeath: 234, aliases: ['يحيي', 'يحيي بن يحيي'] },
+  { code: 'malik', edition: 'malik', name_ar: 'الموطأ', title_ar: 'موطأ مالك', compiler: 'يحيي بن يحيي الليثي', compilerDisplay: 'يحيى بن يحيى الليثي', compilerFull: 'يحيى بن يحيى بن كثير الليثي الأندلسي أبو محمد', compilerDeath: 234, aliases: ['يحيي', 'يحيي بن يحيي'] },
 ];
 const compilerKeysOf = c => new Set([c.compiler, ...c.aliases]);
 const CHUNK = 200;
@@ -239,21 +239,38 @@ function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map())
   const rijalByWord = new Map(); // distinctive nisba/laqab → entries
   const entryCache = new Map();
   for (const l of rijalByHead.values()) for (const c of l) for (const d of distinctive(c.name)) (rijalByWord.get(d) || rijalByWord.set(d, []).get(d)).push(c);
+  // symmetric evidence: the neighbour's own notice names the candidate ("الحميدي: روى عن سفيان بن عيينة")
+  const entriesOf = key => {
+    if (entryCache.has(key)) return entryCache.get(key);
+    const w = key.split(' '); const cs = rijalByHead.get(w[0]) || [];
+    let found = cs.filter(c => c.name === key || c.name.startsWith(key + ' '));
+    if (!found.length) found = cs.filter(c => sameName(key, c.name));
+    if (!found.length) for (const d of distinctive(key)) for (const c of rijalByWord.get(d) || []) if (sameName(key, c.name) && !found.includes(c)) found.push(c); // "الحميدي عبد الله بن الزبير" → عبد الله بن الزبير … الحميدي
+    entryCache.set(key, found); return found;
+  };
+  /** The relative of `full` as the dictionaries name him in his teacher list ("عمه ثابت بن سعيد", "جده زيد"). */
+  const REL_WORDS = { ابيه: ['ابيه', 'والده'], امه: ['امه', 'والدته'], جده: ['جده'], جدته: ['جدته'], عمه: ['عمه'], عمته: ['عمته'], خاله: ['خاله'], خالته: ['خالته'], اخيه: ['اخيه'], اخته: ['اخته'], مولاه: ['مولاه'], مولاته: ['مولاته'], زوجته: ['زوجته', 'امراته'], زوجه: ['زوجها'], ابنه: ['ابنه'], ابنته: ['ابنته'], حماته: ['حماته'] };
+  const REL_KEY = { ابيها: 'ابيه', جدها: 'جده', امها: 'امه', اخيها: 'اخيه' };
+  const teachersOf = new Map(); // corpus: full key → set of teacher keys (no relatives)
+  for (const h of hadiths) for (const e of h.graph.edges) { if (!e.student) continue; const a = base(e.student), b = base(e.teacher); if (a.includes('@') || b.includes('@')) continue; (teachersOf.get(a) || teachersOf.set(a, new Set()).get(a)).add(b); }
+  const relativeViaLists = (full, rel) => {
+    const words = REL_WORDS[rel]; if (!words || !full) return null;
+    const names = new Set();
+    for (const c of entriesOf(full)) for (const t of c.teachers) { const m = t.match(new RegExp('^(?:' + words.join('|') + ') (.+)$')); if (m && m[1].length > 2 && !/^(?:و|ال)?(?:الذي|التي|هو|هي)$/.test(m[1])) names.add(m[1].replace(/ (?:وقيل|ويقال|وهو|وهي|قال|قالت).*$/, '')); }
+    if (names.size === 1) { const nm = [...names][0]; const w = nm.split(' '); for (let n = Math.min(w.length, 5); n >= 2; n--) { const k = w.slice(0, n).join(' '); if (freq.has(k)) return k; } return trimName(w); }
+    // otherwise: among the teachers of `full` in the corpus, the one whose name the dictionary attaches to that relation
+    const relItems = []; for (const c of entriesOf(full)) for (const t of c.teachers) if (new RegExp('^(?:' + words.join('|') + '|عمي|عميه|اعمامه|اخواله|اخوته)(?: |$)').test(t)) relItems.push(t);
+    if (!relItems.length) return null;
+    const hits = new Set();
+    for (const t of teachersOf.get(full) || []) { const head = t.split(' ')[0]; if (head.length > 2 && relItems.some(x => x.split(' ').includes(head))) hits.add(t); }
+    return hits.size === 1 ? [...hits][0] : null;
+  };
   const viaRijal = (bare, students, teachers, depth, relTeachers = []) => {
     const cands = rijalByHead.get(bare); if (!cands) return null;
     const st = students.map(x => x.startsWith('ROOT:') ? compilerKey[x.slice(5)] : x).filter(x => x && !x.includes('@'));
     const te = teachers.filter(x => !x.includes('@'));
     const rels = teachers.filter(x => x.includes('@')).map(x => x.split('@')[0]);
     if (!st.length && !te.length && !rels.length) return null;
-    // symmetric evidence: the neighbour's own notice names the candidate ("الحميدي: روى عن سفيان بن عيينة")
-    const entriesOf = key => {
-      if (entryCache.has(key)) return entryCache.get(key);
-      const w = key.split(' '); const cs = rijalByHead.get(w[0]) || [];
-      let found = cs.filter(c => c.name === key || c.name.startsWith(key + ' '));
-      if (!found.length) found = cs.filter(c => sameName(key, c.name));
-      if (!found.length) for (const d of distinctive(key)) for (const c of rijalByWord.get(d) || []) if (sameName(key, c.name) && !found.includes(c)) found.push(c); // "الحميدي عبد الله بن الزبير" → عبد الله بن الزبير … الحميدي
-      entryCache.set(key, found); return found;
-    };
     const namedBy = (key, side, c) => entriesOf(key).some(x => (side === 'student' ? x.teachers : x.students).some(y => sameName(c.name, y) || prefixOf(y, c.name)));
     const fatherEntry = c => { const i = c.words.indexOf('بن'); if (i < 0) return null; const fw = c.words.slice(i + 1); const cs = rijalByHead.get(fw[0]) || []; return cs.find(x => x.words.slice(0, Math.min(fw.length, 4)).join(' ') === fw.slice(0, Math.min(fw.length, 4)).join(' ')) || null; };
     const scored = cands.map(c => { let n = 0; for (const x of st) { if (c.students.some(y => sameName(x, y))) n++; if (x.includes(' ') && namedBy(x, 'student', c)) n++; } for (const x of te) { if (c.teachers.some(y => sameName(x, y))) n++; if (x.includes(' ') && namedBy(x, 'teacher', c)) n++; } for (const r of rels) if (c.teachers.includes(r)) n++; if (rels.includes('ابيه') && relTeachers.length) { const f = fatherEntry(c); if (f) for (const x of relTeachers) if (f.teachers.some(y => sameName(x, y))) n += 2; } return [c, n]; }).filter(([c, n]) => n > 0 && plausibleAt({ gen: c.layer === 1 ? 'sahabi' : c.layer && c.layer <= 5 ? 'tabii' : 'muhaddith', death: c.death, layer: c.layer }, depth, compilerDeath, st.map(deathOfKey).filter(x => x != null), te.map(deathOfKey).filter(x => x != null))).sort((a, b) => b[1] - a[1]);
@@ -354,6 +371,8 @@ function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map())
         else { const f = full ? fatherOf(full) : null; const ff = f ? (f.includes(' بن ') ? f : dominant(f)) : null; target = ff ? fatherOf(ff) : null; }
       }
       if (target) target = cleanName(target) || null;
+      // still unknown, or reduced to a bare given name: the dictionaries often name the relative
+      if (!target || !target.includes(' ')) { const full = fullOf(b) || b; if (full.includes(' بن ')) { const viaL = relativeViaLists(full, REL_KEY[rel] || rel); if (viaL) target = viaL; } }
       if (target) { rename.set(k0, target); relResolved++; }
       else if (b !== b0) rename.set(k0, `${rel}@${b}`);
     }
@@ -368,8 +387,17 @@ function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map())
     g.edges = g.edges.filter((e, i, arr) => e.student !== e.teacher && arr.findIndex(x => x.student === e.student && x.teacher === e.teacher) === i);
     g.nodes = nodes;
   }
-  // second pass: names expanded above now feed the neighbour statistics, so the remaining bare names can follow them
-  {
+  // second and third passes: names expanded above now feed the neighbour statistics, so the remaining bare names can follow them;
+  // the evidence of all the neighbours of an occurrence is added up ("حدثنا الحميدي حدثنا سفيان عن عمرو بن دينار")
+  const jointPick = (k, students, teachers) => {
+    const tot = new Map();
+    for (const st of students) for (const [f, n] of byPair.get(`${k}|s|${st}`) || []) tot.set(f, (tot.get(f) || 0) + n);
+    for (const t of teachers) for (const [f, n] of byPair.get(`${k}|t|${t}`) || []) tot.set(f, (tot.get(f) || 0) + n);
+    const arr = [...tot].sort((a, b) => b[1] - a[1]); if (!arr.length) return null;
+    const sum = arr.reduce((x, y) => x + y[1], 0);
+    return arr[0][1] >= 2 && arr[0][1] / sum >= 0.6 ? arr[0][0] : null;
+  };
+  for (let pass = 0; pass < 2; pass++) {
     byPair.clear();
     for (const h of hadiths) for (const e of h.graph.edges) {
       const s = e.student == null ? `ROOT:${h.coll}` : base(e.student);
@@ -391,6 +419,7 @@ function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map())
         let full = null;
         for (const st of students) { full = pick(byPair.get(`${k}|s|${st}`)); if (full && !plausible(full, depths.get(k0), students, teachers)) full = null; if (full) break; }
         if (!full) for (const t of teachers) { full = pick(byPair.get(`${k}|t|${t}`)); if (full && !plausible(full, depths.get(k0), students, teachers)) full = null; if (full) break; }
+        if (!full) { full = jointPick(k, students, teachers); if (full && !plausible(full, depths.get(k0), students, teachers)) full = null; }
         if (full) rename.set(k0, full);
       }
       if (!rename.size) continue;
@@ -402,6 +431,7 @@ function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map())
       g.nodes = nodes;
     }
     shortExpanded += second;
+    if (!second) break;
   }
   return { relResolved, relTotal, shortExpanded, shortTotal, viaBooks };
 }
@@ -841,6 +871,29 @@ async function main() {
     dateAndClassify(hadiths, ents);
   }
 
+  // ── Full names: the dictionary entry matched to the entity gives the name in full ("أبو الصهباء" → "صهيب أبو الصهباء البكري")
+  {
+    const aliasesOf = new Map();
+    for (const [alias, target] of canon) (aliasesOf.get(target) || aliasesOf.set(target, []).get(target)).push(alias);
+    const compatible = (key, name) => { const kw = key.split(' '), nw = name.split(' '); if (kw[0] === 'ابن' && kw.length === 2) return nw.some((x, i) => x === 'بن' && nw[i + 1] === kw[1]); return kw.every(x => nw.includes(x)); };
+    let full = 0;
+    for (const e of ents.values()) {
+      if (e.compiler) { e.fullName = COLLECTIONS.find(c => c.code === e.compiler).compilerFull; continue; }
+      const cands = [];
+      if (e.taqrib) cands.push([e.taqrib.name, e.taqrib.raw]);
+      if (e.tahdhib) cands.push([e.tahdhib.name, e.tahdhib.text]);
+      for (const src of ['kamal', 'kashif', 'siyar', 'mizan', 'jarh', 'thiqat', 'tarikh', 'sacd', 'ijli', 'majruhin', 'shahin', 'isaba', 'usd', 'istiab', 'nuaym']) { const n = e.notices?.find(x => x.src === src); if (n) cands.push([n.entry.name, n.entry.text]); }
+      for (const [nm, raw] of cands) {
+        const clean = cleanName(nm); if (!clean || ![e.key, ...(aliasesOf.get(e.key) || [])].some(k => compatible(k, clean))) continue;
+        const trimmed = trimFullName(clean);
+        if (trimmed.split(' ').length <= e.key.split(' ').length && trimmed !== e.key) continue; // no shorter than what we have
+        const disp = displayFromRaw(raw, trimmed);
+        if (disp) { e.fullName = disp; full++; break; }
+      }
+    }
+    log(`full names from the dictionaries: ${full}`);
+  }
+
   // ids: compilers first, then by count desc
   const list = [...ents.values()].sort((a, b) => (b.compiler ? 1 : 0) - (a.compiler ? 1 : 0) || b.count - a.count || a.key.localeCompare(b.key));
   list.forEach((e, i) => { e.id = i + 1; });
@@ -869,7 +922,8 @@ async function main() {
   const bioOf = e => { if (BIOS[e.key]) return BIOS[e.key]; for (const [alias, target] of canon) if (target === e.key && BIOS[alias]) return BIOS[alias]; return null; };
   const narrators = list.map(e => ({
     id: e.id,
-    name_ar: [...e.displays].sort((a, b) => b[1] - a[1])[0][0],
+    name_ar: e.fullName || ([...e.displays].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0] + (e.key.includes('@') ? ' (لم يُسمَّ في الإسناد)' : '')),
+    name_short: [...e.displays].sort((a, b) => b[1] - a[1])[0][0],
     name_latin: e.latin || null,
     generation: e.gen,
     death_ah: e.death ?? null,

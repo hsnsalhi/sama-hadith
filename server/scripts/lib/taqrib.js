@@ -360,3 +360,45 @@ export function matchSource(ents, aliases, entries, srcId, { companions = false 
   }
   return stats;
 }
+
+
+// ── Full names for display ───────────────────────────────────────────────────
+const NISBA_STOP = new Set(['الفقيه', 'الحافظ', 'الامام', 'القاضي', 'الشيخ', 'العلامه', 'المحدث', 'الصحابي', 'الجليل', 'الثقه', 'الضعيف', 'الكبير', 'الصغير', 'الاكبر', 'الاصغر', 'المشهور', 'المعروف', 'الله', 'الرحمن', 'الرحيم', 'الملك', 'العزيز', 'الوهاب', 'الكريم', 'الحميد', 'المجيد', 'الصمد', 'الاعلي', 'المطلب', 'الرزاق', 'الوارث']);
+/**
+ * Trims a cleaned dictionary name to a readable full name: given name, up to `links` patronymic links,
+ * the nisbas/laqabs, and the kunya. "محمد بن مسلم بن عبيد الله بن عبد الله بن شهاب … القرشي الزهري ابو بكر الفقيه" → "محمد بن مسلم بن عبيد الله بن عبد الله القرشي الزهري ابو بكر"
+ */
+export function trimFullName(clean, links = 3) {
+  const w = clean.split(' ').filter(Boolean);
+  const out = [];
+  let i = 0, n = 0;
+  const theo = k => (w[k] === 'عبد' || w[k] === 'عبيد') && w[k + 1];
+  const nameAt = k => theo(k) ? [w[k], w[k + 1]] : (w[k] === 'ابو' || w[k] === 'ابي' || w[k] === 'ام') && w[k + 1] ? (theo(k + 1) ? [w[k], w[k + 1], w[k + 2]] : [w[k], w[k + 1]]) : [w[k]];
+  let nm = nameAt(0); out.push(...nm); i = nm.length;
+  while (i < w.length && (w[i] === 'بن' || w[i] === 'بنت') && w[i + 1]) {
+    nm = nameAt(i + 1);
+    if (n < links) out.push(w[i], ...nm);
+    i += 1 + nm.length; n++;
+  }
+  let nisbas = 0, kunya = false;
+  for (; i < w.length;) {
+    if ((w[i] === 'ابو' || w[i] === 'ام') && w[i + 1] && !kunya) { nm = nameAt(i); out.push(...nm); i += nm.length; kunya = true; continue; }
+    if (w[i].startsWith('ال') && w[i].length > 3 && !NISBA_STOP.has(w[i])) { if (nisbas < 3) { out.push(w[i]); nisbas++; } i++; continue; }
+    break;
+  }
+  return out.join(' ');
+}
+/** The words of `raw` (original spelling) that render the cleaned name `clean`, or null. */
+export function displayFromRaw(raw, clean) {
+  const target = clean.split(' ').filter(Boolean);
+  const words = stripMarkers(raw).replace(/[،:.؟()\[\]«»"'؛¶]/g, ' ').split(/\s+/).filter(Boolean);
+  const nw = words.map(x => cleanName(x));
+  const out = [];
+  let j = 0;
+  // the trimmed name is a subsequence of the raw words: match in order, skipping raw words not in the name
+  for (let i = 0; i < words.length && j < target.length; i++) {
+    if (nw[i] === target[j]) { out.push(words[i]); j++; }
+    else if (out.length && nw[i] && (nw[i] === 'بن' || nw[i] === 'بنت') && target[j] !== 'بن' && target[j] !== 'بنت') continue;
+  }
+  return j === target.length ? out.join(' ').replace(/^(?:ابي|ابا) /, 'أبو ') : null;
+}
