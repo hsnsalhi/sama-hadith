@@ -323,7 +323,7 @@ function buildEntities(hadiths, ref, canon) {
   // reference enrichment
   for (const e of ents.values()) {
     const r = ref.get(e.key);
-    if (r) { e.death = r.death; e.gen = r.gen; e.origin = r.origin || null; e.latin = r.latin || null; e.reliability = r.reliability || null; e.dated = 'reference'; }
+    if (r) { e.death = r.death; e.gen = r.gen === 'rijal' ? 'muhaddith' : r.gen; e.origin = r.origin || null; e.latin = r.latin || null; e.reliability = r.reliability || null; e.dated = 'reference'; }
     if (e.compiler) { const c = COLLECTIONS.find(c => c.code === e.compiler); e.death = c.compilerDeath; e.gen = 'muhaddith'; e.dated = 'reference'; }
   }
   return ents;

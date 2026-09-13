@@ -9,7 +9,6 @@ export function initFilters() {
   document.getElementById('bs').addEventListener('click', () => setF('sahabi'));
   document.getElementById('bt').addEventListener('click', () => setF('tabii'));
   document.getElementById('bm').addEventListener('click', () => setF('muhaddith'));
-  document.getElementById('br').addEventListener('click', () => setF('rijal'));
 
   // Auto-rotate
   document.getElementById('bauto').addEventListener('click', toggleAuto);
@@ -22,7 +21,7 @@ export function initFilters() {
 
 function setF(f) {
   state.filter = f;
-  ['all', 'sahabi', 'tabii', 'muhaddith', 'rijal'].forEach(k => {
+  ['all', 'sahabi', 'tabii', 'muhaddith'].forEach(k => {
     const b = document.getElementById('b' + (k === 'all' ? 'a' : k[0]));
     if (b) b.classList.toggle('on', k === f);
   });

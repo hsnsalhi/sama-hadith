@@ -306,8 +306,8 @@ export const EXTRA_NARRATORS = [
   { names: ['حجاج بن الشاعر', 'حجاج بن يوسف بن الشاعر'], latin: 'Hajjaj ibn al-Sha\'ir', death: 259, gen: 'muhaddith', origin: 'بغداد' },
   { names: ['عبد الرحمن بن بشر', 'عبد الرحمن بن بشر بن الحكم'], latin: 'Abd al-Rahman ibn Bishr', death: 260, gen: 'muhaddith', origin: 'نيسابور' },
   { names: ['يونس بن عبد الاعلي'], latin: 'Yunus ibn Abd al-A\'la', death: 264, gen: 'muhaddith', origin: 'مصر' },
-  { names: ['ابو زرعه', 'ابو زرعه الرازي'], latin: 'Abu Zur\'a al-Razi', death: 264, gen: 'rijal', origin: 'الري' },
+  { names: ['ابو زرعه الرازي'], latin: 'Abu Zur\'a al-Razi', death: 264, gen: 'muhaddith', origin: 'الري' },
   { names: ['الربيع بن سليمان'], latin: 'al-Rabi\' ibn Sulayman', death: 270, gen: 'muhaddith', origin: 'مصر' },
-  { names: ['ابو حاتم', 'ابو حاتم الرازي'], latin: 'Abu Hatim al-Razi', death: 277, gen: 'rijal', origin: 'الري' },
+  { names: ['ابو حاتم الرازي'], latin: 'Abu Hatim al-Razi', death: 277, gen: 'muhaddith', origin: 'الري' },
   { names: ['الدارمي', 'عبد الله بن عبد الرحمن الدارمي', 'عبد الله بن عبد الرحمن'], latin: 'al-Darimi', death: 255, gen: 'muhaddith', origin: 'سمرقند' },
 ];

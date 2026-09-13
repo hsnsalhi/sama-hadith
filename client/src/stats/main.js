@@ -3,7 +3,7 @@ import { getManifest, getTransmissions } from '../lib/api.js';
 
 const f = n => Number(n || 0).toLocaleString('en-US');
 const pct = (a, b) => b ? (100 * a / b).toFixed(1) + '٪' : '—';
-const GEN = { sahabi: 'الصحابة', tabii: 'التابعون', muhaddith: 'المحدّثون وأتباع التابعين ومن بعدهم', rijal: 'علماء الرجال' };
+const GEN = { sahabi: 'الصحابة', tabii: 'التابعون', muhaddith: 'المحدّثون وأتباع التابعين ومن بعدهم' };
 const KIND = { marfu: 'مرفوع إلى النبي ﷺ', mawquf: 'موقوف على صحابي', maqtu: 'مقطوع على تابعي', balagh: 'بلاغ (بلا إسناد)', ray: 'رأي أو قول متأخر' };
 const SRC = { reference: 'من قوائم المراجع المدقّقة', taqrib: 'من تقريب التهذيب (سنة مصرَّح بها)', taqrib_approx: 'من تقريب التهذيب (تقريبية: نحو/بعد/قبل)', estimated: 'تقديري بالاستيفاء بين المواقع في الأسانيد' };
 

@@ -396,6 +396,21 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
         if ((KUNYA.has(tokens[k - 1]) || THEOPHORIC.has(tokens[k - 1])) && k < n && AR.test(tokens[k])) { add.push(tokens[k]); k += 1; }
         while (k < n && AR.test(tokens[k]) && tokens[k].startsWith('ال') && !NAME_END.has(tokens[k]) && !connectorOf(tokens[k])) { add.push(tokens[k]); k += 1; } // … بن عمرو الرقي
       }
+      else if (t !== 'يعني' && /^(?:ابن|ابو) [^ ]+$/.test(lastName) && k < n && AR.test(tokens[k]) && !NAME_END.has(tokens[k]) && !connectorOf(tokens[k]) && !FILLERS.has(tokens[k]) && !NOT_NAME_START.has(tokens[k])) {
+        // "عن ابن حبان - هو محمد بن يحيى بن حبان -": the full name replaces the short one when it contains it
+        const nm = readName(tokens, k, nameStarts, { noExtra: true });
+        const tail = lastName.split(' ')[1];
+        if (nm && nm.tokens.includes('بن') && nm.tokens.includes(tail)) {
+          const newKey = cleanName(nm.tokens.join(' '));
+          if (newKey && newKey !== lastName && !nodes.has(newKey)) {
+            const node = nodes.get(lastName); nodes.delete(lastName); node.key = newKey; node.raw = nm.tokens.join(' '); node.display = displayForm(spanOf(k, nm.next)); nodes.set(newKey, node);
+            for (const e of edges) { if (e.student === lastName) e.student = newKey; if (e.teacher === lastName) e.teacher = newKey; }
+            frontier = frontier.map(f => f === lastName ? newKey : f);
+            lastName = newKey;
+          }
+          i = nm.next; continue;
+        }
+      }
       else if (t === 'يعني' && k < n && AR.test(tokens[k]) && !NAME_END.has(tokens[k]) && !connectorOf(tokens[k]) && !FILLERS.has(tokens[k]) && !NOT_NAME_START.has(tokens[k]) && !PROPHET.test(' ' + tokens[k]) && (vocabHas(tokens[k]) || nameStarts.has(tokens[k]))) { add = [tokens[k]]; k += 1; }
       if (add) {
         const newKey = cleanName(lastName.replace(/#\d+$/, '') + ' ' + add.join(' '));

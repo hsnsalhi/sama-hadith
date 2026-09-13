@@ -100,11 +100,10 @@ const KNOWN_NARRATORS = [
   { name: 'ابن ماجه', latin: 'Ibn Majah', death: 273, gen: 'muhaddith', origin: 'خراسان', reliability: 'إمام' },
   { name: 'الدارمي', latin: 'al-Darimi', death: 255, gen: 'muhaddith', origin: 'خراسان', reliability: 'إمام حافظ' },
   { name: 'إسماعيل بن إبراهيم', latin: 'Ismail ibn Ibrahim', death: 193, gen: 'muhaddith', origin: 'البصرة', reliability: 'ثقة حافظ' },
-  { name: 'يحيى بن معين', latin: 'Yahya ibn Main', death: 233, gen: 'rijal', origin: 'بغداد', reliability: 'إمام في الجرح والتعديل' },
-  { name: 'علي بن المديني', latin: 'Ali ibn al-Madini', death: 234, gen: 'rijal', origin: 'البصرة', reliability: 'إمام في العلل' },
-  { name: 'أبو حاتم الرازي', latin: 'Abu Hatim al-Razi', death: 277, gen: 'rijal', origin: 'الري', reliability: 'إمام حافظ' },
-  { name: 'ابن حبان', latin: 'Ibn Hibban', death: 354, gen: 'rijal', origin: 'خراسان', reliability: 'إمام حافظ' },
-  { name: 'الدارقطني', latin: 'al-Daraqutni', death: 385, gen: 'rijal', origin: 'بغداد', reliability: 'إمام حافظ' },
+  { name: 'يحيى بن معين', latin: 'Yahya ibn Main', death: 233, gen: 'muhaddith', origin: 'بغداد', reliability: 'إمام في الجرح والتعديل' },
+  { name: 'علي بن المديني', latin: 'Ali ibn al-Madini', death: 234, gen: 'muhaddith', origin: 'البصرة', reliability: 'إمام في العلل' },
+  { name: 'أبو حاتم الرازي', latin: 'Abu Hatim al-Razi', death: 277, gen: 'muhaddith', origin: 'الري', reliability: 'إمام حافظ' },
+  // Ibn Ḥibbān (d. 354) and al-Dāraquṭnī (d. 385) never narrate in the seven books: "ابن حبان" in the isnads is محمد بن يحيى بن حبان
 ];
 
 /**
