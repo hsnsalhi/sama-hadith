@@ -234,6 +234,7 @@ function readName(tokens, i, nameStarts, { noExtra = false } = {}) {
 /** Normalized key for a raw name (honorifics removed, kunya case unified). */
 export function cleanName(raw) {
   let s = normalizeArabic(raw).replace(HONORIFICS, ' ').replace(/[،:.؟()\-]/g, ' ').replace(/\s+/g, ' ').trim();
+  s = s.replace(/(^| )(عبد|عبيد)(الله|الرحمن|الرحيم|العزيز|الملك|الكريم|الوهاب|الرزاق|الوارث|الصمد|الاعلي|المجيد|الحميد|المطلب)(?= |$)/g, '$1$2 $3'); // عبدالله → عبد الله
   s = s.replace(/^(?:ابي|ابا) /, 'ابو ');
   s = s.replace(/^و(?=(?:ابو|ابن|ام|عبد|عبيد) )/, '');
   s = s.replace(/ (?:قال|قالت|انه|انها|يقول)$/, '').trim();

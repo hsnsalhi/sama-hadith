@@ -445,6 +445,62 @@ async function main() {
     g.edges = g.edges.filter((e, i, arr) => e.student !== e.teacher && arr.findIndex(x => x.student === e.student && x.teacher === e.teacher) === i);
     g.nodes = nodes;
   }
+  // ── Merge variant / truncated name forms into the fuller form of the same person ──
+  // "جابر بن عبد" → "جابر بن عبد الله", "يحيى بن يحيى" → "يحيى بن يحيى الليثي" (the one sharing neighbours).
+  // Guards: the short form must not be a reference person; the two forms must share a neighbour;
+  // they must never appear as two distinct nodes in the same isnad; the winner must be unambiguous.
+  {
+    const freq = new Map(), nb = new Map(), coOccur = new Map();
+    const add = (m, k, v) => (m.get(k) || m.set(k, new Set()).get(k)).add(v);
+    for (const h of hadiths) {
+      const keys = [...h.graph.nodes.keys()].map(k => canon.get(k) || k);
+      for (const k of keys) freq.set(k, (freq.get(k) || 0) + 1);
+      for (const e of h.graph.edges) { const a = e.student == null ? null : (canon.get(e.student) || e.student), b = canon.get(e.teacher) || e.teacher; if (a) { add(nb, a, b); add(nb, b, a); } else add(nb, b, `ROOT:${h.coll}`); }
+      for (const a of keys) for (const b of keys) if (a !== b) add(coOccur, a, b);
+    }
+    const compilers = new Set(COLLECTIONS.map(c => c.compiler));
+    const INCOMPLETE = new Set(['بن', 'ابي', 'ابن', 'عبد', 'عبيد', 'ام', 'ابو', 'ابا', 'بنت', 'مولي']);
+    const byHead = new Map(); // first word → keys (canonical keys and their alias spellings, e.g. "جابر بن عبد الله" → canonical "جابر")
+    for (const k of freq.keys()) { const w = k.split(' ')[0]; (byHead.get(w) || byHead.set(w, []).get(w)).push(k); }
+    for (const [alias, target] of canon) { if (freq.has(target) && !freq.has(alias)) { const w = alias.split(' ')[0]; (byHead.get(w) || byHead.set(w, []).get(w)).push(alias); } }
+    const targetOf = L => freq.has(L) ? L : (canon.get(L) || L);
+    const merge = new Map();
+    for (const S of freq.keys()) {
+      if (ref.has(S) || compilers.has(S) || S.includes('@')) continue;
+      const w = S.split(' ');
+      const incomplete = INCOMPLETE.has(w[w.length - 1]);
+      if (!(incomplete || (w.length >= 3 && w.includes('بن')))) continue;
+      const cands = [...new Set((byHead.get(w[0]) || []).filter(L => L !== S && L.startsWith(S + ' ')).map(targetOf))].filter(L => L !== S && (incomplete || !coOccur.get(S)?.has(L))); // a truncation may sit next to the full name in one isnad
+      if (!cands.length) continue;
+      const fS = freq.get(S);
+      const scored = cands.map(L => { const a = nb.get(S) || new Set(), b = nb.get(L) || new Set(); let shared = 0; for (const x of a) if (b.has(x)) shared++; return { L, shared, f: freq.get(L) }; })
+        // the longer form must be established: seen at least twice, and not dwarfed by the short form (a frequent short form is the main name, not a truncation)
+        // coverage: at least half of the short form's neighbours must be neighbours of the long form (a pooled short form covering several persons fails this)
+        .filter(c => (c.shared >= 1 || incomplete) && c.f >= 2 && (incomplete || (c.f * 4 >= fS && c.shared * 2 >= (nb.get(S)?.size || 0))))
+        .sort((x, y) => y.shared - x.shared || y.f - x.f);
+      if (!scored.length) continue;
+      const [best, second] = scored;
+      if (second && second.shared >= 1 && !incomplete) continue; // two long forms both share neighbours with the short one: several persons → leave it
+      if (best.shared === 0 && (!incomplete || (second && second.f * 3 > best.f))) continue;
+      merge.set(S, best.L);
+    }
+    // resolve chains S → L → LL
+    const resolveM = k => { let seen = 0; while (merge.has(k) && seen++ < 5) k = merge.get(k); return k; };
+    let applied = 0;
+    for (const [S] of merge) { const target = resolveM(S); if (target !== S) { canon.set(S, target); applied++; } }
+    for (const h of hadiths) {
+      const g = h.graph;
+      if (![...g.nodes.keys()].some(k => merge.has(canon.get(k) || k) || merge.has(k))) continue;
+      const nodes = new Map();
+      for (const [k, node] of g.nodes) { const nk = resolveM(canon.get(k) || k); if (!nodes.has(nk)) nodes.set(nk, { ...node, key: nk }); }
+      for (const e of g.edges) { if (e.student != null) e.student = resolveM(canon.get(e.student) || e.student); e.teacher = resolveM(canon.get(e.teacher) || e.teacher); }
+      g.edges = g.edges.filter((e, i, arr) => e.student !== e.teacher && arr.findIndex(x => x.student === e.student && x.teacher === e.teacher) === i);
+      g.nodes = nodes;
+    }
+    const examples = [...merge].slice(0, 12).map(([a, b]) => `${a} → ${b}`).join(' | ');
+    log(`name variants merged: ${applied} (${examples})`);
+  }
+
   // "… عن نافع، أنّ ابن عمر كان يصلي": the report is Ibn Umar's → attach him after the last narrator (quote link)
   {
     const sahabiKeys = new Set([...ref].filter(([, r]) => r.gen === 'sahabi').map(([k]) => k));
