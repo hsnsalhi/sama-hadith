@@ -152,3 +152,4 @@ body { background: var(--bg); color: rgba(201,168,76,.85); font-family: 'Cairo',
 .fact { display: flex; flex-direction: column; gap: 2px; }
 .fact-k { font-family: 'Cairo', sans-serif; font-size: 10px; color: rgba(245,232,200,.55); letter-spacing: 1px; }
 .fact-v { font-family: 'Cairo', sans-serif; font-size: 13px; color: #f7e9c4; font-variant-numeric: tabular-nums; }
+.prov { font-family: 'Cairo', sans-serif; font-size: 10px; color: rgba(245,232,200,.55); letter-spacing: .5px; margin-bottom: 6px; }

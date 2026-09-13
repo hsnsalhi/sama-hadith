@@ -349,6 +349,11 @@ function dateAndClassify(hadiths, ents) {
     if (g.reachesProphet) anchors.push([maxDepth + 1, PROPHET_YEAR + 30]); // a companion typically outlived the Prophet by decades; soft anchor
     anchors.sort((a, b) => a[0] - b[0]);
 
+    for (const ed of g.edges) {
+      if (!ed.student) continue;
+      const t = ents.get(ed.teacher), st = ents.get(ed.student);
+      if (t?.dated === 'reference' && st) (st.teacherRefGens ||= new Set()).add(t.gen);
+    }
     for (const [k, d] of depth) {
       if (k === '∅') continue;
       const e = ents.get(k);
@@ -372,10 +377,15 @@ function dateAndClassify(hadiths, ents) {
     if (e.dated === 'reference') continue;
     if (e.estimates.length) { e.death = Math.round(median(e.estimates)); e.dated = 'estimated'; }
     const v = e.votes; const best = Object.entries(v).sort((a, b) => b[1] - a[1])[0];
-    e.gen = best && best[1] > 0 ? best[0] : (e.death && e.death < 100 ? 'sahabi' : e.death && e.death < 150 ? 'tabii' : 'muhaddith');
+    e.gen = best && best[1] > 0 ? best[0] : (e.death && e.death < 150 ? 'tabii' : 'muhaddith'); // the date alone never makes a companion
     // an estimated date that contradicts the structural layer wins
     if (e.gen === 'sahabi' && e.death > 115) e.gen = e.death > 200 ? 'muhaddith' : 'tabii';
     if (e.gen === 'tabii' && e.death > 200) e.gen = 'muhaddith';
+    // whoever narrates from a known successor cannot be a companion; from a known muhaddith, not a successor
+    const RANK = { sahabi: 0, tabii: 1, muhaddith: 2, rijal: 2 };
+    const teacherRank = Math.max(-1, ...[...(e.teacherRefGens || [])].map(g => RANK[g] ?? -1));
+    const required = teacherRank >= 2 ? 2 : teacherRank >= 0 ? 1 : 0; // from a companion or a successor → at least a successor; from a muhaddith → a muhaddith
+    if (RANK[e.gen] < required) e.gen = required === 1 ? 'tabii' : 'muhaddith';
   }
 }
 
@@ -418,12 +428,7 @@ async function main() {
   const hadiths = loaded.filter(h => h.text.trim());
   log(`entries without text in the source: ${noText.length} (kept, flagged)`);
   const nameStarts = parseAll(hadiths);
-  const { inherited, inheritedAll, inheritedHead } = inheritIsnads(hadiths);
-  log(`isnads inherited from previous hadith: ${inherited} (tail) + ${inheritedHead} (head) + ${inheritedAll} (whole)`);
   for (const h of noText) { h.graph = { nodes: new Map(), edges: [], reachesProphet: false }; h.isnad_ar = ''; h.matn_ar = ''; }
-  const stillEmpty = hadiths.filter(h => !h.graph.edges.length);
-  log(`hadiths without any chain: ${stillEmpty.length}`);
-  for (const h of stillEmpty.slice(0, 30)) log(`   [${h.id}] ${cleanName(h.text).slice(0, 110)}`);
   const res = resolveNames(hadiths);
   log(`relatives resolved: ${res.relResolved}/${res.relTotal} · short names expanded: ${res.shortExpanded}/${res.shortTotal}`);
   const { ref, canon } = loadReferences();
@@ -504,14 +509,22 @@ async function main() {
 
   // "… عن نافع، أنّ ابن عمر كان يصلي": the report is Ibn Umar's → attach him after the last narrator (quote link)
   {
-    const sahabiKeys = new Set([...ref].filter(([, r]) => r.gen === 'sahabi').map(([k]) => k));
+    const refKeys = new Set([...ref].filter(([, r]) => r.gen === 'sahabi' || r.gen === 'tabii').map(([k]) => k));
+    const LEAD = new Set(['ان', 'وان', 'قال', 'قالت', 'سمعت', 'سمع', 'عن', 'كان', 'عند', 'فقال', 'يقول']);
     let attached = 0;
     for (const h of hadiths) {
       const g = h.graph; if (!g.edges.length || g.reachesProphet) continue;
-      const toks = cleanName(h.matn_ar.slice(0, 80)).split(' ');
-      if (toks[0] !== 'ان' && toks[0] !== 'وان') continue;
+      const toks = cleanName(h.matn_ar.slice(0, 90)).split(' ');
+      // "قال ابن عباس", "قال قال ابن عباس", "سمعت أبا هريرة", "أن ابن عمر كان", "تذاكرنا … عند ابن عباس فقال"
+      let start = -1;
+      for (let i = 0; i < Math.min(toks.length, 12); i++) if (LEAD.has(toks[i])) { start = i + 1; while (LEAD.has(toks[start])) start++; if (start < toks.length) break; }
+      if (start < 0) continue;
       let found = null;
-      for (let len = 4; len >= 1; len--) { const cand = toks.slice(1, 1 + len).join(' '); const ck = canon.get(cand) || cand; if (sahabiKeys.has(ck) || sahabiKeys.has(cand)) { found = ck; break; } }
+      for (let len = 4; len >= 1; len--) {
+        let cand = toks.slice(start, start + len).join(' ').replace(/^(?:ابا|ابي) /, 'ابو ');
+        const ck = canon.get(cand) || cand;
+        if (refKeys.has(ck) || refKeys.has(cand)) { found = ck; break; }
+      }
       if (!found) continue;
       const hasTeacher = new Set(g.edges.map(e => e.student));
       const leaves = [...g.nodes.keys()].filter(k => !hasTeacher.has(k));
@@ -522,6 +535,12 @@ async function main() {
     }
     log(`matn subjects attached as final link (companion's deed/word): ${attached}`);
   }
+  // "بهذا الإسناد" / continuation fragments: inherit from the previous hadith (after resolution & attachment, so the copied tails are final)
+  const { inherited, inheritedAll, inheritedHead } = inheritIsnads(hadiths);
+  log(`isnads inherited from previous hadith: ${inherited} (tail) + ${inheritedHead} (head) + ${inheritedAll} (whole)`);
+  const stillEmpty = hadiths.filter(h => !h.graph.edges.length);
+  log(`hadiths without any chain: ${stillEmpty.length}`);
+  for (const h of stillEmpty.slice(0, 30)) log(`   [${h.id}] ${cleanName(h.text).slice(0, 110)}`);
   const ents = buildEntities(hadiths, ref, canon);
   dateAndClassify(hadiths, ents);
 

@@ -151,7 +151,7 @@ function renderBiography(n, teachers, students, hadithRows, trans, collections) 
 
   // 1. curated notice
   const bioEl = document.getElementById('bio-text');
-  if (n.bio) { bioEl.textContent = n.bio; bioEl.style.borderColor = col + '55'; }
+  if (n.bio) { bioEl.innerHTML = `<div class="prov">من كتب التراجم (تقريب التهذيب، سير أعلام النبلاء، الإصابة)</div>${n.bio}`; bioEl.style.borderColor = col + '55'; }
   else bioEl.style.display = 'none';
 
   // 2. portrait computed from the corpus
@@ -182,7 +182,7 @@ function renderBiography(n, teachers, students, hadithRows, trans, collections) 
     const pos = n.depth >= 4.5 ? 'في آخر السند، أي في طبقة الصحابة والتابعين الأوائل' : n.depth >= 3 ? 'في وسط السند' : n.depth >= 1.5 ? 'في أوائل السند قريباً من المصنِّفين' : 'في أول السند، من شيوخ المصنِّفين';
     p.push(`موقعه في الأسانيد ${pos} (متوسط رتبته ${n.depth} من المصنِّف).`);
   }
-  document.getElementById('bio-profile').innerHTML = p.map(x => `<p>${x}</p>`).join('');
+  document.getElementById('bio-profile').innerHTML = `<div class="prov">مستخرج آلياً من أسانيد الكتب السبعة${n.death_estimated ? '؛ التاريخ والطبقة تقديريان ما لم يُذكر خلاف ذلك' : ''}</div>` + p.map(x => `<p>${x}</p>`).join('');
 
   // 3. facts grid
   const facts = [
