@@ -59,8 +59,8 @@ async function loadData() {
   setLS('بناء الكون ثلاثي الأبعاد...', 92);
   await new Promise(r => setTimeout(r, 300));
 
+  computeTimelineRange(); // the era range drives the x axis of the stars
   buildStars();
-  computeTimelineRange();
   buildTimeline();
   buildGeoAxis();
 

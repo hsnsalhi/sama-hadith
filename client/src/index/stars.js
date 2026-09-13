@@ -110,6 +110,9 @@ export function buildStars() {
 
   state.starPoints = new THREE.Points(geo, mat);
   state.scene.add(state.starPoints);
+  // first display of the flat map: spread it over the whole viewport
+  if (state.view === '2d' && !state.fittedOnce && vis.length) { state.fittedOnce = true; fitToStars(positions); }
+
 }
 
 /** Mark the given narrator ids as highlighted (hadith path) and dim the rest. */
@@ -127,4 +130,16 @@ export function setHighlight(ids) {
 /** World position of a narrator even when filtered out of the sky. */
 export function positionOf(n) {
   return state.posMap[n.id] || getPos(n);
+}
+
+/** Camera distance at which the given positions fill the viewport (2D view). */
+export function fitToStars(positions) {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (let i = 0; i < positions.length; i += 3) { const x = positions[i], y = positions[i + 1]; if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  if (!isFinite(minX)) return;
+  const fov = (state.camera?.fov || 60) * Math.PI / 180, aspect = innerWidth / Math.max(1, innerHeight);
+  const w = (maxX - minX) * 1.08 + 60, h = (maxY - minY) * 1.25 + 60;
+  const r = Math.max(w / 2 / (Math.tan(fov / 2) * aspect), h / 2 / Math.tan(fov / 2));
+  state.targetSpherical.radius = Math.max(30, Math.min(2600, r));
+  state.targetSpherical.theta = 0; state.targetSpherical.phi = Math.PI / 2;
 }

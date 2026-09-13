@@ -9,7 +9,7 @@ export function handleMouseMove(e) {
   if (!state.starPoints) return;
 
   state.raycaster.setFromCamera(state.mouse, state.camera);
-  const hits = state.raycaster.intersectObject(state.starPoints);
+  const hits = state.raycaster.intersectObject(state.starPoints).sort((a, b) => a.distanceToRay - b.distanceToRay); // the star nearest to the pointer, not to the camera
   const tt = document.getElementById('tt');
 
   if (hits.length) {
@@ -41,10 +41,12 @@ export function handleClick(e, prevX, prevY) {
 
   if (!state.starPoints) return;
 
+  // the click selects exactly the star shown under the pointer (the hovered one)
+  if (state.hovId != null) { const n = state.narById.get(state.hovId); if (n) { openPanel(n); return; } }
   state.mouse.x = (e.clientX / innerWidth) * 2 - 1;
   state.mouse.y = -(e.clientY / innerHeight) * 2 + 1;
   state.raycaster.setFromCamera(state.mouse, state.camera);
-  const hits = state.raycaster.intersectObject(state.starPoints);
+  const hits = state.raycaster.intersectObject(state.starPoints).sort((a, b) => a.distanceToRay - b.distanceToRay);
 
   if (hits.length) {
     const n = state.narById.get(state.idxMap[hits[0].index]);

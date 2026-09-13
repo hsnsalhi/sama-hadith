@@ -60,13 +60,14 @@ export function loadTaqrib(path) {
     let layer = null;
     const lm = norm.match(/ من (?:(?:رووس|رءوس|كبار|صغار|اوساط|اواسط|اوايل|اواخر) )?(?:الطبقه )?(الحاديه عشره|الثانيه عشره|الاولي|الثانيه|الثالثه|الرابعه|الخامسه|السادسه|السابعه|الثامنه|التاسعه|العاشره)(?= |$)/);
     if (lm) layer = LAYERS[lm[1]];
+    if (!layer && /(?:^| )(?:صحابي|صحابيه|له صحبه|لها صحبه|من كبار الصحابه|من الصحابه|من صغار الصحابه|امير المومنين|من المهاجرين|من الانصار|شهد بدرا|شهد احدا|شهد الحديبيه|بايع تحت الشجره)(?: |$)/.test(norm)) layer = 1;
     let grade = null, gradePos = -1;
     for (const g of GRADES) {
       let p = norm.indexOf(' ' + g + ' '); if (p < 0 && norm.endsWith(' ' + g)) p = norm.length - g.length - 1;
       if (p >= 0 && (gradePos < 0 || p < gradePos)) { grade = g; gradePos = p; }
     }
     let death = null, deathApprox = false;
-    const dm = norm.match(/(?:مات|توفي|قتل|استشهد|توفيت|ماتت) (?:شهيدا )?(?:سنه|في حدود سنه|بعد سنه|قبل سنه|في سنه|بعد|قبل|نحو سنه|في حدود) /);
+    const dm = norm.match(/(?:مات|توفي|قتل|استشهد|توفيت|ماتت|قتلت)(?: (?:شهيدا|في|ذي|الحجه|القعده|المحرم|صفر|ربيع|الاول|الاخر|جمادي|الاولي|الاخره|رجب|شعبان|رمضان|شوال|اول|اخر|وسط|ليله|يوم|عاشوراء|عرفه|الجمعه|الاربعاء|الخميس|السبت|الاحد|الاثنين|الثلاثاء|من|بالمدينه|بمكه|بالبصره|بالكوفه|بالشام|بمصر|بدمشق|ببغداد|بواسط|بخراسان|باليمن|بالطايف|بحمص|بالري|بنيسابور|بمرو|بالثغر|بطرسوس|بالرقه|بحران|بسمرقند|ببخاري|ببيت المقدس|بالمدينه|بحلب)){0,6} (?:سنه|في حدود سنه|بعد سنه|قبل سنه|في سنه|بعد|قبل|نحو سنه|في حدود) /);
     let centuryExplicit = false;
     if (dm) {
       // collect the numeral words that follow ("خمس وعشرين ومايه", "سبع او ثمان وخمسين"); stop at anything else ("وقيل…")
@@ -121,7 +122,7 @@ export function entryKeys(e) {
 
 // ── Tahdhīb al-Tahdhīb ──────────────────────────────────────────────────────
 // "### $ 771 م د س مسلم وأبي داود والنسائي صهيب أبو الصهباء البكري البصري ويقال المدني مولى بن عباس روى عن … وعنه … قال أبو زرعة ثقة …"
-const EXPANSION_WORDS = new Set(['البخاري', 'مسلم', 'ومسلم', 'والترمذي', 'الترمذي', 'والنسايي', 'النسايي', 'وابن', 'ماجه', 'ماجة', 'وداود', 'في', 'الادب', 'المفرد', 'التعاليق', 'التعليق', 'خلق', 'افعال', 'العباد', 'القراءه', 'خلف', 'الامام', 'رفع', 'اليدين', 'الجمعه', 'الصلاه', 'مسايل', 'الناسخ', 'والمنسوخ', 'المراسيل', 'القدر', 'الشمايل', 'عمل', 'اليوم', 'والليله', 'مسند', 'خصايص', 'السنن', 'الكبري', 'التفسير', 'الاسماء', 'والكني', 'مقدمه', 'الصحيح', 'الستة', 'السته', 'الجماعه', 'الاربعه', 'والاربعه', 'والباقين', 'الباقين', 'سوي', 'وحده', 'فقط', 'اصحاب', 'اصحابها', 'الكتب', 'الجميع', 'وفي', 'كتاب', 'الرد', 'علي', 'الجهميه', 'فضايل', 'الانصار', 'الصحابه', 'النكاح', 'حديث', 'مالك', 'الغيلانيات', 'الاجابه', 'المرسل', 'الطلاق', 'البعث', 'الزهد', 'الوصايا', 'الكني', 'التاريخ']);
+const EXPANSION_WORDS = new Set(['البخاري', 'ومسلم', 'والترمذي', 'الترمذي', 'والنسايي', 'النسايي', 'وابن', 'ماجه', 'ماجة', 'وداود', 'في', 'الادب', 'المفرد', 'التعاليق', 'التعليق', 'خلق', 'افعال', 'العباد', 'القراءه', 'الامام', 'رفع', 'اليدين', 'الجمعه', 'الصلاه', 'مسايل', 'الناسخ', 'والمنسوخ', 'المراسيل', 'القدر', 'الشمايل', 'اليوم', 'والليله', 'مسند', 'خصايص', 'السنن', 'الكبري', 'التفسير', 'الاسماء', 'والكني', 'مقدمه', 'الصحيح', 'الستة', 'السته', 'الجماعه', 'الاربعه', 'والاربعه', 'والباقين', 'الباقين', 'سوي', 'وحده', 'فقط', 'اصحاب', 'اصحابها', 'الكتب', 'الجميع', 'وفي', 'كتاب', 'الرد', 'الجهميه', 'فضايل', 'الانصار', 'الصحابه', 'النكاح', 'حديث', 'الغيلانيات', 'الاجابه', 'المرسل', 'الطلاق', 'البعث', 'الزهد', 'الوصايا', 'الكني', 'التاريخ']);
 const STOP_LIST = /^(?:غيرهم|غيره|جماعه|اخرون|خلق|كثير|كثيرون|اخرين|جماعة|روي|مات قبله|وغيرهم|غير ذلك)$/;
 const CUT_RE = / (?:قال|ذكره|وثقه|ضعفه|وقال|مات|توفي|له|روي له|قلت|ذكر|قالوا|قيل|كان|وكان|قال ابو|قال ابن|وله|وذكره)(?= )/;
 let WAW_NAMES = new Set(); // names beginning with و (وكيع، وهب، واقد…) so that "وعنه وكيع" is not split into "كيع"
@@ -144,19 +145,24 @@ export function loadTahdhib(path) {
       if ((t === 'ابي' || t === 'وابي' || t === 'ابو' || t === 'وابو') && t2 === 'داود') { k += 2; continue; }
       if ((t === 'بن' || t === 'وبن' || t === 'ابن' || t === 'وابن') && (t2 === 'ماجه' || t2 === 'ماجة')) { k += 2; continue; }
       if (EXPANSION_WORDS.has(t) && (k === 0 || sig.length)) { k++; continue; }
+      // words that are also names ("مسلم", "علي", "مالك", "خلف", "عمل"): part of the expansion only in their formula
+      const prev = toks[k - 1], next = toks[k + 1] || '';
+      if (sig.length && ((t === 'مسلم' && next !== 'بن' && (next.startsWith('و') || next === 'في' || next === 'وحده' || next === 'فقط')) || (t === 'علي' && (prev === 'مسند' || prev === 'الرد')) || (t === 'مالك' && (prev === 'حديث' || prev === 'موطا')) || (t === 'خلف' && prev === 'القراءه') || (t === 'عمل' && next === 'اليوم'))) { k++; continue; }
       break;
     }
     const rest = toks.slice(k).join(' ');
     const rw = rest.search(/ (?:روي عن|روت عن|روي عنه|حدث عن) /);
     let name = (rw >= 0 ? rest.slice(0, rw) : rest.split(' ').slice(0, 12).join(' ')).trim();
+    if (name.startsWith('بن ')) name = 'ا' + name; // "بن أبي ذئب" = ابن أبي ذئب
+    name = name.replace(/^(?:(?:امير المومنين|الامام|الحافظ|الشيخ|القاضي|الفقيه|السيد|الخليفه|الصحابي|الجليل|العلامه|المحدث|ابو الخلفاء|خليفه رسول الله) )+/, '');
     name = name.replace(GLOSS_RE, '').replace(/ (?:عن|من|الي|كان|قال|ذكره|روي|له|ابن اخي|ابن اخت|احد|رجل|لم|لا|ليس|في|بحديث)(?= |$).*$/, '').trim();
     let teachers = [], students = [];
     if (rw >= 0) {
       const after = rest.slice(rw).replace(/^ (?:روي عن|روت عن|روي عنه|حدث عن) /, '');
       const ws = after.search(/ (?:وعنه|وعنها|روي عنه|وروي عنه|روي عنها|وروي عنها) /);
       const tpart = (ws >= 0 ? after.slice(0, ws) : after).split(CUT_RE)[0];
-      teachers = splitNames(tpart).slice(0, 60);
-      if (ws >= 0) students = splitNames(after.slice(ws).replace(/^ (?:وعنه|وعنها|روي عنه|وروي عنه|روي عنها|وروي عنها) /, '').split(CUT_RE)[0]).slice(0, 60);
+      teachers = splitNames(tpart).slice(0, 400);
+      if (ws >= 0) students = splitNames(after.slice(ws).replace(/^ (?:وعنه|وعنها|روي عنه|وروي عنه|روي عنها|وروي عنها) /, '').split(CUT_RE)[0]).slice(0, 400);
     }
     entries.push({ n, vol, name, sigla: sig, colls: [...new Set(sig.flatMap(x => SIGLA[x]))], teachers, students, text: body });
   }
@@ -187,7 +193,7 @@ export function nameVocabulary(taqrib, tahdhib, extraNames = []) {
   for (const nm of extraNames) add(nm, 2);
   const out = new Set();
   for (const [w, c] of vocab) if (c >= 2) out.add(w); // a word seen once in a teacher list only is not enough
-  for (const w of ['بن', 'بنت', 'ابن', 'ابو', 'ابي', 'ام', 'عبد', 'عبيد', 'مولي', 'الله', 'اربع', 'كتاب', 'كتب', 'ولد', 'رجل', 'رجلا', 'امراه', 'ناس', 'قوم', 'اهل', 'الحبيب', 'الامين', 'يوم', 'سنه', 'شهر', 'ليله', 'حديث', 'حديثا', 'كلمه', 'شيء', 'شيئا', 'قال', 'انه', 'كان', 'كانوا', 'الغد', 'الجمعه', 'الصلاه', 'المسجد', 'المنبر', 'الناس', 'القوم', 'الرجل', 'المراه', 'الحديث', 'الكتاب', 'الله', 'النبي', 'رسول']) out.delete(w);
+  for (const w of ['جد', 'جده', 'جدته', 'والد', 'والده', 'اب', 'ابيه', 'اخ', 'اخو', 'اخي', 'اخت', 'عم', 'عمه', 'خال', 'خاله', 'ابنه', 'ابنته', 'زوج', 'زوجه', 'امراه', 'بن', 'بنت', 'ابن', 'ابو', 'ابي', 'ام', 'عبد', 'عبيد', 'مولي', 'الله', 'اربع', 'كتاب', 'كتب', 'ولد', 'رجل', 'رجلا', 'امراه', 'ناس', 'قوم', 'اهل', 'الحبيب', 'الامين', 'يوم', 'سنه', 'شهر', 'ليله', 'حديث', 'حديثا', 'كلمه', 'شيء', 'شيئا', 'قال', 'انه', 'كان', 'كانوا', 'الغد', 'الجمعه', 'الصلاه', 'المسجد', 'المنبر', 'الناس', 'القوم', 'الرجل', 'المراه', 'الحديث', 'الكتاب', 'الله', 'النبي', 'رسول']) out.delete(w);
   return out;
 }
 
@@ -238,6 +244,8 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
       if (best) { e.tahdhib = best.e; stats.tahdhib++; } else if (ranked.length > 1) stats.tahdhibAmbiguous++;
     }
     {
+      // a bare single-word entity ("سفيان", "عمر~") that several persons of the books share is left unmatched: it pools several people
+      if (!e.key.includes(' ') && !/^(?:ابو|ابن|ام|ال)/.test(e.key) && (iTaq.get(e.key) || []).length + taqrib.filter(t => cleanName(t.name).split(' ')[0] === e.key).length > 1) continue;
       // a reference-dated narrator is never matched through a weak key ("ابن شهاب" → عبد الله بن شهاب): stage 2 handles him by death year
       const ranked = cands(iTaq, e).filter(([t, strength]) => dateOk(t, e) && (!t.layer || !e.gen || e.dated !== 'reference' || layerGen(t.layer) === e.gen) && !(e.dated === 'reference' && (strength <= 1 || t.stub || (t.death == null && !t.layer)))).map(([t, strength]) => {
         let s = 0;
@@ -266,7 +274,9 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
         let set = null;
         for (const w of kw) { const p = words.get(w); if (!p) { set = null; break; } set = set ? new Set([...set].filter(i => p.has(i))) : new Set(p); }
         if (!set) continue;
-        for (const i of set) { const t = taqrib[i]; if (contains(cleanName(t.name).split(' '), kw)) found.set(i, t); }
+        const nameWords = cleanName(key).split(' ');
+        const allowInside = nameWords.length >= 2 || /^(?:ابو|ابن|ام|ال)/.test(nameWords[0]); // a kunya, a nisba or a compound may sit anywhere; a bare given name only at the head
+        for (const i of set) { const t = taqrib[i]; const w = cleanName(t.name).split(' '); if (allowInside ? contains(w, kw) : w[0] === kw[0]) found.set(i, t); }
       }
       const dated = [...found.values()].filter(t => t.death != null && Math.abs(taqribDeath(t, e.death) - e.death) <= 3);
       let ok = dated.filter(t => !t.layer || !e.gen || layerGen(t.layer) === e.gen || e.gen === 'rijal');

@@ -185,8 +185,96 @@ function inheritIsnads(hadiths) {
 
 const SHORT = k => !k.includes(' بن ') && !k.includes('@');
 
-function resolveNames(hadiths) {
+// depth of every node from the compiler (0 = the compiler's direct source)
+const depthsOf = g => { const adj = new Map(); for (const e of g.edges) { const s = e.student ?? '∅'; (adj.get(s) || adj.set(s, []).get(s)).push(e.teacher); } const d = new Map([['∅', -1]]); const q = ['∅']; while (q.length) { const k = q.shift(); for (const t of adj.get(k) || []) if (!d.has(t)) { d.set(t, d.get(k) + 1); q.push(t); } } return d; };
+// a companion cannot stand within two links of the compiler, a successor cannot be his direct source
+const LAYER_MID = { 1: 55, 2: 90, 3: 110, 4: 130, 5: 145, 6: 150, 7: 170, 8: 190, 9: 215, 10: 235, 11: 255, 12: 280 };
+/**
+ * r: { gen, death, layer } of the candidate person; depth from the compiler; deaths of his would-be students and teachers when known.
+ * A link rarely spans more than ~65 years; a student seldom dies long before his teacher.
+ */
+const plausibleAt = (r, depth, compilerDeath = null, studentDeaths = [], teacherDeaths = []) => {
+  if (!r || depth == null) return true;
+  if (r.gen === 'sahabi' && depth <= 2) return false;
+  if (r.gen === 'tabii' && depth <= 0) return false;
+  const death = r.death ?? (r.layer ? LAYER_MID[r.layer] : null);
+  if (death == null) return true;
+  if (compilerDeath && death < compilerDeath - 55 * (depth + 1) - 20) return false;
+  for (const sd of studentDeaths) if (death < sd - 70 || death > sd + 15) return false;
+  for (const td of teacherDeaths) if (death > td + 90 || death < td - 15) return false;
+  return true;
+};
+
+function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map()) {
   const base = k => k.replace(/#\d+$/, '');
+  const RANK = { sahabi: 0, tabii: 1, muhaddith: 2, rijal: 2 };
+  // a companion cannot stand within two links of the compiler, a successor cannot be his direct source
+  let compilerDeath = null; // set per hadith
+  const deathOfKey = k => { if (!k || k.includes('@') || k.startsWith('ROOT:')) return null; const r = ref.get(k); return r?.death ?? null; };
+  const plausible = (full, depth, students = [], teachers = []) => plausibleAt(ref.get(full), depth, compilerDeath, students.map(deathOfKey).filter(x => x != null), teachers.map(deathOfKey).filter(x => x != null));
+  // genealogies from the rijāl books: "عمر بن الخطاب" → "عمر بن الخطاب بن نفيل بن عبد العزى…"
+  const nasab = new Map(); // "X بن Y" → [{ words, layer, death }]
+  for (const t of rijal) { const w = cleanName(t.name).split(' '); const i = w.indexOf('بن'); if (i !== 1 || w.length < 3) continue; const k = w.slice(0, 3).join(' '); (nasab.get(k) || nasab.set(k, []).get(k)).push({ words: w, layer: t.layer || null, death: t.death ?? null }); }
+  const layerGen = l => l === 1 ? 'sahabi' : l <= 5 ? 'tabii' : 'muhaddith';
+  const trimName = w => { const out = w.slice(0, 4); while (out.length > 1 && /^(?:بن|بنت|ابي|ابو|عبد|عبيد|ام|ابن)$/.test(out[out.length - 1])) out.pop(); return out.join(' '); };
+  // bare name + its neighbours → the person of the rijāl books whose teachers/students include those neighbours ("حدثنا عمر، حدثنا أبي" → عمر بن حفص بن غياث)
+  const rijalByHead = new Map();
+  const taqByName = new Map(); // 3–6 first words of a Taqrīb name → [{ layer, death }] (used only when unique)
+  for (const t of rijal) if (t.layer || t.death != null) { const w = cleanName(t.name).split(' '); for (let n = 3; n <= Math.min(6, w.length); n++) { const k = w.slice(0, n).join(' '); (taqByName.get(k) || taqByName.set(k, []).get(k)).push({ layer: t.layer || null, death: t.death != null ? taqribDeath(t, null) : null }); } }
+  const taqInfo = w => { for (let n = Math.min(6, w.length); n >= 3; n--) { const l = taqByName.get(w.slice(0, n).join(' ')); if (l && l.length === 1) return l[0]; if (l && l.length > 1) return {}; } return {}; };
+  for (const t of rijal) {
+    if (!t.teachers || (!t.teachers.length && !t.students.length)) continue;
+    const name = cleanName(t.name); const w = name.split(' '); if (w.length < 2) continue;
+    const tq = taqInfo(w);
+    (rijalByHead.get(w[0]) || rijalByHead.set(w[0], []).get(w[0])).push({ name, words: w, layer: t.layer || tq.layer || null, death: tq.death ?? null, teachers: t.teachers.map(cleanName).filter(Boolean), students: t.students.map(cleanName).filter(Boolean) });
+  }
+  const compilerKey = { bukhari: 'البخاري', muslim: 'مسلم', abudawud: 'ابو داود', tirmidhi: 'الترمذي', nasai: 'النسايي', ibnmajah: 'ابن ماجه', malik: 'مالك' };
+  const prefixOf = (a, b) => { const x = a.split(' '), y = b.split(' '); if (x.length < 2 || y.length < 2) return false; const n = Math.min(x.length, y.length); for (let i = 0; i < n; i++) if (x[i] !== y[i]) return false; return true; };
+  const GENERIC = new Set(['المدني', 'المكي', 'الكوفي', 'البصري', 'الشامي', 'المصري', 'البغدادي', 'الواسطي', 'الدمشقي', 'الحمصي', 'اليماني', 'الخراساني', 'النيسابوري', 'المروزي', 'الرازي', 'الحافظ', 'الامام', 'الفقيه', 'القاضي', 'الاعمي', 'الضرير', 'الاصل', 'الكبير', 'الصغير', 'المولي', 'الحجازي', 'العراقي', 'الجزري', 'الرقي', 'الحراني', 'البلخي', 'الهروي', 'السجستاني', 'الطايفي', 'الانصاري', 'القرشي', 'الهاشمي', 'الاموي', 'التميمي', 'الازدي', 'الثقفي', 'المخزومي', 'الزهري', 'العدوي', 'الاسدي', 'الكندي', 'الهمداني', 'النخعي', 'السلمي', 'الجهني', 'الليثي', 'الخزاعي', 'الاشعري', 'الاعرج', 'الاعور', 'الطويل', 'القصير', 'الاحول', 'الاسود', 'الله', 'الرحمن']);
+  const distinctive = nm => nm.split(' ').filter(w => w.startsWith('ال') && w.length >= 5 && !GENERIC.has(w));
+  const ibnOf = nm => { const w = nm.split(' '); if (w[0] === 'ابن' && w.length >= 2) return w.slice(1).join(' '); const i = w.indexOf('بن'); return i > 0 ? w.slice(i + 1).join(' ') : null; };
+  const sameName = (a, b) => a === b || prefixOf(a, b) || distinctive(a).some(w => b.split(' ').includes(w)) || (a.startsWith('ابن ') && ibnOf(b) != null && (ibnOf(b) === ibnOf(a) || ibnOf(b).startsWith(ibnOf(a) + ' '))) || (b.startsWith('ابن ') && ibnOf(a) != null && (ibnOf(a) === ibnOf(b) || ibnOf(a).startsWith(ibnOf(b) + ' ')));
+  const rijalByWord = new Map(); // distinctive nisba/laqab → entries
+  const entryCache = new Map();
+  for (const l of rijalByHead.values()) for (const c of l) for (const d of distinctive(c.name)) (rijalByWord.get(d) || rijalByWord.set(d, []).get(d)).push(c);
+  const viaRijal = (bare, students, teachers, depth, relTeachers = []) => {
+    const cands = rijalByHead.get(bare); if (!cands) return null;
+    const st = students.map(x => x.startsWith('ROOT:') ? compilerKey[x.slice(5)] : x).filter(x => x && !x.includes('@'));
+    const te = teachers.filter(x => !x.includes('@'));
+    const rels = teachers.filter(x => x.includes('@')).map(x => x.split('@')[0]);
+    if (!st.length && !te.length && !rels.length) return null;
+    // symmetric evidence: the neighbour's own notice names the candidate ("الحميدي: روى عن سفيان بن عيينة")
+    const entriesOf = key => {
+      if (entryCache.has(key)) return entryCache.get(key);
+      const w = key.split(' '); const cs = rijalByHead.get(w[0]) || [];
+      let found = cs.filter(c => c.name === key || c.name.startsWith(key + ' '));
+      if (!found.length) found = cs.filter(c => sameName(key, c.name));
+      if (!found.length) for (const d of distinctive(key)) for (const c of rijalByWord.get(d) || []) if (sameName(key, c.name) && !found.includes(c)) found.push(c); // "الحميدي عبد الله بن الزبير" → عبد الله بن الزبير … الحميدي
+      entryCache.set(key, found); return found;
+    };
+    const namedBy = (key, side, c) => entriesOf(key).some(x => (side === 'student' ? x.teachers : x.students).some(y => sameName(c.name, y) || prefixOf(y, c.name)));
+    const fatherEntry = c => { const i = c.words.indexOf('بن'); if (i < 0) return null; const fw = c.words.slice(i + 1); const cs = rijalByHead.get(fw[0]) || []; return cs.find(x => x.words.slice(0, Math.min(fw.length, 4)).join(' ') === fw.slice(0, Math.min(fw.length, 4)).join(' ')) || null; };
+    const scored = cands.map(c => { let n = 0; for (const x of st) { if (c.students.some(y => sameName(x, y))) n++; if (x.includes(' ') && namedBy(x, 'student', c)) n++; } for (const x of te) { if (c.teachers.some(y => sameName(x, y))) n++; if (x.includes(' ') && namedBy(x, 'teacher', c)) n++; } for (const r of rels) if (c.teachers.includes(r)) n++; if (rels.includes('ابيه') && relTeachers.length) { const f = fatherEntry(c); if (f) for (const x of relTeachers) if (f.teachers.some(y => sameName(x, y))) n += 2; } return [c, n]; }).filter(([c, n]) => n > 0 && plausibleAt({ gen: c.layer === 1 ? 'sahabi' : c.layer && c.layer <= 5 ? 'tabii' : 'muhaddith', death: c.death, layer: c.layer }, depth, compilerDeath, st.map(deathOfKey).filter(x => x != null), te.map(deathOfKey).filter(x => x != null))).sort((a, b) => b[1] - a[1]);
+    if (process.env.DEBUG_BARE && bare === process.env.DEBUG_BARE) console.log('[viaRijal]', bare, JSON.stringify({ st, te, rels, depth, compilerDeath }), scored.slice(0, 4).map(([c, n]) => `${c.name.slice(0, 30)}:${n}:L${c.layer}:d${c.death}`).join(' | '));
+    if (!scored.length) return null;
+    if (scored.length > 1 && scored[0][1] === scored[1][1]) return null;
+    const w = scored[0][0].words;
+    for (let n = Math.min(w.length, 5); n >= 2; n--) { const k = w.slice(0, n).join(' '); if (freq.has(k) && k.includes(' بن ')) return k; }
+    return trimName(w);
+  };
+  /** Father (gen = 1) or grandfather (gen = 2) of `full` from the genealogies, or null when unknown / ambiguous. */
+  const viaNasab = (full, gen) => {
+    const w = full.split(' '); if (w.indexOf('بن') !== 1 || w.length < 3) return null;
+    let c = (nasab.get(w.slice(0, 3).join(' ')) || []).filter(x => x.words.slice(0, w.length).join(' ') === full);
+    const r = ref.get(full);
+    if (r && c.length > 1) {
+      c = c.filter(x => (!x.layer || layerGen(x.layer) === r.gen) && (x.death == null || r.death == null || Math.abs(x.death - r.death) <= 5 || Math.abs(x.death + 100 - r.death) <= 5));
+      const strong = c.filter(x => x.layer || x.death != null); if (strong.length) c = strong;
+    }
+    const fathers = new Set();
+    for (const x of c) { let idx = -1; for (let n = 0; n < gen; n++) { idx = x.words.indexOf('بن', idx + 1); if (idx < 0) break; } if (idx < 0 || idx + 1 >= x.words.length) continue; fathers.add(trimName(x.words.slice(idx + 1))); }
+    return fathers.size === 1 ? [...fathers][0] : null;
+  };
   // frequency of every key, display forms, expansions: first token → full keys
   const freq = new Map(), displays = new Map();
   for (const h of hadiths) for (const [k0, node] of h.graph.nodes) {
@@ -221,10 +309,12 @@ function resolveNames(hadiths) {
   }
   const pick = m => { if (!m) return null; const arr = [...m].sort((a, b) => b[1] - a[1]); const tot = arr.reduce((s, x) => s + x[1], 0); return arr[0][1] >= 2 && arr[0][1] / tot >= 0.7 ? arr[0][0] : null; };
 
-  let shortExpanded = 0, shortTotal = 0, relResolved = 0, relTotal = 0;
+  let shortExpanded = 0, shortTotal = 0, relResolved = 0, relTotal = 0, viaBooks = 0;
   for (const h of hadiths) {
     const g = h.graph;
     const rename = new Map();
+    const depths = depthsOf(g);
+    compilerDeath = COLLECTIONS.find(c => c.code === h.coll)?.compilerDeath || null;
     // a) short names
     for (const k0 of g.nodes.keys()) {
       const k = base(k0);
@@ -233,8 +323,10 @@ function resolveNames(hadiths) {
       const students = g.edges.filter(e => e.teacher === k0).map(e => e.student == null ? `ROOT:${h.coll}` : base(e.student));
       const teachers = g.edges.filter(e => e.student === k0).map(e => base(e.teacher));
       let full = null;
-      for (const s of students) { full = pick(byPair.get(`${k}|s|${s}`)); if (full) break; }
-      if (!full) for (const t of teachers) { full = pick(byPair.get(`${k}|t|${t}`)); if (full) break; }
+      const depth = depths.get(k0);
+      for (const s of students) { full = pick(byPair.get(`${k}|s|${s}`)); if (full && !plausible(full, depth, students, teachers)) full = null; if (full) break; }
+      if (!full) for (const t of teachers) { full = pick(byPair.get(`${k}|t|${t}`)); if (full && !plausible(full, depth, students, teachers)) full = null; if (full) break; }
+      if (!full) { const relTeachers = teachers.filter(t => t.includes('@')).flatMap(t => g.edges.filter(e => e.student && base(e.student) === t).map(e => base(e.teacher)).filter(x => !x.includes('@'))); full = viaRijal(k, students, teachers, depth, relTeachers); if (full && !plausible(full, depth, students, teachers)) full = null; if (full) viaBooks++; }
       if (full) { rename.set(k0, full); shortExpanded++; } else if (k0 !== k) rename.set(k0, k);
     }
     // b) relatives, using the expanded base when available
@@ -242,21 +334,28 @@ function resolveNames(hadiths) {
       if (!k0.includes('@')) continue;
       relTotal++;
       const [rel, b0] = k0.split('@');
-      const b = rename.get(b0) || rename.get(base(b0)) || base(b0);
+      let b = rename.get(b0) || rename.get(base(b0)) || base(b0);
+      const bDepth = depths.get(b0);
+      if (fullest.has(b) && plausible(fullest.get(b), bDepth)) b = fullest.get(b); // "ابن عمر" → عبد الله بن عمر
       let target = null;
+      const fullOf = x => { if (x.includes(' بن ')) return x; const d = dominant(x); return d && plausible(d, bDepth) ? d : null; };
+      // the fullest form of the father: the genealogy of the rijāl books first, then the corpus
+      const bestKey = nm => { if (!nm) return null; const w = nm.split(' '); for (let n = w.length; n >= 2; n--) { const k = w.slice(0, n).join(' '); if (freq.has(k)) return k; } return freq.has(nm) ? nm : trimName(w); };
       if (rel === 'ابيه' || rel === 'ابيها') {
         if (b.startsWith('ابن ')) target = b.slice(4);
-        else { const full = b.includes(' بن ') ? b : dominant(b); target = full ? fatherOf(full) : null; }
+        else { const full = fullOf(b); target = full ? (bestKey(viaNasab(full, 1)) || fatherOf(full)) : null; }
+
       } else if (rel === 'جده' || rel === 'جدها') {
-        const full = b.includes(' بن ') ? b : dominant(b);
-        const f = full ? fatherOf(full) : null;
-        const ff = f ? (f.includes(' بن ') ? f : dominant(f)) : null;
-        target = ff ? fatherOf(ff) : null;
+        const full = fullOf(b);
+        const viaBooks = full ? bestKey(viaNasab(full, 2)) : null;
+        if (viaBooks) target = viaBooks;
+        else { const f = full ? fatherOf(full) : null; const ff = f ? (f.includes(' بن ') ? f : dominant(f)) : null; target = ff ? fatherOf(ff) : null; }
       }
       if (target) target = cleanName(target) || null;
       if (target) { rename.set(k0, target); relResolved++; }
       else if (b !== b0) rename.set(k0, `${rel}@${b}`);
     }
+    if (process.env.DEBUG_H === h.id) console.log('[resolveNames]', h.id, 'nodes', [...g.nodes.keys()].join(' | '), '| depths', JSON.stringify([...depths]), '| rename', JSON.stringify([...rename]));
     if (!rename.size) continue;
     const nodes = new Map();
     for (const [k, node] of g.nodes) {
@@ -267,15 +366,83 @@ function resolveNames(hadiths) {
     g.edges = g.edges.filter((e, i, arr) => e.student !== e.teacher && arr.findIndex(x => x.student === e.student && x.teacher === e.teacher) === i);
     g.nodes = nodes;
   }
-  return { relResolved, relTotal, shortExpanded, shortTotal };
+  // second pass: names expanded above now feed the neighbour statistics, so the remaining bare names can follow them
+  {
+    byPair.clear();
+    for (const h of hadiths) for (const e of h.graph.edges) {
+      const s = e.student == null ? `ROOT:${h.coll}` : base(e.student);
+      const t = base(e.teacher);
+      if (t.includes(' بن ') && !t.startsWith('ابن ')) bump(`${t.split(' بن ')[0]}|s|${s}`, t);
+      if (e.student != null && s.includes(' بن ') && !s.startsWith('ابن ')) bump(`${s.split(' بن ')[0]}|t|${t}`, s);
+    }
+    let second = 0;
+    for (const h of hadiths) {
+      const g = h.graph;
+      const depths = depthsOf(g);
+      compilerDeath = COLLECTIONS.find(c => c.code === h.coll)?.compilerDeath || null;
+      const rename = new Map();
+      for (const k0 of g.nodes.keys()) {
+        const k = base(k0);
+        if (k.includes('@') || !SHORT(k) || k.startsWith('ابن ') || k.startsWith('ابو ') || k.startsWith('ام ')) continue;
+        const students = g.edges.filter(e => e.teacher === k0).map(e => e.student == null ? `ROOT:${h.coll}` : base(e.student));
+        const teachers = g.edges.filter(e => e.student === k0).map(e => base(e.teacher));
+        let full = null;
+        for (const st of students) { full = pick(byPair.get(`${k}|s|${st}`)); if (full && !plausible(full, depths.get(k0), students, teachers)) full = null; if (full) break; }
+        if (!full) for (const t of teachers) { full = pick(byPair.get(`${k}|t|${t}`)); if (full && !plausible(full, depths.get(k0), students, teachers)) full = null; if (full) break; }
+        if (full) rename.set(k0, full);
+      }
+      if (!rename.size) continue;
+      second += rename.size;
+      const nodes = new Map();
+      for (const [k, node] of g.nodes) { const nk = rename.get(k) || k; if (!nodes.has(nk)) nodes.set(nk, { ...node, key: nk, display: rename.has(k) ? displayOf(nk) : node.display }); }
+      for (const e of g.edges) { if (rename.has(e.student)) e.student = rename.get(e.student); if (rename.has(e.teacher)) e.teacher = rename.get(e.teacher); }
+      g.edges = g.edges.filter((e, i, arr) => e.student !== e.teacher && arr.findIndex(x => x.student === e.student && x.teacher === e.teacher) === i);
+      g.nodes = nodes;
+    }
+    shortExpanded += second;
+  }
+  return { relResolved, relTotal, shortExpanded, shortTotal, viaBooks };
 }
 
 // ── 6. Entities ─────────────────────────────────────────────────────────────
 
-function loadReferences() {
+/**
+ * A bare given name ("عمر", "مالك") is accepted as an alias of a reference person only when the corpus itself says so:
+ * the dominant full form "X بن …" is that person's, or the bare form mostly sits next to the same narrators as his full forms.
+ */
+function bareAliasCheck(hadiths, rijal = []) {
+  const base = k => k.replace(/#\d+$/, '');
+  const byHead = new Map(), nb = new Map();
+  const add = (m, k, v) => { const x = m.get(k) || m.set(k, new Map()).get(k); x.set(v, (x.get(v) || 0) + 1); };
+  for (const h of hadiths) {
+    for (const k0 of h.graph.nodes.keys()) { const k = base(k0); if (k.includes(' بن ') && !k.startsWith('ابن ')) add(byHead, k.split(' ')[0], k); }
+    for (const e of h.graph.edges) { if (e.student == null) continue; const a = base(e.student), b = base(e.teacher); add(nb, a, b); add(nb, b, a); }
+  }
+  const rijalByName = new Map();
+  for (const t of rijal) { if (!t.teachers?.length && !t.students?.length) continue; rijalByName.set(cleanName(t.name), [...t.teachers, ...t.students].map(cleanName)); }
+  const prefixOf = (a, b) => { const x = a.split(' '), y = b.split(' '); if (x.length < 2 || y.length < 2) return false; const n = Math.min(x.length, y.length); for (let i = 0; i < n; i++) if (x[i] !== y[i]) return false; return true; };
+  return (bare, fullNames) => {
+    const mine = nb.get(bare); if (!mine) return { ok: true, why: 'unused' };
+    const tot = [...mine.values()].reduce((s, n) => s + n, 0); if (tot < 3) return { ok: true, why: 'rare' };
+    // a competitor: another person "bare بن …" of the corpus who keeps the same company as the bare form
+    const forms = byHead.get(bare) || new Map();
+    for (const [form, occ] of forms) {
+      if (occ < 3 || fullNames.some(f => form === f || form.startsWith(f + ' ') || f.startsWith(form + ' '))) continue;
+      const theirs = nb.get(form); if (!theirs) continue;
+      let shared = 0; for (const [k, n] of mine) if (theirs.has(k)) shared += n;
+      if (shared / tot >= 0.15) return { ok: false, why: `${Math.round(100 * shared / tot)}% of its company is that of ${form}` };
+    }
+    return { ok: true, why: 'no competitor' };
+  };
+}
+
+function loadReferences(bareOk = () => ({ ok: true })) {
   const ref = new Map();   // key → { death, gen, origin, latin, reliability, source }
   const canon = new Map(); // alias key → canonical key (same person)
   const byPerson = new Map();
+  const rejected = [];
+  const fullest = new Map(); // any name of a reference person → his fullest "X بن Y…" name
+  const isBare = k => !/ /.test(k) && !/^(?:ال|ابو|ابن|ام)/.test(k);
   for (const [k, r] of loadReference()) {
     const key = cleanName(k);
     ref.set(key, { death: r.death_ah, gen: r.generation, origin: r.origin, latin: r.name_latin, reliability: r.reliability, source: 'reference' });
@@ -283,16 +450,33 @@ function loadReferences() {
     if (byPerson.has(pid)) canon.set(key, byPerson.get(pid)); else byPerson.set(pid, key);
   }
   for (const e of EXTRA_NARRATORS) {
-    const names = e.names.filter(nm => !e.ambiguous?.includes(nm)).map(cleanName);
+    let names = e.names.filter(nm => !e.ambiguous?.includes(nm)).map(cleanName);
+    const fulls = names.filter(k => !isBare(k));
+    names = names.filter(k => { if (!isBare(k) || !fulls.length) return true; const r = bareOk(k, fulls); if (!r.ok) rejected.push(`${k} (${e.latin}: ${r.why})`); return r.ok; });
     if (!names.length) continue;
+    { const longest = [...names].filter(k => k.includes(' بن ')).sort((a, b) => b.length - a.length)[0]; if (longest) for (const k of e.names.map(cleanName)) fullest.set(k, longest); }
+    // the canonical key is the fullest name ("عمر بن الخطاب"), never a bare given name ("عمر")
     let main = names.find(k => canon.has(k) || byPerson.has(`${e.latin}|${e.death}`)) ;
-    main = main ? (canon.get(main) || main) : names[0];
+    main = main ? (canon.get(main) || main) : ([...names].filter(k => !isBare(k)).sort((a, b) => b.length - a.length)[0] || names[0]);
     for (const k of names) {
       if (!ref.has(k) || ref.get(k).source === 'reference') ref.set(k, { death: e.death, gen: e.gen, origin: e.origin, latin: e.latin, reliability: ref.get(k)?.reliability || ref.get(main)?.reliability || null, source: 'reference' });
       if (k !== main) canon.set(k, main);
     }
   }
-  return { ref, canon };
+  // a bare given name never stays the canonical key of a person who has a fuller name ("عمر" from the legacy list → "عمر بن الخطاب")
+  for (const K of [...new Set([...canon.values(), ...ref.keys()])]) {
+    if (!isBare(K)) continue;
+    const aliases = [...canon].filter(([, t]) => t === K).map(([a]) => a);
+    const fuller = aliases.filter(a => a.includes(' بن ')).sort((a, b) => b.length - a.length)[0] || (fullest.get(K) && fullest.get(K) !== K ? fullest.get(K) : null);
+    if (!fuller) continue;
+    for (const a of aliases) canon.set(a, fuller);
+    canon.delete(fuller);
+    if (!ref.has(fuller) && ref.has(K)) ref.set(fuller, ref.get(K));
+    const r = bareOk(K, [fuller]);
+    if (r.ok) canon.set(K, fuller); else { canon.delete(K); ref.delete(K); rejected.push(`${K} (${r.why})`); }
+  }
+  if (rejected.length) log(`bare aliases rejected by the corpus: ${rejected.join(' | ')}`);
+  return { ref, canon, fullest };
 }
 
 function buildEntities(hadiths, ref, canon) {
@@ -361,6 +545,7 @@ function dateAndClassify(hadiths, ents) {
     for (const [k, d] of depth) {
       if (k === '∅') continue;
       const e = ents.get(k);
+      if (!e) { (dateAndClassify.missing ||= new Map()).set(k, h.id); continue; }
       (e.depths ||= []).push(d);
       if (anchored(e)) continue;
       // nearest anchors above (smaller depth) and below (greater depth)
@@ -484,9 +669,9 @@ async function main() {
     log(`encoding-damaged names: ${kept} intact keys, ${repaired} repaired, ${dropped} dropped`);
   }
   for (const h of noText) { h.graph = { nodes: new Map(), edges: [], reachesProphet: false }; h.isnad_ar = ''; h.matn_ar = ''; }
-  const res = resolveNames(hadiths);
-  log(`relatives resolved: ${res.relResolved}/${res.relTotal} · short names expanded: ${res.shortExpanded}/${res.shortTotal}`);
-  const { ref, canon } = loadReferences();
+  const { ref, canon, fullest } = loadReferences(bareAliasCheck(hadiths, tahdhib));
+  const res = resolveNames(hadiths, ref, [...taqrib, ...tahdhib], fullest);
+  log(`relatives resolved: ${res.relResolved}/${res.relTotal} · short names expanded: ${res.shortExpanded}/${res.shortTotal} (${res.viaBooks} through the rijāl books)`);
   // "الربيع بن نافع أبو توبة" and "الربيع بن نافع" are the same person: fold the kunya-suffixed form onto the base form
   {
     const keys = new Set();
@@ -497,12 +682,18 @@ async function main() {
     }
   }
   // apply aliases inside the graphs so ids resolve to the canonical entity
+  const isBareKey = k => !/ /.test(k) && !/^(?:ال|ابو|ابن|ام)/.test(k);
   for (const h of hadiths) {
     const g = h.graph;
     if (![...g.nodes.keys()].some(k => canon.has(k))) continue;
+    const depths = depthsOf(g);
+    const map = new Map();
+    // a bare alias standing where the person cannot stand keeps its own identity ("عمر~": the Bukhārī shaykh, not the caliph)
+    for (const k of g.nodes.keys()) { if (!canon.has(k)) continue; const t = canon.get(k); map.set(k, isBareKey(k) && !plausibleAt(ref.get(t), depths.get(k)) ? k + '~' : t); }
+    if (!map.size) continue;
     const nodes = new Map();
-    for (const [k, node] of g.nodes) { const nk = canon.get(k) || k; if (!nodes.has(nk)) nodes.set(nk, { ...node, key: nk }); }
-    for (const e of g.edges) { if (canon.has(e.student)) e.student = canon.get(e.student); if (canon.has(e.teacher)) e.teacher = canon.get(e.teacher); }
+    for (const [k, node] of g.nodes) { const nk = map.get(k) || k; if (!nodes.has(nk)) nodes.set(nk, { ...node, key: nk }); }
+    for (const e of g.edges) { if (map.has(e.student)) e.student = map.get(e.student); if (map.has(e.teacher)) e.teacher = map.get(e.teacher); }
     g.edges = g.edges.filter((e, i, arr) => e.student !== e.teacher && arr.findIndex(x => x.student === e.student && x.teacher === e.teacher) === i);
     g.nodes = nodes;
   }
@@ -599,6 +790,7 @@ async function main() {
   for (const h of stillEmpty.slice(0, 30)) log(`   [${h.id}] ${cleanName(h.text).slice(0, 110)}`);
   const ents = buildEntities(hadiths, ref, canon);
   dateAndClassify(hadiths, ents);
+  if (dateAndClassify.missing) log(`nodes without entity: ${[...dateAndClassify.missing].slice(0, 8).map(x => x.join(' in ')).join(' | ')}`);
 
   // ── Rijāl: align with Taqrīb / Tahdhīb al-Tahdhīb (Ibn Ḥajar), then re-date with the new anchors ──
   {
