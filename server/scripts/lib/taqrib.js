@@ -117,6 +117,7 @@ export function entryKeys(e) {
   if (idx.length && w[idx[0] + 1]) { const f = w.slice(idx[0] + 1, idx[0] + 3).join(' '); if (!['ابي', 'عبد', 'عبيد', 'ام', 'ابو'].includes(w[idx[0] + 1])) put(`ابن ${w[idx[0] + 1]}`, 1); else if (w[idx[0] + 2]) put(`ابن ${f}`, 1); }
   const nisba = [...w].reverse().find(t => t.startsWith('ال') && t.length > 3 && t !== 'الله' && !GENERIC_NISBA.has(t));
   if (nisba && w[0] !== nisba && w[0] !== 'ابو' && w[0] !== 'ام') put(`${w[0]} ${nisba}`, 1);
+  for (const t of w) if (t.startsWith('ال') && t.length >= 6 && !GENERIC_NISBA.has(t) && t !== 'الله') put(t, 1);
   return keys;
 }
 
@@ -240,7 +241,8 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
         if (strength === 3) s += 1;
         return { e: t, s, strength };
       }).sort((a, b) => b.s - a.s);
-      const best = pick(ranked);
+      let best = pick(ranked);
+      if (!best && ranked.length && !e.key.includes(' bn ')) { const [b, s2] = ranked; const overlap = b.s - (b.strength === 3 ? 1 : 0) - (b.e.colls.length && b.e.colls.some(c => collsE.has(c)) ? 2 : 0); if (overlap >= 3 && (!s2 || b.s >= s2.s + 2)) best = b; } // "كريب", "الجريري": the company decides
       if (best) { e.tahdhib = best.e; stats.tahdhib++; } else if (ranked.length > 1) stats.tahdhibAmbiguous++;
     }
     {
