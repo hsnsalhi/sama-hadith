@@ -16,7 +16,7 @@ export const state = {
   selId: null,
   hovId: null,
   filter: 'all',
-  view: '3d',
+  view: '2d',
   autoOn: false,
   posMap: {},
   idxMap: {},

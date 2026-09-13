@@ -1,48 +1,22 @@
-const RIJAL_DATA = {
-  'أبو هريرة': [
-    { critic: 'البخاري', text: 'أكثر الصحابة حديثاً عن رسول الله ﷺ', grade: 'ثقة' },
-    { critic: 'الذهبي', text: 'حافظ الصحابة', grade: 'ثقة' },
-  ],
-  'عائشة بنت أبي بكر': [
-    { critic: 'ابن حجر', text: 'أم المؤمنين وأفقه نساء الأمة', grade: 'ثقة' },
-  ],
-  'البخاري': [
-    { critic: 'ابن خزيمة', text: 'ما رأيت تحت أديم السماء أعلم بحديث رسول الله ﷺ من محمد بن إسماعيل', grade: 'إمام' },
-    { critic: 'الترمذي', text: 'ما رأيت أحداً أعلم بالعلل والرجال من البخاري', grade: 'إمام' },
-  ],
-  'مالك بن أنس': [
-    { critic: 'الشافعي', text: 'مالك حجة الله على خلقه بعد التابعين', grade: 'حجة إمام' },
-    { critic: 'يحيى بن معين', text: 'ثقة، هو أثبت الناس في كل شيء', grade: 'ثقة' },
-  ],
-  'أحمد بن حنبل': [
-    { critic: 'ابن المديني', text: 'ليس في أصحابنا أحفظ من أحمد', grade: 'إمام حافظ' },
-    { critic: 'الشافعي', text: 'خرجت من بغداد وما خلفت بها أحداً أفضل ولا أعلم ولا أفقه من أحمد', grade: 'إمام' },
-  ],
-};
-
-export function buildRijal(narrator) {
+// Tahdhīb al-Tahdhīb (Ibn Ḥajar): the full notice matched to this narrator, as published by OpenITI (CC BY-NC-SA 4.0).
+export function buildRijal(n, rijal) {
   const list = document.getElementById('rijal-list');
-  const data = RIJAL_DATA[narrator.name_ar] || [];
-
-  if (narrator.reliability) {
-    const card = document.createElement('div');
-    card.className = 'rijal-card';
-    card.innerHTML = `
-      <div class="rijal-name">الحكم العام</div>
-      <div class="rijal-text">${narrator.reliability}</div>
-      <span class="rijal-grade" style="background:rgba(122,245,192,.08);border:0.5px solid rgba(122,245,192,.2);color:#7af5c0">${narrator.reliability}</span>
-    `;
-    list.appendChild(card);
-  }
-
-  data.forEach(r => {
-    const card = document.createElement('div');
-    card.className = 'rijal-card';
-    card.innerHTML = `
-      <div class="rijal-name">${r.critic}</div>
-      <div class="rijal-text">"${r.text}"</div>
-      <span class="rijal-grade" style="background:rgba(122,245,192,.08);border:0.5px solid rgba(122,245,192,.2);color:#7af5c0">${r.grade}</span>
-    `;
-    list.appendChild(card);
-  });
+  list.innerHTML = '';
+  if (!rijal?.tahdhib) return;
+  const text = rijal.tahdhib;
+  const short = text.length > 900;
+  const card = document.createElement('div');
+  card.className = 'rijal-card';
+  const ref = n.tahdhib ? `الجزء ${n.tahdhib.vol} · الترجمة رقم ${n.tahdhib.n}` : '';
+  card.innerHTML = `
+    <div class="rijal-name">تهذيب التهذيب لابن حجر العسقلاني${ref ? ' · ' + ref : ''}</div>
+    <div class="rijal-text" id="tahdhib-text">${short ? text.slice(0, 900) + '…' : text}</div>
+    ${short ? '<button class="rijal-more" id="tahdhib-more">عرض الترجمة كاملة</button>' : ''}
+    ${rijal.teachers?.length ? `<div class="rijal-sub"><span class="rijal-k">روى عن (في التهذيب):</span> ${rijal.teachers.join('، ')}</div>` : ''}
+    ${rijal.students?.length ? `<div class="rijal-sub"><span class="rijal-k">روى عنه (في التهذيب):</span> ${rijal.students.join('، ')}</div>` : ''}
+    <div class="rijal-attr">النص من مشروع OpenITI (مخطوطة رقمية مصحّحة آلياً، قد تحوي أخطاء طباعية) · الرخصة CC BY-NC-SA 4.0 · المطابقة مع الراوي آلية بحسب الاسم والرموز والشيوخ والتلاميذ.</div>
+  `;
+  list.appendChild(card);
+  const btn = card.querySelector('#tahdhib-more');
+  if (btn) btn.addEventListener('click', () => { card.querySelector('#tahdhib-text').textContent = text; btn.remove(); });
 }

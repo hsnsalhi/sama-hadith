@@ -38,14 +38,14 @@ export function openPanel(n, { keepPath = false } = {}) {
 
   document.getElementById('pb').innerHTML = `
     ${state.hadith && hadithApi ? `<button id="back-hadith" class="cb wide">↩ العودة إلى الحديث</button>` : ''}
-    <a href="narrator.html?id=${n.id}" target="_blank" class="full-link">ترجمة الراوي الكاملة ↗</a>
+    <a href="narrator.html?id=${n.id}" class="full-link">ترجمة الراوي الكاملة ←</a>
     <div class="ir"><span class="il">وفاته</span><span class="iv">${n.death_ah ? ar(n.death_ah) + ' هـ' + (n.death_estimated ? ' <small title="تاريخ مقدَّر من موقعه في الأسانيد">(تقديري)</small>' : '') : '—'}</span></div>
     <div class="ir"><span class="il">المنشأ</span><span class="iv">${n.origin || '—'}</span></div>
     <div class="ir"><span class="il">وروده في الأسانيد</span><span class="iv">${ar((n.hadith_count || 0).toLocaleString('en'))}</span></div>
     <div class="ir"><span class="il">الحكم</span><span class="iv">${n.reliability || '—'}</span></div>
     ${colls.length ? `<div class="ps"><div class="pst">المصادر</div>${colls.map(c => `<span class="tag tc">${c}</span>`).join('')}</div>` : ''}
-    ${teachers.length ? `<div class="ps"><div class="pst">شيوخه (${ar(teachers.length)})</div>${list(teachers)}</div>` : ''}
-    ${students.length ? `<div class="ps"><div class="pst">تلاميذه (${ar(students.length)})</div>${list(students)}</div>` : ''}
+    ${teachers.length ? `<div class="ps"><div class="pst">روى عن (${ar(teachers.length)})</div>${list(teachers)}</div>` : ''}
+    ${students.length ? `<div class="ps"><div class="pst">روى عنه (${ar(students.length)})</div>${list(students)}</div>` : ''}
     <div class="ps" id="panel-hadiths"><div class="pst">أحاديثه</div><div class="pl-more">جارٍ التحميل…</div></div>
   `;
   loadPanelHadiths(n.id);

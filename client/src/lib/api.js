@@ -149,6 +149,13 @@ export async function getHadiths({ narratorId, limit = Infinity, offset = 0 } = 
   return out.filter(Boolean);
 }
 
+/** Rijāl notices (Taqrīb line, Tahdhīb text, its teacher/student lists) of a narrator, or null. */
+export async function getRijal(narratorId) {
+  const m = await getManifest();
+  const shard = await load(`narrators/r/${Number(narratorId) % (m.shards || 64)}.json`, { optional: true });
+  return shard?.[narratorId] || null;
+}
+
 /** Lightweight rows (number, snippet) for every hadith of a narrator, in collection order. */
 export async function getHadithRowsByNarrator(narratorId) {
   const [ids, rows, colls] = await Promise.all([getHadithIdsByNarrator(narratorId), getIndexRowMap(), getCollections()]);

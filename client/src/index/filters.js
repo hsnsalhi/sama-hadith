@@ -17,6 +17,7 @@ export function initFilters() {
   // View toggle
   document.getElementById('vb3d').addEventListener('click', () => setView('3d'));
   document.getElementById('vb2d').addEventListener('click', () => setView('2d'));
+  if (state.view === '2d') state.targetSpherical.set(state.targetSpherical.radius, Math.PI / 2, 0);
 }
 
 function setF(f) {

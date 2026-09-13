@@ -60,8 +60,8 @@ export function drawIsnad(narrator, teachers, students) {
   // Column labels
   ctx.font = '9px Cairo,sans-serif'; ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(201,168,76,.25)';
-  if (teachers.length) ctx.fillText('الشيوخ', W * 0.2, 20);
-  if (students.length) ctx.fillText('التلاميذ', W * 0.8, 20);
+  if (teachers.length) ctx.fillText('روى عن', W * 0.2, 20);
+  if (students.length) ctx.fillText('روى عنه', W * 0.8, 20);
 
   // Nodes
   nodes.forEach(nd => {

@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         narrator: resolve(__dirname, 'narrator.html'),
+        stats: resolve(__dirname, 'stats.html'),
       },
     },
   },
