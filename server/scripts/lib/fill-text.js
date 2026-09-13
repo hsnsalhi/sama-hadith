@@ -26,6 +26,12 @@ async function fetchBook(cache, book) {
   return JSON.parse(text);
 }
 
+/** Arabic titles of the books (sections) of a collection, by book number: the numbering of hadith-json agrees with hadith-api's. */
+export async function bookTitles(book, cache, log = () => {}) {
+  try { const d = await fetchBook(cache, book); return Object.fromEntries((d.chapters || []).map(c => [String(c.id), (c.arabic || '').trim()]).filter(([, t]) => t)); }
+  catch (e) { log(`hadith-json unavailable for ${book}: ${e.message}`); return {}; }
+}
+
 /**
  * @param hadiths records of one collection in numbering order ({ text, ... }), mutated in place
  * @returns ids of the records that received a text

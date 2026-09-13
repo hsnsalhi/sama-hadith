@@ -118,7 +118,7 @@ async function main() {
         if (!h) return;
         const gr = (h.grades || []).find(g => g.grade && gradeAr(g.grade));
         el.querySelector('.hadith-snippet').innerHTML = `${h.isnad_ar ? `<div class="hadith-isnad">${h.isnad_ar}</div>` : ''}<div>${h.matn_ar || ''}</div>${h.text_en ? `<div class="hadith-en">${h.text_en}</div>` : ''}`;
-        if (h.section?.name_en) el.querySelector('.hadith-meta').insertAdjacentHTML('afterbegin', `<span class="hadith-tag">${h.section.name_en}</span>`);
+        if (h.section?.name_ar || h.section?.name_en) el.querySelector('.hadith-meta').insertAdjacentHTML('afterbegin', `<span class="hadith-tag">${h.section.name_ar || h.section.name_en}</span>`);
         if (gr) el.querySelector('.hadith-meta').insertAdjacentHTML('afterbegin', `<span class="hadith-tag hadith-grade-sahih" title="حكم ${graderAr(gr.name)}">${gradeAr(gr.grade)}</span>`);
       }));
     }

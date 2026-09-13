@@ -293,7 +293,8 @@ async function renderPanel(h) {
   document.getElementById('pgt').textContent = collectionTitle(h.coll);
   const kd = KINDS.find(k => k.key === h.kind);
   document.getElementById('pn').innerHTML = 'حديث رقم ' + toArabicDigits(h.num) + (kd ? ` <span class="kind big" style="--k:${kd.col}" title="${kd.title}">${kd.label}</span>` : '');
-  document.getElementById('pl').textContent = h.section?.name_en ? `${h.section.name_en} · كتاب ${toArabicDigits(h.section.number)}` : (h.ref ? `كتاب ${toArabicDigits(h.ref.book)} · حديث ${toArabicDigits(h.ref.hadith)}` : '');
+  const secName = h.section?.name_ar || h.section?.name_en;
+  document.getElementById('pl').textContent = secName ? `${secName} · الكتاب ${toArabicDigits(h.section.number)}` : (h.ref ? (h.ref.book ? `الكتاب ${toArabicDigits(h.ref.book)} · ` : '') + `حديث ${toArabicDigits(h.ref.hadith)}` : '');
   document.getElementById('pb').innerHTML = `
     <div class="hnav"><button id="h-prev" class="cb">‹ السابق</button><button id="h-next" class="cb">التالي ›</button></div>
     ${h.no_text ? `<div class="note warn">هذا الرقم موجود في المصدر لكن نصّه غير متوفر فيه؛ لا إسناد ولا متن يمكن عرضهما.</div>` : ''}
@@ -304,7 +305,7 @@ async function renderPanel(h) {
     ${h.isnad_ar ? `<div class="ps"><div class="pst">الإسناد</div><div class="isnad-txt">${h.isnad_ar}</div></div>` : ''}
     ${h.no_text ? '' : `<div class="ps"><div class="pst">المتن</div><div class="matn-txt">${h.matn_ar || '—'}</div></div>`}
     ${h.text_src === 'hadith-json' ? `<div class="ps note-src">النص ناقص في طبعة hadith-api، فأُكمل من <a href="https://github.com/AhmedBaset/hadith-json" target="_blank" rel="noopener">hadith-json</a> (sunnah.com)</div>` : ''}
-    ${h.text_en ? `<div class="ps"><div class="pst en-toggle" id="en-toggle">English ▸</div><div class="en-txt" id="en-txt" hidden>${h.text_en}</div></div>` : ''}
+    ${h.text_en ? `<div class="ps"><div class="pst en-toggle" id="en-toggle">الترجمة الإنجليزية ▸</div><div class="en-txt" id="en-txt" hidden>${h.text_en}</div></div>` : ''}
     <div class="ps"><div class="pst">مشاركة</div><input class="share" readonly value="${location.origin}${location.pathname}?hadith=${h.id}"></div>
   `;
   const pb = document.getElementById('pb');

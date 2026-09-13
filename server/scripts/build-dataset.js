@@ -25,7 +25,7 @@ import { EXTRA_NARRATORS } from './lib/reference-extra.js';
 import { BIOS } from './lib/reference-bios.js';
 import { loadTaqrib, loadTahdhib, matchRijal, matchSource, taqribDeath, closestDeath, nameVocabulary, trimFullName, displayFromRaw, isTheo, LAYER_NAMES } from './lib/taqrib.js';
 import { SOURCES, fetchSource, loadSource, OPENITI_LICENCE } from './lib/openiti.js';
-import { fillMissingTexts, SUPPLEMENT } from './lib/fill-text.js';
+import { fillMissingTexts, bookTitles, SUPPLEMENT } from './lib/fill-text.js';
 import { tokenize, stem, shardKey } from '../../client/src/lib/search-norm.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -72,13 +72,14 @@ async function fetchEdition(file) {
 
 async function loadAll() {
   const hadiths = [];
-  const sections = {};
+  const sections = {}, sectionsAr = {};
   const filled = [];
   for (const c of COLLECTIONS) {
     const ara = await fetchEdition(`ara-${c.edition}.json`);
     const eng = await fetchEdition(`eng-${c.edition}.min.json`);
     const enByNum = new Map(eng.hadiths.map(h => [String(h.hadithnumber), h]));
     sections[c.code] = ara.metadata?.sections || {};
+    sectionsAr[c.code] = await bookTitles(c.edition, CACHE_HJ, log); // كتاب فضل ليلة القدر rather than "Virtues of the Night of Qadr"
     const recs = [];
     for (const h of ara.hadiths) {
       const num = String(h.hadithnumber);
@@ -95,7 +96,7 @@ async function loadAll() {
     hadiths.push(...recs);
     log(`${c.code}: ${ara.hadiths.length} hadiths${got.length ? ` (${got.length} texts completed from ${SUPPLEMENT.name})` : ''}`);
   }
-  return { hadiths, sections, filled };
+  return { hadiths, sections, sectionsAr, filled };
 }
 
 // ── 2. Parse ────────────────────────────────────────────────────────────────
@@ -653,7 +654,7 @@ async function main() {
   const t0 = Date.now();
   let mergeCount = 0, vocabSize = 0;
   const bookStats = [];
-  const { hadiths: loaded, sections, filled: filledTexts } = await loadAll();
+  const { hadiths: loaded, sections, sectionsAr, filled: filledTexts } = await loadAll();
   // entries with no text in the source: kept (numbering stays complete) but flagged; they cannot carry a chain
   const noText = loaded.filter(h => !h.text.trim());
   for (const h of noText) h.noText = true;
@@ -1010,7 +1011,7 @@ async function main() {
         if (kind) kindCounts[kind] = (kindCounts[kind] || 0) + 1;
         return {
           id: h.id, coll: c.code, num: h.num, ref: h.ref, no_text: h.noText ? true : undefined, kind,
-          section: h.ref ? { number: h.ref.book, name_en: sections[c.code]?.[String(h.ref.book)] || null } : null,
+          section: h.ref ? { number: h.ref.book, name_ar: sectionsAr[c.code]?.[String(h.ref.book)] || null, name_en: sections[c.code]?.[String(h.ref.book)] || null } : null,
           grades: h.grades, isnad_ar: h.isnad_ar, matn_ar: h.matn_ar, text_en: h.text_en, text_src: h.text_src,
           isnad: {
             nodes: nodeIds,
