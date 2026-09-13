@@ -6,8 +6,18 @@ const BOOKS = {
   jarh: { title: 'الجرح والتعديل', author: 'ابن أبي حاتم الرازي (ت 327 هـ)' },
   thiqat: { title: 'الثقات', author: 'ابن حبّان البستي (ت 354 هـ)' },
   tarikh: { title: 'التاريخ الكبير', author: 'البخاري (ت 256 هـ)' },
+  sacd: { title: 'الطبقات الكبرى', author: 'ابن سعد (ت 230 هـ)' },
+  ijli: { title: 'معرفة الثقات', author: 'العجلي (ت 261 هـ)' },
+  majruhin: { title: 'المجروحين', author: 'ابن حبّان البستي (ت 354 هـ)' },
+  shahin: { title: 'تاريخ أسماء الثقات', author: 'ابن شاهين (ت 385 هـ)' },
+  mizan: { title: 'ميزان الاعتدال', author: 'شمس الدين الذهبي (ت 748 هـ)' },
+  siyar: { title: 'سير أعلام النبلاء', author: 'شمس الدين الذهبي (ت 748 هـ)' },
+  istiab: { title: 'الاستيعاب في معرفة الأصحاب', author: 'ابن عبد البر (ت 463 هـ)' },
+  usd: { title: 'أسد الغابة', author: 'ابن الأثير (ت 630 هـ)' },
+  isaba: { title: 'الإصابة في تمييز الصحابة', author: 'ابن حجر العسقلاني (ت 852 هـ)' },
+  nuaym: { title: 'معرفة الصحابة', author: 'أبو نعيم الأصبهاني (ت 430 هـ)' },
 };
-const ORDER = ['tarikh', 'jarh', 'thiqat', 'kamal', 'kashif', 'tahdhib'];
+const ORDER = ['sacd', 'tarikh', 'ijli', 'jarh', 'thiqat', 'majruhin', 'shahin', 'nuaym', 'istiab', 'usd', 'kamal', 'kashif', 'mizan', 'siyar', 'tahdhib', 'isaba'];
 
 function card(list, { src, ref, text, teachers, students, grades }) {
   const b = BOOKS[src] || { title: src, author: '' };

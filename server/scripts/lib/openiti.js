@@ -14,6 +14,16 @@ export const SOURCES = [
   { id: 'jarh', title: 'الجرح والتعديل', author: 'ابن أبي حاتم الرازي', authorDeath: 327, repo: '0350AH', path: '0327IbnAbiHatimRazi/0327IbnAbiHatimRazi.JarhWaTacdil/0327IbnAbiHatimRazi.JarhWaTacdil.Shamela0002170-ara1.completed', nameFromBody: true },
   { id: 'thiqat', title: 'الثقات', author: 'ابن حبّان البستي', authorDeath: 354, repo: '0375AH', path: '0354IbnHibbanBusti/0354IbnHibbanBusti.Thiqat/0354IbnHibbanBusti.Thiqat.Shamela0005816-ara1.completed' },
   { id: 'tarikh', title: 'التاريخ الكبير', author: 'البخاري', authorDeath: 256, repo: '0275AH', path: '0256Bukhari/0256Bukhari.TarikhKabir/0256Bukhari.TarikhKabir.Shamela0000956-ara1.completed' },
+  { id: 'sacd', title: 'الطبقات الكبرى', author: 'ابن سعد', authorDeath: 230, repo: '0250AH', path: '0230IbnSacd/0230IbnSacd.TabaqatKubra/0230IbnSacd.TabaqatKubra.Shamela0001686-ara1.mARkdown', joinNasab: true },
+  { id: 'ijli', title: 'معرفة الثقات', author: 'العجلي', authorDeath: 261, repo: '0275AH', path: '0261AbuHasanCijli/0261AbuHasanCijli.MacrifatThiqat/0261AbuHasanCijli.MacrifatThiqat.Shamela0009170-ara1.completed', nameFromBody: true },
+  { id: 'majruhin', title: 'المجروحين', author: 'ابن حبّان البستي', authorDeath: 354, repo: '0375AH', path: '0354IbnHibbanBusti/0354IbnHibbanBusti.Majruhin/0354IbnHibbanBusti.Majruhin.Shia003101Vols-ara1.completed' },
+  { id: 'shahin', title: 'تاريخ أسماء الثقات', author: 'ابن شاهين', authorDeath: 385, repo: '0400AH', path: '0385IbnShahin/0385IbnShahin.TarikhAsmaThiqat/0385IbnShahin.TarikhAsmaThiqat.JK000511-ara1.completed' },
+  { id: 'mizan', title: 'ميزان الاعتدال', author: 'شمس الدين الذهبي', authorDeath: 748, repo: '0750AH', path: '0748Dhahabi/0748Dhahabi.MizanIctidal/0748Dhahabi.MizanIctidal.JK001293BK1-ara1.mARkdown' },
+  { id: 'siyar', title: 'سير أعلام النبلاء', author: 'شمس الدين الذهبي', authorDeath: 748, repo: '0750AH', path: '0748Dhahabi/0748Dhahabi.SiyarAclamNubala/0748Dhahabi.SiyarAclamNubala.Shamela0010906-ara1.mARkdown' },
+  { id: 'istiab', title: 'الاستيعاب في معرفة الأصحاب', author: 'ابن عبد البر', authorDeath: 463, repo: '0475AH', path: '0463IbnCabdBarr/0463IbnCabdBarr.IsticabFiMacrifatAshab/0463IbnCabdBarr.IsticabFiMacrifatAshab.JK000778-ara1.mARkdown', companions: true },
+  { id: 'usd', title: 'أسد الغابة في معرفة الصحابة', author: 'ابن الأثير', authorDeath: 630, repo: '0650AH', path: '0630IbnAthirCizzDin/0630IbnAthirCizzDin.UsdGhaba/0630IbnAthirCizzDin.UsdGhaba.Shamela0023700-ara1.completed', companions: true, joinNasab: true },
+  { id: 'isaba', title: 'الإصابة في تمييز الصحابة', author: 'ابن حجر العسقلاني', authorDeath: 852, repo: '0875AH', path: '0852IbnHajarCasqalani/0852IbnHajarCasqalani.IsabaFiTamyiz/0852IbnHajarCasqalani.IsabaFiTamyiz.JK000533-ara1.mARkdown', companions: true },
+  { id: 'nuaym', title: 'معرفة الصحابة', author: 'أبو نعيم الأصبهاني', authorDeath: 430, repo: '0450AH', path: '0430AbuNucaymIsbahani/0430AbuNucaymIsbahani.MacrifatSahaba/0430AbuNucaymIsbahani.MacrifatSahaba.JK009408-ara1.completed', companions: true },
 ];
 export const OPENITI_LICENCE = 'CC BY-NC-SA 4.0';
 
@@ -32,7 +42,7 @@ export async function fetchSource(src, cacheDir) {
 const SIGLA = { 'ع': ['bukhari', 'muslim', 'abudawud', 'tirmidhi', 'nasai', 'ibnmajah'], '4': ['abudawud', 'tirmidhi', 'nasai', 'ibnmajah'], 'خ': ['bukhari'], 'م': ['muslim'], 'د': ['abudawud'], 'ت': ['tirmidhi'], 'س': ['nasai'], 'ق': ['ibnmajah'], 'بخ': [], 'خت': ['bukhari'], 'عخ': [], 'مد': [], 'تم': [], 'عس': [], 'فق': [], 'كد': [], 'خد': [], 'صد': [], 'ل': [], 'ر': [], 'كن': [], 'ص': [], 'ز': [], 'ي': [], 'قد': [], 'سي': [], 'مق': [] };
 const norm = s => normalizeArabic(s).replace(/\(\d+\)|\[[^\]]*\]|\d+ - /g, ' ').replace(/[،:.؟()\[\]«»"'؛¶]/g, ' ').replace(/\s+/g, ' ').trim();
 const normKeep = s => normalizeArabic(s).replace(/\(\d+\)|\[[^\]]*\]|\d+ - /g, ' ').replace(/[،:.؟()\[\]«»"'؛]/g, ' ').replace(/\s+/g, ' ').trim();
-const NAME_STOP = / (?:يروي|روي|روت|سمع|سمعت|عن|من|مات|توفي|توفيت|ماتت|كان|كانت|له|لها|قال|قاله|قالت|وله|كنيته|يكني|ويكني|كناه|اخو|اخت|ابن اخي|ابن اخت|ابن عم|مولاهم|ومن|وهو|هو|وهي|هي|راي|رات|شهد|اسلم|اسلمت|ادرك|نزل|سكن|قدم|قدمت|عداده|يعد|يقال|ويقال|وقيل|قيل|صاحب|امام|كنا|امه|حديثه|حدث|حدثت|كتب|ذكره|كذا|هكذا|ثقه|صدوق|ضعيف|متروك|منكر|مجهول|لين|ليس|لا|ما|في|الي|ثم|فيه|بايع|بايعت|شيخ|الحافظ|الفقيه|القاضي|احد|رجل|امراه|جد|والد|والده|ابو ابيه|اخوه|ابنه|ابن|مختلف|اختلف|كنت|نسبه|نسبته|اصله|واصله|منزله|ولد|مولده|بكسر|بفتح|بضم|بالتصغير|مصغر|بمهمله|بمعجمه|بموحده|بمثناه|بنون|بلام|بجيم|بحاء|بخاء|بدال|بزاي|بسين|بشين|بصاد|بضاد|بطاء|بظاء|بعين|بغين|بفاء|بقاف|بكاف|بميم|بهاء|بواو|بياء|روي له|تابعي|صحابي|لقبه|واسمه|اسمه|واسم|اسم|هذا|هذه|ذكر|ذكرت|وذكره|وحديثه|وفد|بصري|كوفي|مدني|مكي|شامي|مصري|يماني|واسطي|بغدادي|خراساني|نيسابوري|مروزي|رازي|حمصي|دمشقي)(?= |$).*$/;
+const NAME_STOP = / (?:يروي|روي|روت|سمع|سمعت|عن|من|مات|توفي|توفيت|ماتت|كان|كانت|له|لها|قال|قاله|قالت|وله|كنيته|يكني|ويكني|كناه|اخو|اخت|ابن اخي|ابن اخت|ابن عم|مولاهم|ومن|وهو|هو|وهي|هي|راي|رات|شهد|اسلم|اسلمت|ادرك|نزل|سكن|قدم|قدمت|عداده|يعد|يقال|ويقال|وقيل|قيل|صاحب|امام|كنا|امه|حديثه|حدث|حدثت|كتب|ذكره|كذا|هكذا|ثقه|صدوق|ضعيف|متروك|منكر|مجهول|لين|ليس|لا|ما|في|الي|ثم|فيه|بايع|بايعت|شيخ|الحافظ|الفقيه|القاضي|احد|رجل|امراه|جد|والد|والده|ابو ابيه|اخوه|ابنه|ابن|مختلف|اختلف|كنت|نسبه|نسبته|اصله|واصله|منزله|ولد|مولده|بكسر|بفتح|بضم|بالتصغير|مصغر|بمهمله|بمعجمه|بموحده|بمثناه|بنون|بلام|بجيم|بحاء|بخاء|بدال|بزاي|بسين|بشين|بصاد|بضاد|بطاء|بظاء|بعين|بغين|بفاء|بقاف|بكاف|بميم|بهاء|بواو|بياء|بالقاف|بالفاء|بالراء|بالنون|بالمهمله|بالمعجمه|بالموحده|بالمثناه|بالمثلثه|بالتحتانيه|بالفوقانيه|بالكسر|بالفتح|بالضم|بالتصغير|بالتشديد|بالتخفيف|بالسين|بالشين|بالصاد|بالضاد|بالطاء|بالظاء|بالعين|بالغين|بالكاف|بالميم|بالهاء|بالواو|بالياء|بالباء|بالتاء|بالثاء|بالجيم|بالحاء|بالخاء|بالدال|بالذال|بالزاي|بالزاء|بالهمزه|بالالف|بوزن|بضم|مصغرا|مكبرا|بالتثقيل|روي له|تابعي|صحابي|لقبه|واسمه|اسمه|واسم|اسم|هذا|هذه|ذكر|ذكرت|وذكره|وحديثه|وفد|بصري|كوفي|مدني|مكي|شامي|مصري|يماني|واسطي|بغدادي|خراساني|نيسابوري|مروزي|رازي|حمصي|دمشقي)(?= |$).*$/;
 const ORD_RE = /^(?:واحده|احدي|اثنتين|ثلاث|اربع|خمس|ست|سبع|ثمان|تسع|عشر|عشره|عشرين|ثلاثين|اربعين|خمسين|ستين|سبعين|ثمانين|تسعين|مايه|ماية|مئه|ميه|مايتين|مئتين|ميتين|ثلاثمايه|ثلاثمئه|ثلاثميه|ثلثمايه|ثلثميه|اربعمايه|اربعميه|\d+)$/;
 const DEATH_RE = /(?:مات|توفي|توفيت|ماتت|قتل|قتلت|استشهد|هلك|وفاته|توفاه الله)(?: (?:رحمه الله|رحمها الله|شهيدا|في|ب[^ ]+|ذي|الحجه|القعده|المحرم|صفر|ربيع|الاول|الاخر|جمادي|الاولي|الاخره|رجب|شعبان|رمضان|شوال|اول|اخر|وسط|ليله|يوم|عاشوراء|عرفه|الجمعه|الاربعاء|الخميس|السبت|الاحد|الاثنين|الثلاثاء|من|بعد|قبل|نحو|حدود|قريبا|قريب)){0,6}(?: (?:سنه|في سنه|بعد سنه|قبل سنه|نحو سنه|في حدود سنه|في حدود))? /;
 const VERDICT_RE = /(?:^| )(?:ثقه|ثبت|حجه|حافظ|صدوق|صالح الحديث|صالح|لا باس به|ليس به باس|شيخ|محله الصدق|مقبول|مستور|لين الحديث|لين|ضعيف|ضعيف الحديث|متروك|متروك الحديث|منكر الحديث|مجهول|لا يعرف|لا يحتج به|ليس بالقوي|ليس بقوي|ليس بشيء|كذاب|وضاع|يضع الحديث|متهم|ساقط|صويلح|ليس بذاك|لا يتابع عليه|يخطئ|يهم|يدلس|يرسل|فيه نظر|سكتوا عنه|كثير الخطا|سيء الحفظ)(?= |$)/;
@@ -48,8 +58,8 @@ function readEntries(path) {
     const pv = line.match(/PageV(\d+)P/); if (pv) vol = Number(pv[1]);
     if (line.startsWith('### ')) {
       flush();
-      const m = line.match(/^### \$ (?:(\d+) - ?)?(.*)$/);
-      if (m) { seq++; cur = { n: m[1] ? Number(m[1]) : seq, seq, vol, parts: [m[2]] }; }
+      const m = line.match(/^### \$(?!\$) ?(?:\(\s*)?(?:\[\s*)?(?:(\d+)\s*\]?\s*(?:\[\s*\d+\s*[^\]]*\]\s*)?[-–]?\s*)?(.*)$/);
+      if (m) { seq++; cur = { n: m[1] ? Number(m[1]) : seq, seq, vol, parts: [m[2].replace(/^\s*\[\s*\d+\s*\]\s*/, '').replace(/[)*]\s*$/, '')] }; }
       continue;
     }
     if (!cur) continue;
@@ -72,6 +82,9 @@ export function loadSource(src, path) {
     const paras = raw.text.split(' ¶ ').map(p => p.trim()).filter(Boolean);
     let head = paras[0] || '', body = paras.slice(1).join(' ');
     if (src.nameFromBody && head.replace(/[\s\-–—]/g, '') === '') { head = paras[1] || ''; body = paras.slice(2).join(' '); }
+    if (src.joinNasab && paras[1] && /^(?:بن|ابن|بنت) /.test(normalizeArabic(paras[1]))) { head = head + ' ' + paras[1]; body = paras.slice(2).join(' '); } // "معتب بن قشير" / "بن مليل بن زيد…"
+    head = head.replace(/\[[^\]]*\]/g, ' ');
+    if (src.companions) head = head.replace(/^\s*و(?=[ء-ي])/, ''); // "وأسود بن أصرم" in a running list of companions
     const nhead = norm(head);
     // sigla
     let sig = [], toks = nhead.split(' ');

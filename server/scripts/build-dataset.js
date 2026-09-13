@@ -817,7 +817,7 @@ async function main() {
     for (const src of SOURCES) {
       let entries = [];
       try { entries = loadSource(src, await fetchSource(src, CACHE_OPENITI)); } catch (err) { log(`source ${src.id} unavailable: ${err.message}`); continue; }
-      const stS = matchSource(ents, aliases, entries, src.id);
+      const stS = matchSource(ents, aliases, entries, src.id, { companions: !!src.companions });
       bookStats.push({ id: src.id, title: src.title, author: src.author, author_death: src.authorDeath, entries: entries.length, with_death: entries.filter(t => t.death != null).length, with_lists: entries.filter(t => t.teachers.length || t.students.length).length, with_verdicts: entries.filter(t => t.grades.length).length, matched: stS.matched, ambiguous: stS.ambiguous });
       log(`source ${src.id}: ${entries.length} entries · matched ${stS.matched} (ambiguous ${stS.ambiguous})`);
     }

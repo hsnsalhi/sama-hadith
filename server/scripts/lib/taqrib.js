@@ -319,7 +319,7 @@ const contains3 = (name, aw) => { const nw = name.split(' '); const k = aw.slice
  * Evidence: name keys, sigla, death year, teachers/students in common, and compatibility with the
  * Taqrīb/Tahdhīb entry already matched. Sets e.notices = [{ src, entry }].
  */
-export function matchSource(ents, aliases, entries, srcId) {
+export function matchSource(ents, aliases, entries, srcId, { companions = false } = {}) {
   const idx = new Map();
   for (const t of entries) for (const [k, st] of entryKeys(t)) (idx.get(k) || idx.set(k, []).get(k)).push([t, st]);
   const heads = new Map();
@@ -328,6 +328,7 @@ export function matchSource(ents, aliases, entries, srcId) {
   const compat = (a, b) => a === b || prefixOf(a, b);
   const stats = { matched: 0, ambiguous: 0 };
   for (const e of ents.values()) {
+    if (companions && e.gen !== 'sahabi' && e.layer !== 1) continue; // a dictionary of companions only speaks of companions
     const keys = [e.key, ...(aliases.get(e.key) || [])];
     const seen = new Map();
     for (const k of keys) for (const [t, st] of idx.get(k) || []) if (!seen.has(t) || seen.get(t) < st) seen.set(t, st);
