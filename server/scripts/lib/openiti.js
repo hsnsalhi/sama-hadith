@@ -102,11 +102,15 @@ export function loadSource(src, path) {
     // verdicts
     const grades = [];
     for (const sent of ntext.split(/ ¶ | \. /)) {
-      if (!VERDICT_RE.test(sent)) continue;
+      // the verdict word must not be part of a name ("أبو صالح", "أحمد بن صالح", "ثبت بن…") and must follow the critic closely
+      const vm = [...sent.matchAll(new RegExp(VERDICT_RE.source, 'g'))].find(m => { const start = m.index + (m[0][0] === ' ' ? 1 : 0); const before = sent.slice(Math.max(0, start - 12), start), after = sent.slice(m.index + m[0].length, m.index + m[0].length + 5); return !/(?:^| )(?:ابو|ابي|ابن|بن|واحمد|احمد|محمد|عن|و?اخو|ام) $/.test(before) && !/^ (?:بن|ابن|ابو)/.test(after); });
+      if (!vm) continue;
       const c = sent.match(CRITIC_RE);
-      const critic = c ? c[1] : (/(?:^|[¶ ])قلت /.test(sent) ? src.author : null);
-      const v = sent.match(VERDICT_RE)[0].trim();
-      if (!critic && /^(?:صالح|شيخ|ثبت|حافظ|حجه|مستور|مقبول|يخطئ|يهم|يرسل|يدلس)$/.test(v)) continue; // a name, not a verdict, unless a critic says it
+      const own = /(?:^|[¶ ])قلت /.test(sent);
+      const critic = c ? c[1] : (own ? src.author : null);
+      const v = vm[0].trim();
+      if (c && (vm.index < c.index || vm.index - (c.index + c[0].length) > 70)) continue; // the verdict is not what this critic said
+      if (!critic && /^(?:صالح|شيخ|ثبت|حافظ|حجه|مستور|مقبول|يخطئ|يهم|يرسل|يدلس)$/.test(v)) continue;
       if (!critic && !/(?:^|[¶ ])(?:وهو|هو|كان|وكان|فيه|ثقه|صدوق|ضعيف|متروك|لين|مجهول|كذاب|منكر) /.test(sent)) continue;
       grades.push({ critic: critic ? critic.slice(0, 40) : null, verdict: v, text: sent.replace(/¶/g, '').slice(0, 160) });
       if (grades.length >= 12) break;
