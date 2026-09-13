@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { handleMouseMove, handleClick } from './raycaster.js';
 
 let isDragging = false, prevX = 0, prevY = 0;
+let downX = 0, downY = 0, dragDist = 0; // where the button went down, and how far the pointer travelled since
 let tDist = 0;
 let dragMode = 0; // 0=none 1=orbit 2=pan
 
@@ -14,6 +15,7 @@ export function initControls() {
   el.addEventListener('mousedown', e => {
     prevX = e.clientX;
     prevY = e.clientY;
+    downX = e.clientX; downY = e.clientY; dragDist = 0;
     if (e.button === 2 || e.ctrlKey || e.shiftKey) {
       dragMode = 1; el.style.cursor = 'grabbing';
     } else {
@@ -31,6 +33,7 @@ export function initControls() {
     if (isDragging) {
       const dx = e.clientX - prevX;
       const dy = e.clientY - prevY;
+      dragDist += Math.abs(dx) + Math.abs(dy);
       if (dragMode === 1) {
         state.targetSpherical.theta -= dx * 0.005;
         state.targetSpherical.phi -= dy * 0.005;
@@ -53,7 +56,9 @@ export function initControls() {
   });
 
   el.addEventListener('click', e => {
-    handleClick(e, prevX, prevY);
+    // a real click: the pointer barely moved since the button went down; a drag never selects
+    if (dragDist > 6 || Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) return;
+    handleClick(e, downX, downY);
   });
 
   el.addEventListener('wheel', e => {
