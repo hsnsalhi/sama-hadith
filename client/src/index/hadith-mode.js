@@ -9,6 +9,7 @@ import { setHighlight, positionOf } from './stars.js';
 import { updateTimelineRange } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
 import { openPanel } from './panel.js';
+import { isPhone, sheetOffset } from './mobile.js';
 import { getAllHadithIndexes, getHadith, getHadithNeighbours, getManifest, getIndexRowMap, searchHadiths } from '../lib/api.js';
 
 const NUM_AR = '٠١٢٣٤٥٦٧٨٩';
@@ -245,8 +246,9 @@ function fitCamera(points) {
   points.forEach(p => center.add(p)); center.multiplyScalar(1 / points.length);
   let r = 0; points.forEach(p => { r = Math.max(r, p.distanceTo(center)); });
   const fov = state.camera.fov * Math.PI / 180;
-  const dist = Math.max(90, Math.min(1400, (r / Math.tan(fov / 2)) * 1.35 + 40));
+  const dist = Math.max(90, Math.min(1400, (r / Math.tan(fov / 2)) * (isPhone() ? 1.9 : 1.35) + 40));
   state.targetSpherical.radius = dist;
+  center.y -= sheetOffset(dist); // phone: the path sits in the sky left visible above the sheet
   const start = state.panTarget.clone();
   let t = 0;
   if (flyTimer) clearInterval(flyTimer);

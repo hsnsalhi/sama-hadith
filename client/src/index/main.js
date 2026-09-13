@@ -11,6 +11,7 @@ import { doZoom, resetCam } from './controls.js';
 import { closePanel, bindHadithApi } from './panel.js';
 import { initHadithMode, updatePathLabels, openHadith, clearPath, backToHadith } from './hadith-mode.js';
 import { getNarrators, getTransmissions, getManifest } from '../lib/api.js';
+import { initSheet } from './mobile.js';
 
 function setLS(m, p) {
   document.getElementById('lst').textContent = m;
@@ -90,6 +91,7 @@ function init() {
 
   // Close panel
   document.getElementById('pcl').addEventListener('click', closePanel);
+  initSheet();
   bindHadithApi({ openHadith, clearPath, backToHadith });
 
   animate();

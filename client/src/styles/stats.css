@@ -28,3 +28,13 @@ a { color: var(--silver); }
 .loading { color: var(--silver-dim); }
 .tblwrap { overflow-x: auto; }
 @media (max-width: 600px) { #page { padding: 20px 16px 60px; } h1 { font-size: 28px; } }
+@media (max-width: 600px) {
+  .big { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .big .v { font-size: 26px; }
+  .big .d { font-size: 11px; }
+  .card { padding: 14px 14px; }
+  h2 { font-size: 20px; margin: 26px 0 10px; }
+  p, ol, ul { font-size: 13px; }
+  table { font-size: 12px; }
+  th, td { padding: 5px 6px; }
+}

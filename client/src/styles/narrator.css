@@ -164,3 +164,25 @@ body { background: var(--bg); color: rgba(245,232,200,.88); font-family: 'Cairo'
 .rijal-k { font-family: 'Cairo', sans-serif; font-size: 11px; color: rgba(223,228,234,.75); }
 .rijal-attr { font-family: 'Cairo', sans-serif; font-size: 10px; color: rgba(223,228,234,.55); margin-top: 10px; line-height: 1.7; }
 .rijal-grades { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* ── MOBILE ─────────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  #page { padding: 14px 12px 40px; }
+  #back { margin-bottom: 16px; }
+  #hero { padding: 18px 16px; gap: 12px; margin-bottom: 20px; border-radius: 12px; }
+  #hero-star { width: 48px; height: 48px; font-size: 22px; }
+  #hero-name { font-size: 24px; }
+  #hero-latin { margin-bottom: 10px; }
+  #stats { gap: 8px; margin-bottom: 18px; }
+  .stat-card { padding: 12px 8px; }
+  .stat-val { font-size: 20px; }
+  .stat-lbl { font-size: 10px; letter-spacing: .5px; }
+  .section { margin-bottom: 20px; }
+  .card, .bio-card { padding: 14px 14px; }
+  .bio-text, .rq-text { font-size: 15px; line-height: 1.9; }
+  .bio-facts { grid-template-columns: 1fr 1fr; }
+  #isnad-canvas { height: 240px; }
+  #geo-map { height: 200px; }
+  .hadith-text { font-size: 15px; line-height: 1.9; }
+  .rijal-card { padding: 12px 14px; }
+}

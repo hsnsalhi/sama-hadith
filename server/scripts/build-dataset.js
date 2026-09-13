@@ -23,7 +23,7 @@ import { parseIsnadGraph, cleanName, displayForm, connectorType, setNameVocab, n
 import { loadReference } from './lib/reference-loader.js';
 import { EXTRA_NARRATORS } from './lib/reference-extra.js';
 import { BIOS } from './lib/reference-bios.js';
-import { loadTaqrib, loadTahdhib, matchRijal, matchSource, taqribDeath, nameVocabulary, trimFullName, displayFromRaw, LAYER_NAMES } from './lib/taqrib.js';
+import { loadTaqrib, loadTahdhib, matchRijal, matchSource, taqribDeath, closestDeath, nameVocabulary, trimFullName, displayFromRaw, isTheo, LAYER_NAMES } from './lib/taqrib.js';
 import { SOURCES, fetchSource, loadSource, OPENITI_LICENCE } from './lib/openiti.js';
 import { fillMissingTexts, SUPPLEMENT } from './lib/fill-text.js';
 import { tokenize, stem, shardKey } from '../../client/src/lib/search-norm.js';
@@ -848,7 +848,7 @@ async function main() {
       const t = e.taqrib; if (!t) continue;
       if (t.layer) { e.layer = t.layer; if (!e.compiler) { e.gen = t.layer === 1 ? 'sahabi' : t.layer <= 5 ? 'tabii' : 'muhaddith'; e.genFixed = true; taqGen++; } }
       if (t.gradeDisplay) e.reliability = t.gradeDisplay;
-      if (t.death != null && e.dated !== 'reference' && !e.compiler) { e.death = taqribDeath(t, e.death ?? null); e.dated = 'taqrib'; e.deathApprox = t.deathApprox; taqDeath++; }
+      if (t.death != null && e.dated !== 'reference' && !e.compiler) { e.death = closestDeath(t, e.death ?? null); e.dated = 'taqrib'; e.deathApprox = t.deathApprox; taqDeath++; }
     }
     log(`rijāl: Taqrīb ${taqrib.length} entries, Tahdhīb ${tahdhib.length} · matched Taqrīb ${st.taqrib} (ambiguous ${st.taqribAmbiguous}), Tahdhīb ${st.tahdhib} (ambiguous ${st.tahdhibAmbiguous}), both ${st.both} · dates from Taqrīb ${taqDeath}, layers ${taqGen}`);
     // the other biographical dictionaries (OpenITI), aligned on the same entities
@@ -890,16 +890,29 @@ async function main() {
       if (e.compiler) { e.fullName = COLLECTIONS.find(c => c.code === e.compiler).compilerFull; continue; }
       const shown = cleanName([...e.displays].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0]?.[0] || e.key);
       const cands = [];
-      if (e.taqrib) cands.push([e.taqrib.name, e.taqrib.raw]);
-      if (e.tahdhib) cands.push([e.tahdhib.name, e.tahdhib.text]);
+      if (e.taqrib) cands.push([e.taqrib.nameFull || e.taqrib.name, e.taqrib.raw]);
+      if (e.tahdhib) cands.push([e.tahdhib.nameFull || e.tahdhib.name, e.tahdhib.text]);
       for (const src of ['kamal', 'kashif', 'siyar', 'mizan', 'jarh', 'thiqat', 'tarikh', 'sacd', 'ijli', 'majruhin', 'shahin', 'isaba', 'usd', 'istiab', 'nuaym']) { const n = e.notices?.find(x => x.src === src); if (n) cands.push([n.entry.name, n.entry.text]); }
-      for (const [nm, raw] of cands) {
-        const clean = cleanName(nm); if (!clean) continue;
-        const fits = [e.key, ...(aliasesOf.get(e.key) || [])].filter(k => compatible(k, clean)); if (!fits.length) continue;
+      // two nasabs that diverge ("زهير بن حرب" / "زهير بن معاويه") name two men whatever the shared kunya
+      const nasab = k => { const w = k.split(' ').map((x, i, a) => x === 'ابن' && i > 0 && a[i + 1] ? 'بن' : x); const out = []; let i = 0; const nm = j => isTheo(w, j) ? 2 : 1; if (w[0] === 'ابو' || w[0] === 'ام' || w[0] === 'ابن') return null; let l = nm(0); out.push(w.slice(0, l).join(' ')); i = l; while (w[i] === 'بن' && w[i + 1]) { l = nm(i + 1); out.push(w.slice(i + 1, i + 1 + l).join(' ')); i += 1 + l; } return out; };
+      const kn = nasab(e.key);
+      const keyNisbas = e.key.split(' ').filter(w => w.startsWith('ال') && w !== 'الله' && w !== 'الرحمن' && w.length > 3);
+      // a different given name, a father found nowhere in the entry (an ancestor or a mother may be skipped: "احمد بن حنبل", "اسماعيل بن عليه"), or a nisba the entry never carries
+      const conflict = (clean, raw) => {
+        const cn = nasab(clean); const rw = new Set(cleanName(raw || '').split(' ').slice(0, 80));
+        if (kn && cn && kn.length >= 2 && cn.length >= 2) { if (kn[0] !== cn[0]) return true; if (kn[1] !== cn[1] && !cn.includes(kn[1]) && !rw.has(kn[1].split(' ').pop())) return true; }
+        if (keyNisbas.length && !keyNisbas.some(n => rw.has(n) || clean.includes(n))) return true;
+        return false;
+      };
+      const taqHead = e.taqrib ? cleanName(e.taqrib.nameFull || e.taqrib.name).split(' ')[0] : null;
+      const shownWords = shown.split(' ').length;
+      for (const [nm, raw] of cands) { // Taqrīb first, then Tahdhīb, then the other books: the first entry that fits and adds to the name wins
+        const clean = cleanName(nm); if (!clean || conflict(clean, raw)) continue;
+        if (taqHead && !/^(?:ابو|ام|ابن)$/.test(taqHead) && clean.split(' ')[0] !== taqHead && !/^(?:ابو|ام|ابن)$/.test(clean.split(' ')[0])) continue; // another book must speak of the same man as the Taqrīb
+        const fits = [e.key, ...(aliasesOf.get(e.key) || []).filter(k => k.includes(' ') || /^(?:ال|ابو|ابن|ام)/.test(k))].filter(k => compatible(k, clean)); if (!fits.length) continue; // a bare given-name alias fits anyone
         const trimmed = trimFullName(clean);
-        // the dictionary must add to the name the isnads use most ("ابو هريره" → "ابو هريره الدوسي"); a truncated or repeated form is no gain
         const tw = trimmed.split(' ');
-        if (tw.length < 2 || /^(?:بن|بنت|ابو|ابي|ام|عبد)$/.test(tw[tw.length - 1]) || tw.length <= shown.split(' ').length) continue;
+        if (tw.length < 2 || /^(?:بن|بنت|ابو|ابي|ام|عبد)$/.test(tw[tw.length - 1]) || tw.length <= shownWords) continue; // a truncated or repeated form is no gain
         const disp = displayFromRaw(raw, trimmed);
         if (disp) { e.fullName = disp; full++; break; }
       }

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { GC_HEX } from '../lib/constants.js';
+import { sheetOffset } from './mobile.js';
 
 export function buildSelLines(narratorId) {
   if (state.selLines) {
@@ -40,6 +41,7 @@ export function buildSelLines(narratorId) {
 export function flyTo(n) {
   if (!state.posMap[n.id]) return;
   const tp = state.posMap[n.id].clone();
+  tp.y -= sheetOffset(state.targetSpherical.radius); // phone: keep the star above the bottom sheet
   const startPan = state.panTarget.clone();
   let t = 0;
   if (state.flyAnim) clearInterval(state.flyAnim);

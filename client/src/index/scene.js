@@ -17,7 +17,7 @@ export function initThree() {
   document.getElementById('c').appendChild(state.renderer.domElement);
 
   state.raycaster = new THREE.Raycaster();
-  state.raycaster.params.Points.threshold = 4;
+  state.raycaster.params.Points.threshold = matchMedia('(pointer: coarse)').matches ? 12 : 4; // a finger is wider than a mouse pointer
 
   addBgParticles();
   addNebula();

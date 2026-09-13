@@ -139,7 +139,9 @@ export function fitToStars(positions) {
   if (!isFinite(minX)) return;
   const fov = (state.camera?.fov || 60) * Math.PI / 180, aspect = innerWidth / Math.max(1, innerHeight);
   const w = (maxX - minX) * 1.08 + 60, h = (maxY - minY) * 1.25 + 60;
-  const r = Math.max(w / 2 / (Math.tan(fov / 2) * aspect), h / 2 / Math.tan(fov / 2));
+  const portrait = innerHeight > innerWidth && innerWidth <= 760;
+  const visible = portrait ? Math.max(0.3, (innerHeight - 290) / innerHeight) : 1; // header, search, toolbar and timeline cover the rest
+  const r = portrait ? h / 2 / Math.tan(fov / 2) / visible : Math.max(w / 2 / (Math.tan(fov / 2) * aspect), h / 2 / Math.tan(fov / 2));
   state.targetSpherical.radius = Math.max(30, Math.min(2600, r));
   state.targetSpherical.theta = 0; state.targetSpherical.phi = Math.PI / 2;
 }

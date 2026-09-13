@@ -80,7 +80,7 @@ async function loadPanelHadiths(id) {
 }
 
 export function closePanel() {
-  document.getElementById('panel').classList.remove('open');
+  document.getElementById('panel').classList.remove('open', 'tall');
   state.selId = null;
   if (state.selLines) { state.scene.remove(state.selLines); state.selLines = null; }
   if (state.starPoints) state.starPoints.material.uniforms.uSelected.value = -1;
