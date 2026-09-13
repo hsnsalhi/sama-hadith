@@ -233,6 +233,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 /* HINT */
 #hint { position: fixed; bottom: 44px; left: 50%; transform: translateX(-50%); z-index: 5; text-align: center; pointer-events: none; transition: opacity 2s; }
 #hint p { font-family: 'Cairo', sans-serif; font-size: 10px; color: rgba(223,228,234,.2); letter-spacing: 1px; }
+#hint p.m { display: none; }
 
 
 /* ── HADITH MODE ───────────────────────────────────────────────────────── */
@@ -310,7 +311,10 @@ html, body { overscroll-behavior: none; }
   #si { padding: 8px 12px; font-size: 13px; }
   #sr { max-height: 48vh; }
   .chip { font-size: 10px; padding: 2px 7px; }
-  #leg, #geo-axis, #hint, #tt, #zv, #bauto, .csep { display: none !important; }
+  #leg, #geo-axis, #tt, #zv, #bauto, .csep { display: none !important; }
+  #hint { bottom: 118px; width: calc(100vw - 24px); }
+  #hint p.d { display: none; }
+  #hint p.m { display: block; font-size: 11px; color: rgba(223,228,234,.55); background: rgba(0,5,8,.7); padding: 4px 10px; border-radius: 10px; }
   /* bottom toolbar: filters scroll horizontally, view toggle and reset sit on the sides */
   #ctrl { bottom: 64px; left: 8px; right: 8px; transform: none; justify-content: flex-start; overflow-x: auto; padding: 2px 78px 2px 46px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   #ctrl::-webkit-scrollbar { display: none; }
