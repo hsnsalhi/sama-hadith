@@ -9,7 +9,7 @@
  * matchRijal aligns the entries with the narrator entities extracted from the isnads.
  */
 import { readFileSync } from 'node:fs';
-import { cleanName, normalizeArabic } from './isnad-graph.js';
+import { cleanName, normalizeArabic, NON_NAME_WORDS } from './isnad-graph.js';
 
 const LAYERS = { 'الاولي': 1, 'الثانيه': 2, 'الثالثه': 3, 'الرابعه': 4, 'الخامسه': 5, 'السادسه': 6, 'السابعه': 7, 'الثامنه': 8, 'التاسعه': 9, 'العاشره': 10, 'الحاديه عشره': 11, 'الثانيه عشره': 12 };
 export const LAYER_NAMES = { 1: 'الصحابة', 2: 'كبار التابعين', 3: 'الطبقة الوسطى من التابعين', 4: 'من جلّ روايتهم عن كبار التابعين', 5: 'صغار التابعين', 6: 'عاصروا صغار التابعين ولم يلقوا الصحابة', 7: 'كبار أتباع التابعين', 8: 'الطبقة الوسطى من أتباع التابعين', 9: 'صغار أتباع التابعين', 10: 'كبار الآخذين عن تبع الأتباع', 11: 'الطبقة الوسطى من الآخذين عن تبع الأتباع', 12: 'صغار الآخذين عن تبع الأتباع' };
@@ -234,8 +234,12 @@ export function nameVocabulary(taqrib, tahdhib, extraNames = []) {
   for (const t of taqrib) add(t.name, 2);
   for (const t of tahdhib) { add(t.name, 2); for (const nm of t.teachers) add(nm); for (const nm of t.students) add(nm); }
   for (const nm of extraNames) add(nm, 2);
+  const heads = new Set();
+  for (const t of [...taqrib, ...tahdhib]) for (const w of cleanName(t.name).split(' ')) heads.add(w);
+  for (const nm of extraNames) for (const w of cleanName(nm).split(' ')) heads.add(w);
   const out = new Set();
-  for (const [w, c] of vocab) if (c >= 2) out.add(w); // a word seen once in a teacher list only is not enough
+  // a word of an entry head is a name; a word met only in the teacher/student lists must recur ("ويقال", "ممن", "خرجت" are list noise)
+  for (const [w, c] of vocab) if ((heads.has(w) ? c >= 2 : c >= 4) && !NON_NAME_WORDS.has(w) && !GLOSS_WORD.test(w) && !PRON_RE.test(w)) out.add(w);
   for (const w of ['جد', 'جده', 'جدته', 'والد', 'والده', 'اب', 'ابيه', 'اخ', 'اخو', 'اخي', 'اخت', 'عم', 'عمه', 'خال', 'خاله', 'ابنه', 'ابنته', 'زوج', 'زوجه', 'امراه', 'بن', 'بنت', 'ابن', 'ابو', 'ابي', 'ام', 'عبد', 'عبيد', 'مولي', 'الله', 'اربع', 'كتاب', 'كتب', 'ولد', 'رجل', 'رجلا', 'امراه', 'ناس', 'قوم', 'اهل', 'الحبيب', 'الامين', 'يوم', 'سنه', 'شهر', 'ليله', 'حديث', 'حديثا', 'كلمه', 'شيء', 'شيئا', 'قال', 'انه', 'كان', 'كانوا', 'الغد', 'الجمعه', 'الصلاه', 'المسجد', 'المنبر', 'الناس', 'القوم', 'الرجل', 'المراه', 'الحديث', 'الكتاب', 'الله', 'النبي', 'رسول']) out.delete(w);
   return out;
 }

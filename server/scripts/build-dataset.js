@@ -19,7 +19,7 @@
 import { mkdir, writeFile, readFile, rm, access } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseIsnadGraph, cleanName, displayForm, connectorType, setNameVocab, normalizeArabic } from './lib/isnad-graph.js';
+import { parseIsnadGraph, cleanName, displayForm, connectorType, setNameVocab, normalizeArabic, isJunkName, NON_NAME_WORDS } from './lib/isnad-graph.js';
 import { loadReference } from './lib/reference-loader.js';
 import { EXTRA_NARRATORS } from './lib/reference-extra.js';
 import { BIOS } from './lib/reference-bios.js';
@@ -371,7 +371,7 @@ function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map())
       const bestKey = nm => { if (!nm) return null; const w = nm.split(' '); for (let n = w.length; n >= 2; n--) { const k = w.slice(0, n).join(' '); if (freq.has(k)) return k; } return freq.has(nm) ? nm : trimName(w); };
       if (rel === 'ابيه' || rel === 'ابيها') {
         if (b.startsWith('ابن ')) target = b.slice(4);
-        else { const full = fullOf(b); target = full ? (bestKey(viaNasab(full, 1)) || fatherOf(full)) : null; }
+        else { const full = fullOf(b); target = full ? (bestKey(viaNasab(full, 1)) || fatherOf(full)) : null; if (process.env.DEBUG_REL && b.includes(process.env.DEBUG_REL)) console.error(`[rel] ${k0} | b=${b} full=${full} viaNasab=${full && viaNasab(full, 1)} bestKey=${full && bestKey(viaNasab(full, 1))} fatherOf=${full && fatherOf(full)} → ${target}`); }
 
       } else if (rel === 'جده' || rel === 'جدها') {
         const full = fullOf(b);
@@ -520,7 +520,22 @@ function loadReferences(bareOk = () => ({ ok: true })) {
   return { ref, canon, fullest };
 }
 
+/** A node that is not a name ("ابيه" left without referent, "يقال", "خرجت") is removed with its edges: better a gap than a phantom narrator. */
+function pruneJunkNodes(hadiths) {
+  let n = 0;
+  for (const h of hadiths) {
+    const g = h.graph; if (!g?.nodes) continue;
+    const junk = [...g.nodes.keys()].filter(k => isJunkName(k) || (!k.includes(' ') && !k.includes('@') && g.nodes.get(k)?.display && NON_NAME_WORDS.has(cleanName(g.nodes.get(k).display)))); // "منيه" reached from "ابن منية عن أبيه": a mother's name taken for the father
+    if (!junk.length) continue;
+    n += junk.length;
+    for (const k of junk) g.nodes.delete(k);
+    const bad = new Set(junk);
+    g.edges = g.edges.filter(e => !bad.has(e.teacher) && !bad.has(e.student));
+  }
+  return n;
+}
 function buildEntities(hadiths, ref, canon) {
+  const pruned = pruneJunkNodes(hadiths); if (pruned) log(`phantom narrators removed: ${pruned}`);
   const ents = new Map(); // key → entity
   const get = key0 => {
     const key = canon.get(key0) || key0;
@@ -947,10 +962,13 @@ async function main() {
   const collOf = id => id.slice(0, id.indexOf(':'));
   // bios: by canonical key or by any alias pointing to it
   const bioOf = e => { if (BIOS[e.key]) return BIOS[e.key]; for (const [alias, target] of canon) if (target === e.key && BIOS[alias]) return BIOS[alias]; return null; };
+  // "عن أبيه" resolved to a man keeps the relative word among its displays: never show it as his name
+  const named = e => { const d = [...e.displays].filter(([x]) => !NON_NAME_WORDS.has(cleanName(x))); return d.length ? d : [[e.key.replace(/~+$/, ''), 1]]; }; // only "أبيه" on record: show the resolved name itself
   const narrators = list.map(e => ({
     id: e.id,
-    name_ar: e.fullName || ([...e.displays].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0] + (e.key.includes('@') ? ' (لم يُسمَّ في الإسناد)' : '')),
-    name_short: [...e.displays].sort((a, b) => b[1] - a[1])[0][0],
+    key: e.key,
+    name_ar: e.fullName || (named(e).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0] + (e.key.includes('@') ? ' (لم يُسمَّ في الإسناد)' : '')),
+    name_short: named(e).sort((a, b) => b[1] - a[1])[0][0],
     name_latin: e.latin || null,
     generation: e.gen,
     death_ah: e.death ?? null,
