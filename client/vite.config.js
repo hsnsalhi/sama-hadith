@@ -12,6 +12,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         narrator: resolve(__dirname, 'narrator.html'),
         stats: resolve(__dirname, 'stats.html'),
+        glossary: resolve(__dirname, 'glossary.html'),
       },
     },
   },

@@ -1,0 +1,11 @@
+@import './stats.css';
+#toc { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+#toc a { font-size: 13px; color: var(--silver); text-decoration: none; border-bottom: 0.5px dotted rgba(223,228,234,.4); }
+#toc a:hover { color: var(--gold); border-color: var(--gold); }
+dl { margin: 0; }
+dt { font-family: 'Amiri', serif; font-size: 18px; color: var(--gold); margin: 16px 0 4px; }
+dt:first-child { margin-top: 4px; }
+dd { margin: 0; font-size: 14.5px; line-height: 1.95; color: rgba(245,232,200,.9); }
+dd a { color: var(--silver); }
+.note.foot { margin-top: 30px; }
+@media (max-width: 600px) { dt { font-size: 16px; } dd { font-size: 13.5px; } }

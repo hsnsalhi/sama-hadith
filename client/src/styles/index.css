@@ -30,6 +30,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 .hv { font-family: 'Cairo', sans-serif; font-size: 17px; font-weight: 600; color: var(--gold); font-variant-numeric: tabular-nums; }
 .hl { font-family: 'Cairo', sans-serif; font-size: 10px; color: rgba(223,228,234,.8); }
 #hstats { display: flex; text-decoration: none; pointer-events: all; }
+#hgloss { pointer-events: all; margin-right: auto; margin-left: 18px; align-self: center; font-family: 'Cairo', sans-serif; font-size: 11px; color: var(--silver-dim); text-decoration: none; border: 0.5px solid rgba(223,228,234,.25); border-radius: 12px; padding: 3px 10px; }
+#hgloss:hover { color: var(--gold); border-color: var(--gold); }
 #hstats:hover .hl { color: var(--silver); }
 #hstats:hover .hv { text-shadow: 0 0 12px rgba(201,168,76,.6); }
 
@@ -303,6 +305,7 @@ html, body { overscroll-behavior: none; }
   #hdr-left h1 { font-size: 19px; letter-spacing: 1px; }
   #hdr-left p { display: none; }
   .hstat { margin-left: 12px; }
+  #hgloss { font-size: 10px; padding: 2px 7px; margin-left: 8px; }
   .hv { font-size: 13px; }
   .hl { font-size: 9px; }
   #sw { top: 48px; left: 8px; right: 8px; width: auto; max-width: none; transform: none; padding: 6px 8px; border-radius: 12px; }
