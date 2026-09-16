@@ -72,6 +72,14 @@ function readEntries(path) {
 
 const normText = s => normalizeArabic(s).replace(/[،:.()\[\]«»"']/g, ' ').replace(/\s+/g, ' ').trim();
 
+// the man's own kunya later in the header ("… أبو إسحاق السبيعي"), never his patron's ("مولى أم سلمة")
+const PATRON_WORDS = new Set(['مولي', 'مولاه', 'مولاة', 'زوج', 'زوجه', 'ابن', 'بن', 'بنت', 'اخو', 'اخي', 'اخت', 'والد', 'والده', 'عم', 'خال', 'صاحب', 'غلام', 'كاتب', 'جد', 'جده', 'ام', 'ابو', 'عن', 'روي']);
+function kunyaTail(text) {
+  const re = /(?:^| )((?:ابو|ام) (?!بن )[^ ]+(?: ال[^ ]{3,})?)(?= |$)/g;
+  let m;
+  while ((m = re.exec(text))) { const before = text.slice(0, m.index).trim().split(' ').pop(); if (!before || !PATRON_WORDS.has(before)) return m[1]; }
+  return null;
+}
 export function loadTaqrib(path) {
   const entries = [];
   for (const { n, body } of readEntries(path)) {
@@ -114,11 +122,11 @@ export function loadTaqrib(path) {
     let name = name0.replace(/ عن .*$/, '').replace(GLOSS_RE, '');
     { // a kunya that a gloss hid ("عمرو بن عبد الله ويقال … أبو إسحاق السبيعي") still names the man: append it to the matching form
       const rest = name0.replace(/ عن .*$/, '').slice(name.length);
-      const km = rest.match(/(?:^|(?<=(?<! (?:مولي|مولاه|مولاة|زوج|زوجه|ابن|بن|بنت|اخو|اخي|اخت|والد|والده|عم|خال|صاحب|غلام|كاتب|جد|جده|ام|ابو)) )((?:ابو|ام) (?!بن )[^ ]+(?: ال[^ ]{3,})?)(?= |$)/);
-      if (km && !name.includes(km[1])) name = (name + ' ' + km[1]).trim();
+      const km = kunyaTail(rest);
+      if (km && !name.includes(km)) name = (name + ' ' + km).trim();
     }
     let nameFull = stripGloss(name0.replace(/ عن .*$/, ''));
-    { const km = name0.slice(nameFull.length).match(/(?:^|(?<=(?<! (?:مولي|مولاه|مولاة|زوج|زوجه|ابن|بن|بنت|اخو|اخي|اخت|والد|والده|عم|خال|صاحب|غلام|كاتب|جد|جده|ام|ابو)) )((?:ابو|ام) (?!بن )[^ ]+(?: ال[^ ]{3,})?)(?= |$)/); if (km && !nameFull.includes(km[1])) nameFull = (nameFull + ' ' + km[1]).trim(); } // for display only: "محمد بن خازم بمعجمتين أبو معاوية" keeps its kunya
+    { const km = kunyaTail(name0.slice(nameFull.length)); if (km && !nameFull.includes(km)) nameFull = (nameFull + ' ' + km).trim(); } // for display only: "محمد بن خازم بمعجمتين أبو معاوية" keeps its kunya
     entries.push({ n, name, nameFull, stub, deaths: typeof deaths !== 'undefined' ? deaths : [], grade, gradeDisplay: grade ? GRADE_DISPLAY[grade] : null, layer, death, deathApprox, centuryExplicit, sigla: sig, colls: [...colls], raw: body });
   }
   return entries;
