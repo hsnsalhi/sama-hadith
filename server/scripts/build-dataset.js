@@ -23,7 +23,7 @@ import { parseIsnadGraph, cleanName, displayForm, connectorType, setNameVocab, n
 import { loadReference } from './lib/reference-loader.js';
 import { EXTRA_NARRATORS } from './lib/reference-extra.js';
 import { BIOS } from './lib/reference-bios.js';
-import { loadTaqrib, loadTahdhib, matchRijal, matchSource, taqribDeath, closestDeath, nameVocabulary, trimFullName, displayFromRaw, isTheo, LAYER_NAMES } from './lib/taqrib.js';
+import { loadTaqrib, loadTahdhib, matchRijal, matchSource, taqribDeath, closestDeath, nameVocabulary, trimFullName, displayFromRaw, isTheo, chainOf, LAYER_NAMES } from './lib/taqrib.js';
 import { SOURCES, fetchSource, loadSource, OPENITI_LICENCE } from './lib/openiti.js';
 import { fillMissingTexts, bookTitles, SUPPLEMENT } from './lib/fill-text.js';
 import { tokenize, stem, shardKey } from '../../client/src/lib/search-norm.js';
@@ -846,6 +846,7 @@ async function main() {
   const stillEmpty = hadiths.filter(h => !h.graph.edges.length);
   log(`hadiths without any chain: ${stillEmpty.length}`);
   for (const h of stillEmpty.slice(0, 30)) log(`   [${h.id}] ${cleanName(h.text).slice(0, 110)}`);
+  let mergedOnTaqrib = 0;
   const ents = buildEntities(hadiths, ref, canon);
   dateAndClassify(hadiths, ents);
   if (dateAndClassify.missing) log(`nodes without entity: ${[...dateAndClassify.missing].slice(0, 8).map(x => x.join(' in ')).join(' | ')}`);
@@ -893,6 +894,43 @@ async function main() {
       }
     }
     log(`dates from the other books: ${rijalDeath}`);
+    // ── Duplicates: two entities aligned on the same Taqrīb entry are one man ("سفيان الثوري" and "سفيان بن سعيد بن مسروق")
+    {
+      const byTaq = new Map();
+      for (const e of ents.values()) if (e.taqrib) (byTaq.get(e.taqrib) || byTaq.set(e.taqrib, []).get(e.taqrib)).push(e);
+      let merged = 0;
+      const bare = k => k.replace(/~+$/, '').split(' ').filter(w => w !== 'بن' && w !== 'ابن' && w !== 'بنت' && w !== 'ابي' && w !== 'ابو' && w !== 'ام').map(w => w.replace(/^ال(?=.{3})/, ''));
+      for (const group of byTaq.values()) {
+        if (group.length < 2) continue;
+        group.sort((a, b) => (b.compiler ? 1 : 0) - (a.compiler ? 1 : 0) || b.count - a.count); // the compiler absorbs "مسلم بن الحجاج"
+        const main = group[0];
+        const tName = cleanName(main.taqrib.nameFull || main.taqrib.name);
+        const tWords = new Set([...tName.split(' '), ...main.key.split(' ')].map(w => w.replace(/^ال(?=.{3})/, '')));
+        const tChain = new Set(chainOf(tName).map(w => w.replace(/^ال(?=.{3})/, '')));
+        for (const other of group.slice(1)) {
+          if (other.key.includes('@') || other.compiler) continue;
+          if (other.dated === 'reference' && main.dated === 'reference' && other.death != null && main.death != null && Math.abs(other.death - main.death) > 3) continue;
+          const ow = bare(other.key);
+          if (!ow.length || !ow.every(w => tWords.has(w))) continue;          // its name must fit the man
+          if (ow.length === 1 && !/^(?:ابن|ابو|ام) /.test(other.key) && tChain.has(ow[0])) continue; // a bare "الحجاج" is only the father of شعبة: another man ("ابن الحجاج" would be him)
+          for (const [d, c] of other.displays) main.displays.set(d, (main.displays.get(d) || 0) + c);
+          main.count += other.count; for (const c of other.colls) main.colls.add(c);
+          const have = new Set(main.hadiths); for (const h of other.hadiths) if (!have.has(h)) { main.hadiths.push(h); have.add(h); }
+          main.estimates.push(...(other.estimates || [])); main.depths.push(...(other.depths || []));
+          for (const k in other.votes || {}) main.votes[k] = (main.votes[k] || 0) + other.votes[k];
+          for (const n of other.notices || []) if (!main.notices?.some(x => x.src === n.src)) (main.notices ||= []).push(n);
+          if (!main.tahdhib && other.tahdhib) main.tahdhib = other.tahdhib;
+          if (other.dated === 'reference' && main.dated !== 'reference') { main.death = other.death; main.dated = 'reference'; main.deathApprox = false; }
+          for (const f of ['latin', 'origin', 'reliability', 'gen']) if (!main[f] && other[f]) main[f] = other[f];
+          for (const [a, t] of canon) if (t === other.key) canon.set(a, main.key);
+          canon.set(other.key, main.key);
+          ents.delete(other.key);
+          merged++;
+        }
+      }
+      log(`duplicate entities merged on the same Taqrīb entry: ${merged}`);
+      mergedOnTaqrib = merged;
+    }
     dateAndClassify(hadiths, ents);
   }
 
@@ -965,11 +1003,13 @@ async function main() {
   const bioOf = e => { if (BIOS[e.key]) return BIOS[e.key]; for (const [alias, target] of canon) if (target === e.key && BIOS[alias]) return BIOS[alias]; return null; };
   // "عن أبيه" resolved to a man keeps the relative word among its displays: never show it as his name
   const named = e => { const d = [...e.displays].filter(([x]) => !NON_NAME_WORDS.has(cleanName(x))); return d.length ? d : [[e.key.replace(/~+$/, ''), 1]]; }; // only "أبيه" on record: show the resolved name itself
+  const aliasesOfKey = new Map(); for (const [a, t] of canon) (aliasesOfKey.get(t) || aliasesOfKey.set(t, []).get(t)).push(a);
   const narrators = list.map(e => ({
     id: e.id,
     key: e.key,
     name_ar: e.fullName || (named(e).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0] + (e.key.includes('@') ? ' (لم يُسمَّ في الإسناد)' : '')),
     name_short: named(e).sort((a, b) => b[1] - a[1])[0][0],
+    alt: (() => { const main = new Set([e.fullName, named(e).sort((a, b) => b[1] - a[1])[0][0]].map(x => cleanName(x || ''))); const seen = new Set(); const out = []; for (const [d, c] of named(e).sort((a, b) => b[1] - a[1])) { const k = cleanName(d); if (c < 2 || main.has(k) || seen.has(k)) continue; seen.add(k); out.push(d); if (out.length >= 4) break; } for (const a of aliasesOfKey.get(e.key) || []) { if (a.includes('@') || a.includes('~') || !a.includes(' ') || main.has(a) || seen.has(a)) continue; seen.add(a); out.push(displayForm(a)); if (out.length >= 6) break; } return out.length ? out : undefined; })(), // other forms the isnads use ("ابن شهاب" for al-Zuhrī), for the search
     name_latin: e.latin || null,
     generation: e.gen,
     death_ah: e.death ?? null,
@@ -1087,7 +1127,7 @@ async function main() {
       rijal: { name: 'OpenITI', url: 'https://github.com/OpenITI', licence: OPENITI_LICENCE, books: bookStats, taqrib: { entries: taqrib.length, with_grade: taqrib.filter(t => t.grade).length, with_layer: taqrib.filter(t => t.layer).length, with_death: taqrib.filter(t => t.death != null).length }, tahdhib: { entries: tahdhib.length, with_teachers: tahdhib.filter(t => t.teachers.length).length, with_students: tahdhib.filter(t => t.students.length).length } },
       reference: { legacy: 88, extra: EXTRA_NARRATORS.length, bios: Object.keys(BIOS).length, ref_keys: ref.size },
     },
-    merges: mergeCount, name_vocabulary: vocabSize,
+    merges: mergeCount, merges_taqrib: mergedOnTaqrib, name_vocabulary: vocabSize,
     transmissions: trans.size, hadiths: loaded.length, hadiths_with_text: hadiths.length, hadiths_with_isnad: hadithsWithIsnad,
     isnads_inherited_tail: inherited, isnads_inherited_head: inheritedHead, isnads_inherited_whole: inheritedAll, hadiths_without_chain: stillEmpty.length,
     relatives_resolved: res.relResolved, short_names_expanded: res.shortExpanded,

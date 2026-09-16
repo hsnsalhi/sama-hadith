@@ -114,11 +114,11 @@ export function loadTaqrib(path) {
     let name = name0.replace(/ عن .*$/, '').replace(GLOSS_RE, '');
     { // a kunya that a gloss hid ("عمرو بن عبد الله ويقال … أبو إسحاق السبيعي") still names the man: append it to the matching form
       const rest = name0.replace(/ عن .*$/, '').slice(name.length);
-      const km = rest.match(/(?:^| )((?:ابو|ام) (?!بن )[^ ]+(?: ال[^ ]{3,})?)(?= |$)/);
+      const km = rest.match(/(?:^|(?<=(?<! (?:مولي|مولاه|مولاة|زوج|زوجه|ابن|بن|بنت|اخو|اخي|اخت|والد|والده|عم|خال|صاحب|غلام|كاتب|جد|جده|ام|ابو)) )((?:ابو|ام) (?!بن )[^ ]+(?: ال[^ ]{3,})?)(?= |$)/);
       if (km && !name.includes(km[1])) name = (name + ' ' + km[1]).trim();
     }
     let nameFull = stripGloss(name0.replace(/ عن .*$/, ''));
-    { const km = name0.slice(nameFull.length).match(/(?:^| )((?:ابو|ام) (?!بن )[^ ]+(?: ال[^ ]{3,})?)(?= |$)/); if (km && !nameFull.includes(km[1])) nameFull = (nameFull + ' ' + km[1]).trim(); } // for display only: "محمد بن خازم بمعجمتين أبو معاوية" keeps its kunya
+    { const km = name0.slice(nameFull.length).match(/(?:^|(?<=(?<! (?:مولي|مولاه|مولاة|زوج|زوجه|ابن|بن|بنت|اخو|اخي|اخت|والد|والده|عم|خال|صاحب|غلام|كاتب|جد|جده|ام|ابو)) )((?:ابو|ام) (?!بن )[^ ]+(?: ال[^ ]{3,})?)(?= |$)/); if (km && !nameFull.includes(km[1])) nameFull = (nameFull + ' ' + km[1]).trim(); } // for display only: "محمد بن خازم بمعجمتين أبو معاوية" keeps its kunya
     entries.push({ n, name, nameFull, stub, deaths: typeof deaths !== 'undefined' ? deaths : [], grade, gradeDisplay: grade ? GRADE_DISPLAY[grade] : null, layer, death, deathApprox, centuryExplicit, sigla: sig, colls: [...colls], raw: body });
   }
   return entries;
@@ -163,7 +163,8 @@ export function subsetCandidates(index, key) {
   const kw = key.split(' ').map((x, i, a) => x === 'ابن' && i > 0 && a[i + 1] ? 'بن' : x);
   if (kw.length < 2 || kw[0] === 'ابن') return [];
   const head = (kw[0] === 'ابو' || kw[0] === 'ام') && kw[1] ? `${kw[0]} ${kw[1]}` : (isTheo(kw, 0) ? `${kw[0]} ${kw[1]}` : noArt(kw[0]));
-  const pool = [...(index.byHead.get(head) || []), ...(kw[0].startsWith('ال') || head.startsWith('ابو ') || head.startsWith('ام ') ? index.byWord.get(kw[0]) || [] : [])];
+  const givenName = kw[0].startsWith('ال') && index.byHead.has(noArt(kw[0])); // "الحجاج", "الحكم": a given name with the article, not a nisba
+  const pool = [...(index.byHead.get(head) || []), ...((kw[0].startsWith('ال') && !givenName) || head.startsWith('ابو ') || head.startsWith('ام ') ? index.byWord.get(kw[0]) || [] : [])];
   if (!pool.length) return [];
   const chain = chainOf(kw.join(' ')).map(noArt);
   const words = kw.filter(x => x !== 'بن' && x !== 'بنت').map(noArt);
@@ -176,6 +177,7 @@ export function subsetCandidates(index, key) {
     if (!words.every(x => t._words.has(x))) continue;
     if (chain.length && (t._chain[0] !== chain[0] || !isSubseq(chain.slice(1), t._chain.slice(1)))) continue; // the father must be his father; later ancestors may be skipped
     if (!chain.length && !kw[0].startsWith('ال') && kw[0] !== 'ابو' && kw[0] !== 'ام' && t._head !== head) continue; // a nisba or a kunya may sit anywhere; a given name must head the entry
+    if (!chain.length && kw.length === 1 && kw[0].startsWith('ال') && t._head !== head && (t._chain.includes(noArt(kw[0])) || t._kunyas.has(`ابو ${kw[0]}`) || t._kunyas.has(`ام ${kw[0]}`))) continue; // "الحجاج" is the father of شعبه بن الحجاج or the kunya of مجاهد, not a nisba
     out.push([t, strength]);
   }
   return out;
@@ -199,7 +201,8 @@ export function entryKeys(e) {
   idx.forEach((i, r) => { if (!w[i + 1]) return; const f = w.slice(i + 1, i + 3).join(' '); if (!['ابي', 'عبد', 'عبيد', 'ام', 'ابو'].includes(w[i + 1])) { if (r === 0 || w[i + 1].startsWith('ال')) put(`ابن ${w[i + 1]}`, 1); } else if (w[i + 2] && (r === 0 || w[i + 1] === 'ابي')) put(`ابن ${f}`, 1); });
   const nisba = [...w].reverse().find(t => t.startsWith('ال') && t.length > 3 && t !== 'الله' && !GENERIC_NISBA.has(t));
   if (nisba && w[0] !== nisba && w[0] !== 'ابو' && w[0] !== 'ام') put(`${w[0]} ${nisba}`, 1);
-  for (const t of w) if (t.startsWith('ال') && t.length >= 6 && !GENERIC_NISBA.has(t) && t !== 'الله') put(t, 1);
+  const chainWords = new Set(chainOf(full));
+  w.forEach((t, i) => { if (t.startsWith('ال') && t.length >= 6 && !GENERIC_NISBA.has(t) && t !== 'الله' && !chainWords.has(t) && t !== w[0] && w[i - 1] !== 'ابو' && w[i - 1] !== 'ام') put(t, 1); }); // a nisba, not an ancestor's name ("الحجاج" in شعبه بن الحجاج) nor a kunya's ("ابو الحجاج")
   return keys;
 }
 

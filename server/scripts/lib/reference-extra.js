@@ -64,6 +64,7 @@ export const EXTRA_NARRATORS = [
   { names: ['معاذ بن جبل', 'معاذ'], latin: 'Mu\'adh ibn Jabal', death: 18, gen: 'sahabi', origin: 'الشام' },
   { names: ['عمرو بن العاص'], latin: 'Amr ibn al-As', death: 43, gen: 'sahabi', origin: 'مصر' },
   { names: ['كعب بن مالك'], latin: 'Ka\'b ibn Malik', death: 50, gen: 'sahabi', origin: 'المدينة' },
+  { names: ['كعب الاحبار', 'كعب بن ماتع', 'كعب بن ماتع الحميري'], latin: 'Ka\'b al-Ahbar', death: 32, gen: 'tabii', origin: 'الشام' },
   { names: ['ابو برزه', 'ابو برزه الاسلمي'], latin: 'Abu Barza al-Aslami', death: 65, gen: 'sahabi', origin: 'البصرة' },
   { names: ['عباده بن الصامت'], latin: 'Ubada ibn al-Samit', death: 34, gen: 'sahabi', origin: 'الشام' },
   { names: ['ابو امامه', 'ابو امامه الباهلي'], latin: 'Abu Umama al-Bahili', death: 86, gen: 'sahabi', origin: 'الشام' },

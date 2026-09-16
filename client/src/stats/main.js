@@ -54,6 +54,7 @@ async function main() {
     ${row('أسانيد منقولة بكاملها', f(m.isnads_inherited_whole))}
     ${row('صِلات قرابة حُلّت («عن أبيه»، «عن جده» → الاسم)', f(m.relatives_resolved))}
     ${row('أسماء مختصرة وُسّعت من سياقها (سفيان → سفيان بن عيينة…)', f(m.short_names_expanded))}
+    ${m.merges_taqrib ? row('كيانات دُمجت لأنها تشير إلى ترجمة واحدة في تقريب التهذيب (سفيان الثوري = سفيان بن سعيد بن مسروق)', f(m.merges_taqrib)) : ''}
     ${row('كلمات مفهرسة للبحث في المتون', f(m.search?.words))}
   </table></div>
 

@@ -156,6 +156,7 @@ const THEOPHORIC = new Set(['عبد', 'عبيد']);
 const THEO_TAIL = new Set(['ربه', 'مناف', 'شمس', 'عمرو', 'قيس', 'يزيد', 'المطلب', 'كلال', 'ياليل', 'ود', 'مناه', 'يغوث', 'نهم', 'خير']);
 const theoComplement = w => w !== undefined && AR.test(w) && (w === 'الله' || THEO_TAIL.has(w) || (w.startsWith('ال') && !NAME_END.has(w))) && !CONNECTORS.has(w);
 const PATRONYM = new Set(['بن', 'ابن', 'بنت', 'ابنه', 'مولي']);
+const SAYING = new Set(['قال', 'قالت', 'قالا', 'قالوا', 'كان', 'كانت', 'كانوا', 'يقول', 'تقول', 'سيل', 'سئل', 'سال', 'سالت', 'سمع', 'سمعت', 'راي', 'رات', 'خرج', 'خرجت', 'صلي', 'صلت', 'اتي', 'اتت', 'جاء', 'جاءت', 'دخل', 'دخلت', 'مر', 'مرت', 'نهي', 'امر', 'افتي', 'اعتق', 'اشتري', 'باع', 'كتب', 'حج', 'اعتمر', 'ركب', 'نزل', 'حدث', 'يحدث', 'ذكر', 'زعم', 'اخبر']); // what a named man did or said: the report stops on him
 const REVERSE = new Set(['اخبره', 'حدثه', 'اخبرته', 'حدثته', 'اخبرهم', 'حدثهم', 'اخبراه', 'حدثاه', 'اخبرها', 'حدثها', 'اخبرني', 'حدثني', 'اخبرنا', 'حدثنا', 'حدثاهم', 'اخبراهم', 'حدثوهم', 'اخبروهم', 'حدثاكم', 'حدثوه', 'اخبروه', 'انباه', 'انباهم', 'انبانا', 'انباني']);
 const FIRST_PERSON = new Set(['حدثني', 'حدثنا', 'اخبرني', 'اخبرنا', 'انباني', 'انبانا', 'حدثتني', 'اخبرتني', 'حدثتنا', 'اخبرتنا']);
 const ACCUSATIVE_CONNECTORS = new Set(['سمعت', 'سمعنا', 'سمع', 'ان']);
@@ -505,6 +506,15 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
           }
           if (added.length) { prevFrontier = frontier; frontier = added; lastConnector = tokens[k]; lastName = added[added.length - 1]; }
           i = k + 1; stop = i; continue;
+        }
+        // "عن نافع أن ابن عمر قال / كان": the report is attributed to X, who is the last link (mawqūf / maqṭūʿ)
+        const kv = names.length === 1 && SAYING.has(tokens[nm.next]) ? nm.next : k; // "قال" is also a filler, so look before the fillers were skipped
+        if (edges.length && kv < n && SAYING.has(tokens[kv]) && names.length === 1 && names[0].key && !connectorAt(tokens, kv)) {
+          const nmx = names[0];
+          addNode(nmx.key, nmx.raw, nmx.disp);
+          for (const s of frontier) addEdge(s, nmx.key, 'ان');
+          prevFrontier = frontier; frontier = [nmx.key]; lastConnector = 'ان'; lastName = nmx.key;
+          i = kv; stop = i; break;
         }
       }
     }
