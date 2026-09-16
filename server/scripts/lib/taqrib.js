@@ -73,11 +73,15 @@ function readEntries(path) {
 const normText = s => normalizeArabic(s).replace(/[،:.()\[\]«»"']/g, ' ').replace(/\s+/g, ' ').trim();
 
 // the man's own kunya later in the header ("… أبو إسحاق السبيعي"), never his patron's ("مولى أم سلمة")
-const PATRON_WORDS = new Set(['مولي', 'مولاه', 'مولاة', 'زوج', 'زوجه', 'ابن', 'بن', 'بنت', 'اخو', 'اخي', 'اخت', 'والد', 'والده', 'عم', 'خال', 'صاحب', 'غلام', 'كاتب', 'جد', 'جده', 'ام', 'ابو', 'عن', 'روي']);
+const PATRON_WORDS = new Set(['مولي', 'مولاه', 'مولاة', 'زوج', 'زوجه', 'ابن', 'بن', 'بنت', 'اخو', 'اخي', 'اخت', 'والد', 'والده', 'عم', 'خال', 'صاحب', 'غلام', 'كاتب', 'جد', 'جده', 'ام', 'ابو', 'عن', 'روي', 'او', 'يقال', 'ويقال', 'قيل', 'وقيل']);
 function kunyaTail(text) {
   const re = /(?:^| )((?:ابو|ام) (?!بن )[^ ]+(?: ال[^ ]{3,})?)(?= |$)/g;
   let m;
-  while ((m = re.exec(text))) { const before = text.slice(0, m.index).trim().split(' ').pop(); if (!before || !PATRON_WORDS.has(before)) return m[1]; }
+  while ((m = re.exec(text))) {
+    const pre = text.slice(0, m.index).trim(); const before = pre.split(' ').pop();
+    if (/(?:^| )(?:مولي|مولاه|مولاة|زوج|زوجه|امراه|جاريه|غلام|كاتب)(?: |$)/.test(pre.split(' ').slice(-4).join(' '))) continue; // "مولى ميمونة أو أم سلمة": the patrons
+    if (!before || !PATRON_WORDS.has(before)) return m[1];
+  }
   return null;
 }
 export function loadTaqrib(path) {
