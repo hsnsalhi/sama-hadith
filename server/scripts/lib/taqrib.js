@@ -18,7 +18,7 @@ const GRADE_DISPLAY = { 'ثقه ثبت': 'ثقة ثبت', 'ثقه حافظ': 'ث
 const SIGLA = { 'ع': ['bukhari', 'muslim', 'abudawud', 'tirmidhi', 'nasai', 'ibnmajah'], '4': ['abudawud', 'tirmidhi', 'nasai', 'ibnmajah'], 'خ': ['bukhari'], 'م': ['muslim'], 'د': ['abudawud'], 'ت': ['tirmidhi'], 'س': ['nasai'], 'ق': ['ibnmajah'], 'بخ': [], 'خت': ['bukhari'], 'عخ': [], 'مد': [], 'تم': [], 'عس': [], 'فق': [], 'كد': [], 'خد': [], 'صد': [], 'ل': [], 'ر': [], 'كن': [], 'ص': [], 'ز': [], 'ي': [], 'قد': [], 'سي': [], 'مق': [] };
 const ORD = { 'واحده': 1, 'احدي': 1, 'اثنتين': 2, 'ثلاث': 3, 'اربع': 4, 'خمس': 5, 'ست': 6, 'سبع': 7, 'ثمان': 8, 'تسع': 9, 'عشر': 10, 'عشره': 10, 'عشرين': 20, 'ثلاثين': 30, 'اربعين': 40, 'خمسين': 50, 'ستين': 60, 'سبعين': 70, 'ثمانين': 80, 'تسعين': 90, 'مايه': 100, 'ماية': 100, 'مئه': 100, 'ميه': 100, 'مايتين': 200, 'مئتين': 200, 'ميتين': 200, 'ثلاثمايه': 300, 'ثلاثمئه': 300, 'ثلاثميه': 300, 'ثلثمايه': 300, 'ثلثميه': 300, 'اربعمايه': 400, 'اربعميه': 400 };
 // pronunciation glosses ("بكسر الميم وسكون النون", "بمعجمتين", "مصغرا"): skipped, the name resumes at the kunya, the nisba or the next link
-const PRON_RE = /^(?:و?ب(?:كسر|فتح|ضم|سكون|تشديد|تخفيف|مهمل|معجم|موحد|مثنا|مثلث|نون|لام|جيم|حاء|خاء|دال|ذال|زاي|سين|شين|صاد|ضاد|طاء|ظاء|عين|غين|فاء|قاف|كاف|ميم|هاء|واو|ياء|وزن|ال)[^ ]*|و?ال(?:الف|باء|تاء|ثاء|جيم|حاء|خاء|دال|ذال|راء|زاي|زاء|سين|شين|صاد|ضاد|طاء|ظاء|عين|غين|فاء|قاف|كاف|لام|ميم|نون|هاء|واو|ياء|مهمله|معجمه|موحده|مثناه|مثلثه|فوقانيه|تحتانيه|ساكنه|مفتوحه|مضمومه|مكسوره|مشدده|مخففه|مصغره|اولي|ثانيه|ثالثه|اخيره|كل|همزه|همز)|و?(?:همزه|همز|سكون|فتح|كسر|ضم|تشديد|تخفيف|تثقيل|تصغير|مصغر|مصغرا|مكبر|مكبرا|مثقل|مثقلا|مخفف|مخففا|مهمله|معجمه|موحده|مثناه|مثلثه|ساكنه|مفتوحه|مضمومه|مكسوره|مشدده|مخففه|مصغره|فوقانيه|تحتانيه|مهملتين|معجمتين|موحدتين|مثناتين|فتحتين|ضمتين|كسرتين)|اخر|اخره|اوله|ثانيه|ثالثه|بعدها|قبلها|بينهما|ثم|فيهما|جميعا|معا|فيه|كذلك|مولاهم)$/;
+const PRON_RE = /^(?:و?ب(?:كسر|فتح|ضم|سكون|تشديد|تخفيف|مهمل|معجم|موحد|مثنا|مثلث|نون|لام|جيم|حاء|خاء|دال|ذال|زاي|سين|شين|صاد|ضاد|طاء|ظاء|عين|غين|فاء|قاف|كاف|ميم|هاء|واو|ياء|وزن|ال)[^ ]*|و?ال(?:الف|باء|تاء|ثاء|جيم|حاء|خاء|دال|ذال|راء|زاي|زاء|سين|شين|صاد|ضاد|طاء|ظاء|عين|غين|فاء|قاف|كاف|لام|ميم|نون|هاء|واو|ياء|مهمله|معجمه|موحده|مثناه|مثلثه|فوقانيه|تحتانيه|ساكنه|مفتوحه|مضمومه|مكسوره|مشدده|مخففه|مصغره|اولي|ثانيه|ثالثه|اخيره|كل|همزه|همز)|و?(?:همزه|همز|سكون|فتح|كسر|ضم|تشديد|تخفيف|تثقيل|تصغير|مصغر|مصغرا|مكبر|مكبرا|مثقل|مثقلا|مخفف|مخففا|مهمله|معجمه|موحده|مثناه|مثلثه|ساكنه|مفتوحه|مضمومه|مكسوره|مشدده|مخففه|مصغره|فوقانيه|تحتانيه|مهملتين|معجمتين|موحدتين|مثناتين|فتحتين|ضمتين|كسرتين)|اخر|اخره|اوله|ثانيه|ثالثه|بعدها|قبلها|بينهما|ثم|فيهما|جميعا|معا|فيه|كذلك|مولاهم|بصيغه|صيغه|التصغير|التكبير|بالتصغير|بالتكبير|بوزن|وزن|لكن|قبله|الذي|بعده)$/;
 const EXAMPLE_RE = /^(?:بوزن|وزن|بمثل|مثل|نحو|بلفظ|كلفظ)$/; // "بوزن عظيم": the next word is the example, not a name
 const GLOSS_WORD = /^(?:المعروف|المشهور|يعرف|يقال|ويقال|وقيل|نزيل|صاحب|مولي|روي|وهو|هو|وهي|هي|قيل|واسمه|اسمه|واسم|اسم|اختلف|قال|حتي|امام|راس|كبير|احد|الصحابي|الجليل|حافظ|من|عن|له|لها|وله|ولها|كان|وكان|يكني|ويكني|كنيته|وكنيته|ولد|مولده|قدم|سكن|اصله|واصله|والد|والده|اخو|اخت|زوج|زوجه|امراه|جد|جده)$/;
 export function stripGloss(name) {
@@ -30,6 +30,12 @@ export function stripGloss(name) {
       let j = i + 1; while (j < w.length && (PRON_RE.test(w[j]) || EXAMPLE_RE.test(w[j - 1]))) j++;
       if (j < w.length && (w[j] === 'ابو' || w[j] === 'ام' || w[j] === 'بن' || w[j] === 'ابن' || (w[j].startsWith('ال') && w[j].length > 3 && !GLOSS_WORD.test(w[j])))) { i = j; continue; }
       break;
+    }
+    if ((t === 'مولي' || t === 'مولاه' || t === 'مولاة') && out.length && !out.includes('بن') && w[i + 1] && !GLOSS_WORD.test(w[i + 1]) && !PRON_RE.test(w[i + 1])) {
+      // "سمي مولى أبي بكر بن عبد الرحمن", "بريرة مولاة عائشة": the patron is the man's identity
+      const seg = [t]; let j = i + 1;
+      while (j < w.length && seg.length < 7 && !GLOSS_WORD.test(w[j]) && !PRON_RE.test(w[j]) && !(w[j] === 'ابن' && /^(?:اخي|اخت|عم|خال)$/.test(w[j + 1] || ''))) { seg.push(w[j]); j++; }
+      out.push(...seg); i = j; continue;
     }
     if (GLOSS_WORD.test(t) || (t === 'ابن' && /^(?:اخي|اخت|عم|خال|اخيه|اخته|عمه|خاله)$/.test(w[i + 1] || ''))) break;
     out.push(t); i++;
@@ -75,7 +81,7 @@ const normText = s => normalizeArabic(s).replace(/[،:.()\[\]«»"']/g, ' ').rep
 // the man's own kunya later in the header ("… أبو إسحاق السبيعي"), never his patron's ("مولى أم سلمة")
 const PATRON_WORDS = new Set(['مولي', 'مولاه', 'مولاة', 'زوج', 'زوجه', 'ابن', 'بن', 'بنت', 'اخو', 'اخي', 'اخت', 'والد', 'والده', 'عم', 'خال', 'صاحب', 'غلام', 'كاتب', 'جد', 'جده', 'ام', 'ابو', 'عن', 'روي', 'او', 'يقال', 'ويقال', 'قيل', 'وقيل']);
 function kunyaTail(text) {
-  const re = /(?:^| )((?:ابو|ام) (?!بن )[^ ]+(?: ال[^ ]{3,})?)(?= |$)/g;
+  const re = /(?:^| )((?:ابو|ام) (?!بن )(?:(?:عبد|عبيد) [^ ]+|[^ ]+)(?: ال[^ ]{3,})?)(?= |$)/g;
   let m;
   while ((m = re.exec(text))) {
     const pre = text.slice(0, m.index).trim(); const before = pre.split(' ').pop();
@@ -173,7 +179,15 @@ export function subsetIndex(entries) {
 }
 export function subsetCandidates(index, key) {
   const kw = key.split(' ').map((x, i, a) => x === 'ابن' && i > 0 && a[i + 1] ? 'بن' : x);
-  if (kw.length < 2 || kw[0] === 'ابن') return [];
+  if (kw.length === 1) { // a single given name ("بريره", "مكحول", "كريب"): the men known by that name alone, when they are few
+    if (/^(?:ابو|ام|ابن|ال)/.test(kw[0])) return [];
+    const pool = index.byHead.get(noArt(kw[0])) || [];
+    if (!pool.length || pool.length > 8) return [];
+    if (pool.length === 1) return [[pool[0], 2]];
+    const noNasab = pool.filter(t => !t._chain.length && !t.stub); // "سمي مولى أبي بكر", "بريرة مولاة عائشة": known by one name; a stub ("محمد عن رجل") is not
+    return noNasab.length >= 1 && noNasab.length <= 2 ? noNasab.map(t => [t, 2]) : [];
+  }
+  if (kw[0] === 'ابن') return [];
   const head = (kw[0] === 'ابو' || kw[0] === 'ام') && kw[1] ? `${kw[0]} ${kw[1]}` : (isTheo(kw, 0) ? `${kw[0]} ${kw[1]}` : noArt(kw[0]));
   const givenName = kw[0].startsWith('ال') && index.byHead.has(noArt(kw[0])); // "الحجاج", "الحكم": a given name with the article, not a nisba
   const pool = [...(index.byHead.get(head) || []), ...((kw[0].startsWith('ال') && !givenName) || head.startsWith('ابو ') || head.startsWith('ام ') ? index.byWord.get(kw[0]) || [] : [])];
@@ -325,10 +339,10 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
   const sTaq = subsetIndex(taqrib), sTah = subsetIndex(tahdhib);
   const cands = (idx, e, sidx) => {
     const seen = new Map(), by = new Map();
-    const take = (entry, s, k) => { if (isBareEntry(entry)) return; if (!seen.has(entry) || seen.get(entry) < s) seen.set(entry, s); const b = keyBonus(k, entry); if ((by.get(entry) || 0) < b) by.set(entry, b); };
+    const take = (entry, s, k, allowBare = false) => { if (isBareEntry(entry) && (!allowBare || entry.stub)) return; if (!seen.has(entry) || seen.get(entry) < s) seen.set(entry, s); const b = keyBonus(k, entry); if ((by.get(entry) || 0) < b) by.set(entry, b); };
     for (const k of [e.key, ...(aliases.get(e.key) || [])]) {
       for (const [entry, s] of idx.get(k) || []) take(entry, s, k);
-      if (sidx && k.includes(' ')) for (const [entry, st] of subsetCandidates(sidx, k)) take(entry, st, k); // every word of the name inside the entry
+      if (sidx) for (const [entry, st] of subsetCandidates(sidx, k)) take(entry, st, k, !k.includes(' ')); // every word of the name inside the entry; a single name may meet a man known by one name
     }
     return [...seen].map(([entry, s]) => [entry, s, by.get(entry) || 0]);
   };
@@ -394,8 +408,7 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
       if (best) { e.tahdhib = best.e; stats.tahdhib++; } else if (ranked.length > 1) stats.tahdhibAmbiguous++;
     }
     {
-      // a bare single-word entity ("سفيان", "عمر~") that several persons of the books share is left unmatched: it pools several people
-      if (!e.key.includes(' ') && !/^(?:ابو|ابن|ام|ال)/.test(e.key) && (iTaq.get(e.key) || []).length + taqrib.filter(t => cleanName(t.name).split(' ')[0] === e.key).length > 1) continue;
+      // a bare single-word entity ("سفيان", "محمد") shared by many men gets no candidate from subsetCandidates; the few known by one name ("بريره", "مكحول") do
       // a reference-dated narrator is never matched through a weak key ("ابن شهاب" → عبد الله بن شهاب): stage 2 handles him by death year
       const deathAgrees = t => t.death != null && e.death != null && Math.abs(closestDeath(t, e.death) - e.death) <= 3;
       const ranked = cands(iTaq, e, sTaq).filter(([t, strength]) => dateOk(t, e) && (e.dated !== 'reference' || genOk(t.layer, e.gen)) && !(e.dated === 'reference' && ((strength <= 1 && !deathAgrees(t)) || t.stub || (t.death == null && !t.layer)))).map(([t, strength, bonus]) => {
@@ -489,7 +502,7 @@ export function matchSource(ents, aliases, entries, srcId, { companions = false 
     if (companions && e.gen !== 'sahabi' && e.layer !== 1) continue; // a dictionary of companions only speaks of companions
     const keys = [e.key, ...(aliases.get(e.key) || [])];
     const seen = new Map();
-    for (const k of keys) { for (const [t, st] of idx.get(k) || []) if (!isBareEntry(t) && (!seen.has(t) || seen.get(t) < st)) seen.set(t, st); if (k.includes(' ')) for (const [t, st] of subsetCandidates(sIdx, k)) if (!isBareEntry(t) && (!seen.has(t) || seen.get(t) < st)) seen.set(t, st); }
+    for (const k of keys) { for (const [t, st] of idx.get(k) || []) if (!isBareEntry(t) && (!seen.has(t) || seen.get(t) < st)) seen.set(t, st); for (const [t, st] of subsetCandidates(sIdx, k)) if ((!isBareEntry(t) || (!k.includes(' ') && !t.stub)) && (!seen.has(t) || seen.get(t) < st)) seen.set(t, st); }
     // through the Taqrīb / Tahdhīb entry already found: same head word and compatible name
     const anchorNames = [e.taqrib && cleanName(e.taqrib.name), e.tahdhib && cleanName(e.tahdhib.name)].filter(Boolean);
     for (const an of anchorNames) for (const t of heads.get(an.split(' ')[0]) || []) { const tn = cleanName(t.name); if ((compat(an, tn) || compat(tn, an)) && !seen.has(t)) seen.set(t, 2); }
@@ -552,6 +565,11 @@ export function trimFullName(clean, links = 3) {
   for (; i < w.length;) {
     if ((w[i] === 'ابو' || w[i] === 'ام') && w[i + 1] && !kunya) { nm = nameAt(i); out.push(...nm); i += nm.length; kunya = true; continue; }
     if (w[i].startsWith('ال') && w[i].length > 3 && !NISBA_STOP.has(w[i])) { if (nisbas < 3) { out.push(w[i]); nisbas++; } i++; continue; }
+    if ((w[i] === 'مولي' || w[i] === 'مولاه' || w[i] === 'مولاة') && w[i + 1] && !out.includes('بن')) { // a man known by one name and his patron
+      out.push(w[i]); i++; nm = nameAt(i); out.push(...nm); i += nm.length;
+      let l = 0; while (l < 2 && (w[i] === 'بن' || w[i] === 'بنت') && w[i + 1]) { nm = nameAt(i + 1); out.push(w[i], ...nm); i += 1 + nm.length; l++; }
+      continue;
+    }
     break;
   }
   return out.join(' ');

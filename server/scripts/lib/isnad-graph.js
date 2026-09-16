@@ -60,9 +60,12 @@ const BRACKETS = new Set(['{', '}', '[', ']', '<', '>', '|', '*', '_']);
 /** Same as normalizeArabic but returns, for every normalized char, the index of the source char. */
 export function normalizeWithMap(text) {
   const out = [], map = [];
-  let lastSpace = true;
+  let lastSpace = true, quoted = false;
   for (let i = 0; i < text.length; i++) {
     let c = text[i];
+    if (c === '{') { quoted = true; continue; }                 // a Qurʾānic quotation ({هيت لك}) never holds a narrator
+    if (c === '}') { quoted = false; if (!lastSpace) { out.push(' '); map.push(i); lastSpace = true; } continue; }
+    if (quoted) continue;
     if (DIACRITIC_CHAR.test(c) || DROP.has(c)) continue;
     if (/\s/.test(c) || BRACKETS.has(c)) { if (!lastSpace) { out.push(' '); map.push(i); lastSpace = true; } continue; }
     c = CHAR_MAP[c] || c;
@@ -205,6 +208,7 @@ function connectorAt(tokens, i) {
   const t = tokens[i];
   if ((t === 'قال' || t === 'وقال' || t === 'فقال') && (tokens[i + 1] === 'لي' || tokens[i + 1] === 'لنا')) return { conn: 'قال ' + tokens[i + 1], len: 2 };
   const c = connectorOf(t);
+  if (c && CONNECTOR_TAIL[c] && CONNECTOR_TAIL[c].length && !CONNECTOR_TAIL[c].includes(tokens[i + 1])) return null; // "قرأ" transmits only as "قرأ علينا / على فلان"; "قرأ {هيت لك}" is a recitation
   return c ? { conn: c, len: 1 } : null;
 }
 
