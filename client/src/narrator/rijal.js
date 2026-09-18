@@ -1,21 +1,22 @@
 // The notices of the rijāl books matched to this narrator (texts from OpenITI, CC BY-NC-SA 4.0).
+import { deathAt } from '../lib/constants.js';
 const BOOKS = {
-  tahdhib: { title: 'تهذيب التهذيب', author: 'ابن حجر العسقلاني (ت 852 هـ)' },
-  kamal: { title: 'تهذيب الكمال في أسماء الرجال', author: 'جمال الدين المزّي (ت 742 هـ)' },
-  kashif: { title: 'الكاشف', author: 'شمس الدين الذهبي (ت 748 هـ)' },
-  jarh: { title: 'الجرح والتعديل', author: 'ابن أبي حاتم الرازي (ت 327 هـ)' },
-  thiqat: { title: 'الثقات', author: 'ابن حبّان البستي (ت 354 هـ)' },
-  tarikh: { title: 'التاريخ الكبير', author: 'البخاري (ت 256 هـ)' },
-  sacd: { title: 'الطبقات الكبرى', author: 'ابن سعد (ت 230 هـ)' },
-  ijli: { title: 'معرفة الثقات', author: 'العجلي (ت 261 هـ)' },
-  majruhin: { title: 'المجروحين', author: 'ابن حبّان البستي (ت 354 هـ)' },
-  shahin: { title: 'تاريخ أسماء الثقات', author: 'ابن شاهين (ت 385 هـ)' },
-  mizan: { title: 'ميزان الاعتدال', author: 'شمس الدين الذهبي (ت 748 هـ)' },
-  siyar: { title: 'سير أعلام النبلاء', author: 'شمس الدين الذهبي (ت 748 هـ)' },
-  istiab: { title: 'الاستيعاب في معرفة الأصحاب', author: 'ابن عبد البر (ت 463 هـ)' },
-  usd: { title: 'أسد الغابة', author: 'ابن الأثير (ت 630 هـ)' },
-  isaba: { title: 'الإصابة في تمييز الصحابة', author: 'ابن حجر العسقلاني (ت 852 هـ)' },
-  nuaym: { title: 'معرفة الصحابة', author: 'أبو نعيم الأصبهاني (ت 430 هـ)' },
+  tahdhib: { title: 'تهذيب التهذيب', author: `ابن حجر العسقلاني، ${deathAt(852)}` },
+  kamal: { title: 'تهذيب الكمال في أسماء الرجال', author: `جمال الدين المزّي، ${deathAt(742)}` },
+  kashif: { title: 'الكاشف', author: `شمس الدين الذهبي، ${deathAt(748)}` },
+  jarh: { title: 'الجرح والتعديل', author: `ابن أبي حاتم الرازي، ${deathAt(327)}` },
+  thiqat: { title: 'الثقات', author: `ابن حبّان البستي، ${deathAt(354)}` },
+  tarikh: { title: 'التاريخ الكبير', author: `البخاري، ${deathAt(256)}` },
+  sacd: { title: 'الطبقات الكبرى', author: `ابن سعد، ${deathAt(230)}` },
+  ijli: { title: 'معرفة الثقات', author: `العجلي، ${deathAt(261)}` },
+  majruhin: { title: 'المجروحين', author: `ابن حبّان البستي، ${deathAt(354)}` },
+  shahin: { title: 'تاريخ أسماء الثقات', author: `ابن شاهين، ${deathAt(385)}` },
+  mizan: { title: 'ميزان الاعتدال', author: `شمس الدين الذهبي، ${deathAt(748)}` },
+  siyar: { title: 'سير أعلام النبلاء', author: `شمس الدين الذهبي، ${deathAt(748)}` },
+  istiab: { title: 'الاستيعاب في معرفة الأصحاب', author: `ابن عبد البر، ${deathAt(463)}` },
+  usd: { title: 'أسد الغابة', author: `ابن الأثير، ${deathAt(630)}` },
+  isaba: { title: 'الإصابة في تمييز الصحابة', author: `ابن حجر العسقلاني، ${deathAt(852)}` },
+  nuaym: { title: 'معرفة الصحابة', author: `أبو نعيم الأصبهاني، ${deathAt(430)}` },
 };
 const ORDER = ['sacd', 'tarikh', 'ijli', 'jarh', 'thiqat', 'majruhin', 'shahin', 'nuaym', 'istiab', 'usd', 'kamal', 'kashif', 'mizan', 'siyar', 'tahdhib', 'isaba'];
 

@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { GCS, GL } from '../lib/constants.js';
+import { GCS, GL, fmtYear } from '../lib/constants.js';
 import { buildSelLines, flyTo } from './selection.js';
 import { updateTimeline } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
@@ -33,13 +33,13 @@ export function openPanel(n, { keepPath = false } = {}) {
   const rel = state.transmissions.filter(t => t.student_id === n.id || t.teacher_id === n.id);
   const teachers = rel.filter(t => t.student_id === n.id).map(t => ({ n: state.narById.get(t.teacher_id), w: t.count })).filter(x => x.n).sort((a, b) => b.w - a.w);
   const students = rel.filter(t => t.teacher_id === n.id).map(t => ({ n: state.narById.get(t.student_id), w: t.count })).filter(x => x.n).sort((a, b) => b.w - a.w);
-  const item = ({ n: x, w }) => `<div class="pl-item" data-narrator-id="${x.id}"><div class="pl-d" style="background:${GCS[x.generation]};box-shadow:0 0 4px ${GCS[x.generation]}"></div><span class="pl-n">${x.name_ar}</span><span class="pl-e">${w > 1 ? '×' + ar(w) + ' · ' : ''}${x.death_ah ? ar(x.death_ah) + 'هـ' : ''}</span></div>`;
+  const item = ({ n: x, w }) => `<div class="pl-item" data-narrator-id="${x.id}"><div class="pl-d" style="background:${GCS[x.generation]};box-shadow:0 0 4px ${GCS[x.generation]}"></div><span class="pl-n">${x.name_ar}</span><span class="pl-e">${w > 1 ? '×' + ar(w) + ' · ' : ''}${x.death_ah ? fmtYear(x.death_ah) : ''}</span></div>`;
   const list = arr => arr.map(item).join('');
 
   document.getElementById('pb').innerHTML = `
     ${state.hadith && hadithApi ? `<button id="back-hadith" class="cb wide">↩ العودة إلى الحديث</button>` : ''}
     <a href="narrator.html?id=${n.id}" class="full-link">ترجمة الراوي الكاملة ←</a>
-    <div class="ir"><span class="il">وفاته</span><span class="iv">${n.death_ah ? ar(n.death_ah) + ' هـ' + (n.death_estimated ? ' <small title="تاريخ مقدَّر من موقعه في الأسانيد">(تقديري)</small>' : '') : '—'}</span></div>
+    <div class="ir"><span class="il">وفاته</span><span class="iv">${n.death_ah ? fmtYear(n.death_ah) + (n.death_estimated ? ' <small title="تاريخ مقدَّر من موقعه في الأسانيد">(تقديري)</small>' : '') : '—'}</span></div>
     <div class="ir"><span class="il">المنشأ</span><span class="iv">${n.origin || '—'}</span></div>
     <div class="ir"><span class="il">وروده في الأسانيد</span><span class="iv">${ar((n.hadith_count || 0).toLocaleString('en'))}</span></div>
     <div class="ir"><span class="il">الحكم</span><span class="iv">${n.reliability || '—'}</span></div>

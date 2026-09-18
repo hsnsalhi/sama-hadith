@@ -1,8 +1,10 @@
-import { AVG_LIFE } from '../lib/constants.js';
+import { AVG_LIFE, fmtYear, hijriToCe } from '../lib/constants.js';
 
 export function drawMiniTimeline(narrator, col) {
   const ERA_MIN = 1, ERA_MAX = 950;
   function pct(y) { return Math.max(0, Math.min(100, (y - ERA_MIN) / (ERA_MAX - ERA_MIN) * 100)); }
+  // keep a label inside the card: centred on its year, except near the edges
+  function anchor(el, p) { el.style.left = p + '%'; el.style.transform = p < 8 ? 'none' : p > 92 ? 'translateX(-100%)' : 'translateX(-50%)'; }
 
   const life = AVG_LIFE[narrator.generation] || 70;
   const death = narrator.death_ah || 300;
@@ -17,6 +19,15 @@ export function drawMiniTimeline(narrator, col) {
   ];
 
   const track = document.getElementById('mini-tl');
+  document.querySelectorAll('#mtl-axis [data-h]').forEach(el => {
+    const h = Number(el.dataset.h);
+    el.innerHTML = '';
+    const ce = document.createElement('span'); ce.className = 'ce'; ce.textContent = `${hijriToCe(h)} م`;
+    const ah = document.createElement('span'); ah.className = 'ah'; ah.textContent = `(${h} هـ)`;
+    el.append(ce, ah);
+    el.title = fmtYear(h);
+    anchor(el, pct(h));
+  });
   eras.forEach(e => {
     const d = document.createElement('div');
     d.className = 'mtl-era';
@@ -31,15 +42,15 @@ export function drawMiniTimeline(narrator, col) {
   b.style.cssText = `left:${lp}%;color:${col};`;
   const bl = document.createElement('div');
   bl.className = 'mtl-label top';
-  bl.style.left = lp + '%';
-  bl.textContent = 'ولادة ~' + birth + 'هـ';
+  anchor(bl, lp);
+  bl.textContent = 'ولادة ~' + fmtYear(birth);
   track.appendChild(bl);
 
   const dm = document.getElementById('mtl-death-dot');
   dm.style.cssText = `left:${rp}%;background:${col};box-shadow:0 0 6px ${col};position:absolute;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;`;
   const dl = document.createElement('div');
   dl.className = 'mtl-label bot';
-  dl.style.left = rp + '%';
-  dl.textContent = 'وفاة ' + death + 'هـ';
+  anchor(dl, rp);
+  dl.textContent = 'وفاة ' + fmtYear(death);
   track.appendChild(dl);
 }

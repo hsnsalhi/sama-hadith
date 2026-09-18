@@ -1,3 +1,4 @@
+import { deathAt } from '../lib/constants.js';
 import '../styles/stats.css';
 import { getManifest, getTransmissions } from '../lib/api.js';
 
@@ -65,8 +66,8 @@ async function main() {
   </div>
   <div class="card"><h3>تراجم الرواة</h3>
     <div class="tblwrap"><table><tr><th>الكتاب</th><th>المؤلف</th><th class="n">التراجم</th><th class="n">بسنة وفاة</th><th class="n">بقوائم الرواة</th><th class="n">بأحكام النقّاد</th><th class="n">راوٍ مطابَق</th></tr>
-    ${(s.rijal?.books || []).map(b => `<tr><td>${b.title}</td><td>${b.author} (ت ${b.author_death} هـ)</td><td class="n">${f(b.entries)}</td><td class="n">${f(b.with_death)}</td><td class="n">${f(b.with_lists)}</td><td class="n">${f(b.with_verdicts)}</td><td class="n">${f(b.matched)}</td></tr>`).join('')}</table></div>
-    <p><b>تقريب التهذيب</b> لابن حجر العسقلاني (ت 852 هـ): ${f(s.rijal?.taqrib?.entries)} ترجمة، استُخرج منها الحكم لـ${f(s.rijal?.taqrib?.with_grade)} راوياً، والطبقة لـ${f(s.rijal?.taqrib?.with_layer)}، وسنة الوفاة لـ${f(s.rijal?.taqrib?.with_death)}.</p>
+    ${(s.rijal?.books || []).map(b => `<tr><td>${b.title}</td><td>${b.author}، ${deathAt(b.author_death)}</td><td class="n">${f(b.entries)}</td><td class="n">${f(b.with_death)}</td><td class="n">${f(b.with_lists)}</td><td class="n">${f(b.with_verdicts)}</td><td class="n">${f(b.matched)}</td></tr>`).join('')}</table></div>
+    <p><b>تقريب التهذيب</b> لابن حجر العسقلاني، ${deathAt(852)}: ${f(s.rijal?.taqrib?.entries)} ترجمة، استُخرج منها الحكم لـ${f(s.rijal?.taqrib?.with_grade)} راوياً، والطبقة لـ${f(s.rijal?.taqrib?.with_layer)}، وسنة الوفاة لـ${f(s.rijal?.taqrib?.with_death)}.</p>
     <p><b>تهذيب التهذيب</b> لابن حجر: ${f(s.rijal?.tahdhib?.entries)} ترجمة موسّعة، منها ${f(s.rijal?.tahdhib?.with_teachers)} بقائمة «روى عن» و${f(s.rijal?.tahdhib?.with_students)} بقائمة «روى عنه».</p>
     <p class="note">كل كتاب يُحمَّل نصّه من مستودعات OpenITI عند البناء ويُقرأ آلياً: يُستخرج من كل ترجمة الاسم، ورموز الكتب الستة إن وُجدت، وسنة الوفاة، وقوائم «روى عن» و«روى عنه»، وأقوال النقّاد. ثم تُطابَق الترجمة مع الراوي بالاسم وأجزائه، والرموز، وسنة الوفاة، والرواة المشتركين في الأسانيد، وبترجمته في تقريب التهذيب إن سبقت مطابقتها. كتب الصحابة (الاستيعاب، أسد الغابة، الإصابة، معرفة الصحابة) لا تُطابَق إلا مع رواة الطبقة الأولى. الحالات الملتبسة تُترك بلا مطابقة، وتُعرض كل ترجمة على صفحة الراوي مع اسم الكتاب ورقم الترجمة للتحقق.</p>
     <p class="note">النصان من مشروع <a href="${s.rijal?.url || '#'}" target="_blank" rel="noopener">OpenITI</a> (${s.rijal?.name || ''})، الرخصة ${s.rijal?.licence || 'CC BY-NC-SA 4.0'}. وهما نصوص رقمية مصحَّحة آلياً قد تحوي أخطاء طباعية؛ تُعرض كما هي مع ذكر رقم الترجمة.</p></div>

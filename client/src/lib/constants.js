@@ -14,6 +14,12 @@ export const GCS = {
   rijal: '#7af5c0',
 };
 
+// Years: the atlas counts in hijrī years; every date is shown as "671 م (50 هـ)" (Gregorian first, hijrī in parentheses)
+export const hijriToCe = h => Math.round(h * 0.970229 + 621.5643);
+export const fmtYear = (h, approx = false) => h == null || h === '' ? '؟' : `${hijriToCe(h)} م (${h} هـ)${approx ? ' ~' : ''}`;
+/** "ت 852 هـ" inside a sentence → "ت 1449 م (852 هـ)" */
+export const deathAt = h => `ت ${fmtYear(h)}`;
+
 // Generation labels (Arabic)
 export const GL = {
   sahabi: 'صحابي',

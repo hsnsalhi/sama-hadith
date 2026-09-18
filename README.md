@@ -33,7 +33,7 @@
 
 ## English
 
-**Sama al-Hadith** ("the sky of hadith") is an interactive atlas of the narrators of the seven canonical hadith collections: Ṣaḥīḥ al-Bukhārī, Ṣaḥīḥ Muslim, Sunan Abī Dāwūd, Jāmiʿ al-Tirmidhī, Sunan al-Nasāʾī, Sunan Ibn Mājah and the Muwaṭṭaʾ of Mālik. The chain of transmission (isnād) of every hadith is parsed automatically, the resulting network of narrators (who transmitted from whom) is built, and it is displayed as a "sky" that can be explored in two or three dimensions: the horizontal axis is time (year of death, Hijri), the vertical axis the narrator's home town, the depth his position in the chains.
+**Sama al-Hadith** ("the sky of hadith") is an interactive atlas of the narrators of the seven canonical hadith collections: Ṣaḥīḥ al-Bukhārī, Ṣaḥīḥ Muslim, Sunan Abī Dāwūd, Jāmiʿ al-Tirmidhī, Sunan al-Nasāʾī, Sunan Ibn Mājah and the Muwaṭṭaʾ of Mālik. The chain of transmission (isnād) of every hadith is parsed automatically, the resulting network of narrators (who transmitted from whom) is built, and it is displayed as a "sky" that can be explored in two or three dimensions: the horizontal axis is time (year of death, shown as « 670 م (50 هـ) », Gregorian first then Hijri), the vertical axis the narrator's home town, the depth his position in the chains.
 
 Live site: <https://hsnsalhi.github.io/sama-hadith/>
 

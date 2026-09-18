@@ -1,4 +1,4 @@
-import { GCS } from '../lib/constants.js';
+import { GCS, fmtYear } from '../lib/constants.js';
 
 export function drawIsnad(narrator, teachers, students) {
   const cv = document.getElementById('isnad-canvas');
@@ -79,7 +79,7 @@ export function drawIsnad(narrator, teachers, students) {
     if (nd.n.death_ah) {
       ctx.font = '9px Cairo,sans-serif';
       ctx.fillStyle = 'rgba(201,168,76,.35)';
-      ctx.fillText(nd.n.death_ah + 'هـ', nd.x, nd.y + nd.r + 25);
+      ctx.fillText(fmtYear(nd.n.death_ah), nd.x, nd.y + nd.r + 25);
     }
   });
 }

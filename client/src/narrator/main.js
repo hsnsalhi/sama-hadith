@@ -1,5 +1,5 @@
 import '../styles/narrator.css';
-import { GCS, GL, kindOf, KINDS, gradeAr, graderAr } from '../lib/constants.js';
+import { GCS, GL, kindOf, KINDS, gradeAr, graderAr, fmtYear, deathAt } from '../lib/constants.js';
 import { getCollections } from '../lib/api.js';
 import { getCoords } from '../lib/utils.js';
 import { getNarratorById, getTransmissionsByNarrator, getHadith, getNarratorMap, getHadithRowsByNarrator, getRijal, getManifest } from '../lib/api.js';
@@ -65,7 +65,7 @@ async function main() {
 
     // STATS
     document.getElementById('st-hadiths').textContent = ar((hadithIds.length || n.hadith_count || 0).toLocaleString('en'));
-    document.getElementById('st-death').textContent = n.death_ah ? ar(n.death_ah) + ' هـ' + (n.death_estimated ? ' ~' : '') : '—';
+    document.getElementById('st-death').textContent = n.death_ah ? fmtYear(n.death_ah, n.death_estimated) : '—';
     if (n.death_estimated) document.getElementById('st-death').title = 'تاريخ مقدَّر من موقعه في الأسانيد';
     document.getElementById('st-teachers').textContent = teachers.length;
     document.getElementById('st-students').textContent = students.length;
@@ -89,7 +89,7 @@ async function main() {
     }
 
     // TEACHERS / STUDENTS — complete lists
-    const personRow = ({ n: x, w }) => `<a class="person-row" href="narrator.html?id=${x.id}"><i style="background:${GCS[x.generation] || '#c9a84c'}"></i><span class="person-name">${x.name_ar}</span><span class="person-meta">${w > 1 ? '×' + ar(w) + ' · ' : ''}${x.death_ah ? ar(x.death_ah) + ' هـ' + (x.death_estimated ? '~' : '') : ''}</span></a>`;
+    const personRow = ({ n: x, w }) => `<a class="person-row" href="narrator.html?id=${x.id}"><i style="background:${GCS[x.generation] || '#c9a84c'}"></i><span class="person-name">${x.name_ar}</span><span class="person-meta">${w > 1 ? '×' + ar(w) + ' · ' : ''}${x.death_ah ? fmtYear(x.death_ah, x.death_estimated) : ''}</span></a>`;
     if (teacherRows.length || studentRows.length) {
       document.getElementById('sec-people').style.display = 'block';
       document.getElementById('teachers-list').innerHTML = teacherRows.length ? `<div class="people-title">روى عن <span>${ar(teacherRows.length)}</span></div>` + teacherRows.map(personRow).join('') : '';
@@ -163,8 +163,8 @@ function renderBiography(n, teachers, students, hadithRows, trans, collections, 
     const parts = [];
     if (t.grade) parts.push(`<span class="rq-chip">الحكم: ${t.grade}</span>`);
     if (t.layer) parts.push(`<span class="rq-chip">الطبقة ${t.layer}: ${layerNames[t.layer] || ''}</span>`);
-    if (t.death) parts.push(`<span class="rq-chip">الوفاة: ${t.approx ? 'نحو ' : ''}${t.death} هـ</span>`);
-    rq.innerHTML = `<div class="prov">تقريب التهذيب لابن حجر العسقلاني (ت 852 هـ) · الترجمة رقم ${t.n} · نص OpenITI</div><div class="rq-text">${rijal.taqrib}</div><div class="rq-chips">${parts.join('')}</div>`;
+    if (t.death) parts.push(`<span class="rq-chip">الوفاة: ${t.approx ? 'نحو ' : ''}${fmtYear(t.death)}</span>`);
+    rq.innerHTML = `<div class="prov">تقريب التهذيب لابن حجر العسقلاني، ${deathAt(852)} · الترجمة رقم ${t.n} · نص OpenITI</div><div class="rq-text">${rijal.taqrib}</div><div class="rq-chips">${parts.join('')}</div>`;
     rq.style.borderColor = col + '55';
   } else rq.style.display = 'none';
 
@@ -178,7 +178,7 @@ function renderBiography(n, teachers, students, hadithRows, trans, collections, 
   const topS = students.slice(0, 5).map(x => `${x.n.name_ar} (${x.w})`);
 
   const p = [];
-  p.push(`<b>${n.name_ar}</b>${n.name_latin ? ` <span class="latin">${n.name_latin}</span>` : ''}، ${LAYER_TEXT[n.generation] || ''}${n.origin ? `، من أهل ${n.origin}` : ''}${n.death_ah ? `، ${n.death_estimated ? 'يُقدَّر أنه توفي نحو سنة' : 'توفي سنة'} ${n.death_ah} هـ` : ''}${n.reliability ? `، حكمه عند النقّاد: «${n.reliability}»` : ''}.${n.compiler ? ' وهو مؤلِّف أحد الكتب المعتمدة في هذا الأطلس، فيبدأ به إسناد كل حديث في كتابه.' : ''}`);
+  p.push(`<b>${n.name_ar}</b>${n.name_latin ? ` <span class="latin">${n.name_latin}</span>` : ''}، ${LAYER_TEXT[n.generation] || ''}${n.origin ? `، من أهل ${n.origin}` : ''}${n.death_ah ? `، ${n.death_estimated ? 'يُقدَّر أنه توفي نحو سنة' : 'توفي سنة'} ${fmtYear(n.death_ah)}` : ''}${n.reliability ? `، حكمه عند النقّاد: «${n.reliability}»` : ''}.${n.compiler ? ' وهو مؤلِّف أحد الكتب المعتمدة في هذا الأطلس، فيبدأ به إسناد كل حديث في كتابه.' : ''}`);
   if (teachers.length || students.length) {
     let t = '';
     if (teachers.length) t += `روى عن ${plural(teachers.length, 'راوٍ واحد', 'راويين', 'رواة', 'راوياً')}${topT.length > 1 ? `، وأكثر مروياته عن ${joinAr(topT)}` : ''}`;
@@ -202,7 +202,7 @@ function renderBiography(n, teachers, students, hadithRows, trans, collections, 
   const facts = [
     ['الطبقة', GL[n.generation] || n.generation],
     ['طبقته عند ابن حجر', n.layer ? `${n.layer} · ${layerNames[n.layer] || ''}` : '—'],
-    ['الوفاة', n.death_ah ? `${n.death_ah} هـ${n.death_estimated ? ' (تقديري)' : ''}` : '—'],
+    ['الوفاة', n.death_ah ? `${fmtYear(n.death_ah)}${n.death_estimated ? ' (تقديري)' : ''}` : '—'],
     ['مصدر التاريخ', DEATH_SRC[n.death_source] || '—'],
     ['المنشأ', n.origin || '—'],
     ['الحكم', n.reliability || '—'],

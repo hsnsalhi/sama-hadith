@@ -69,6 +69,9 @@ body { background: var(--bg); color: rgba(245,232,200,.88); font-family: 'Cairo'
 #mtl-birth { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 8px; height: 8px; border-radius: 50%; border: 1px solid currentColor; }
 #mtl-death { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 8px; height: 8px; border-radius: 50%; }
 .mtl-label { position: absolute; font-size: 9px; opacity: .5; white-space: nowrap; transform: translateX(-50%); }
+#mtl-axis { position: relative; height: 24px; margin-top: 6px; font-size: 9px; opacity: .45; }
+#mtl-axis [data-h] { position: absolute; top: 0; display: flex; flex-direction: column; align-items: center; white-space: nowrap; line-height: 1.15; font-variant-numeric: tabular-nums; }
+#mtl-axis .ah { font-size: .85em; opacity: .75; }
 .mtl-label.top { bottom: calc(50% + 10px); }
 .mtl-label.bot { top: calc(50% + 10px); }
 .mtl-era { position: absolute; top: 0; bottom: 0; opacity: .06; }
@@ -118,6 +121,7 @@ body { background: var(--bg); color: rgba(245,232,200,.88); font-family: 'Cairo'
 
 /* RESPONSIVE */
 @media(max-width: 700px) {
+  #mtl-axis [data-h="1"], #mtl-axis [data-h="300"] { display: none; }
   #stats { grid-template-columns: repeat(2, 1fr); }
   #hero { flex-direction: column; }
   #hero-name { font-size: 26px; }

@@ -4,7 +4,7 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { state } from './state.js';
-import { GC_HEX, GCS, GL, KINDS, kindOf, gradeAr, graderAr } from '../lib/constants.js';
+import { GC_HEX, GCS, GL, KINDS, kindOf, gradeAr, graderAr, fmtYear } from '../lib/constants.js';
 import { setHighlight, positionOf } from './stars.js';
 import { updateTimelineRange } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
@@ -210,7 +210,7 @@ function buildLabels(h, ids) {
     const el = document.createElement('div');
     el.className = 'plbl node' + (n.compiler ? ' compiler' : '');
     el.style.setProperty('--c', GCS[n.generation] || '#c9a84c');
-    el.innerHTML = `<span class="plbl-n">${n.name_short || n.name_ar}</span><span class="plbl-d">${n.death_ah ? toArabicDigits(n.death_ah) + ' هـ' + (n.death_estimated ? ' ~' : '') : ''}</span>`;
+    el.innerHTML = `<span class="plbl-n">${n.name_short || n.name_ar}</span><span class="plbl-d">${n.death_ah ? fmtYear(n.death_ah) + (n.death_estimated ? ' ~' : '') : ''}</span>`;
     el.addEventListener('click', () => openPanel(n, { keepPath: true }));
     layer.appendChild(el);
     labelItems.push({ el, pos: positionOf(n), kind: 'node' });

@@ -193,8 +193,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 .tl-era-label {
   font-family: 'Cairo', sans-serif; font-size: 10.5px;
   color: rgba(245,232,200,.85); text-align: center; font-variant-numeric: tabular-nums;
-  position: relative;
+  position: relative; transform: translateX(-50%); white-space: nowrap; line-height: 1.15;
+  display: flex; flex-direction: column; align-items: center;
 }
+.tl-era-label .ah { font-size: .85em; color: rgba(245,232,200,.55); }
 .tl-era-label::before {
   content: ''; position: absolute; top: -8px; left: 50%;
   width: 1px; height: 5px; background: rgba(240,208,128,.5);

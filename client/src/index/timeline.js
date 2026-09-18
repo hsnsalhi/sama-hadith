@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { GCS, ERAS, AVG_LIFE } from '../lib/constants.js';
+import { GCS, ERAS, AVG_LIFE, fmtYear, hijriToCe } from '../lib/constants.js';
 import { openPanel } from './panel.js';
 
 function tlPct(year) {
@@ -42,13 +42,17 @@ export function buildTimeline() {
   years.forEach(y => {
     const sp = document.createElement('span');
     sp.className = 'tl-era-label';
-    sp.textContent = y + ' هـ';
+    // two stacked lines so the labels stay readable on narrow screens: « 670 م » over « (50 هـ) »
+    const ce = document.createElement('span'); ce.className = 'ce'; ce.textContent = `${hijriToCe(y)} م`;
+    const ah = document.createElement('span'); ah.className = 'ah'; ah.textContent = `(${y} هـ)`;
+    sp.append(ce, ah);
+    sp.title = fmtYear(y);
     sp.style.left = tlPct(y) + '%';
     sp.style.position = 'absolute';
     labelsEl.appendChild(sp);
   });
   labelsEl.style.position = 'relative';
-  labelsEl.style.height = '16px';
+  labelsEl.style.height = '26px';
 
   // Dots: every narrator, drawn on a canvas (thousands of DOM nodes would be too heavy)
   track.querySelectorAll('.tl-dot').forEach(d => d.remove());
@@ -94,7 +98,7 @@ function tlHover(e) {
   const tip = document.getElementById('tl-year-tip');
   tip.style.left = x + 'px';
   tip.style.opacity = '1';
-  tip.textContent = year + ' هـ';
+  tip.textContent = fmtYear(year);
 }
 
 function tlLeave() {
@@ -151,8 +155,8 @@ export function updateTimeline(narrator) {
   hlName.style.color = col;
   hlName.style.textShadow = `0 0 10px ${col}`;
 
-  const birthStr = birthEst ? `${Math.max(0, birthEst)} هـ` : '؟';
-  const deathStr = narrator.death_ah ? `${narrator.death_ah} هـ` : '؟';
+  const birthStr = birthEst ? fmtYear(Math.max(0, birthEst)) : '؟';
+  const deathStr = narrator.death_ah ? fmtYear(narrator.death_ah) : '؟';
   hlDates.textContent = `${birthStr} — ${deathStr}`;
 }
 
@@ -167,5 +171,5 @@ export function updateTimelineRange(start, end, label, col = '#f0d080') {
   hlLabel.style.left = (l + (r - l) / 2) + '%'; hlLabel.style.opacity = '1';
   const name = document.getElementById('tl-hl-name'), dates = document.getElementById('tl-hl-dates');
   name.textContent = label || ''; name.style.color = col; name.style.textShadow = `0 0 10px ${col}`;
-  dates.textContent = `${start} — ${end} هـ`;
+  dates.textContent = `${fmtYear(start)} — ${fmtYear(end)}`;
 }
