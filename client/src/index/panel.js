@@ -25,7 +25,7 @@ export function openPanel(n, { keepPath = false } = {}) {
 
   const col = GCS[n.generation] || '#c9a84c';
   document.getElementById('pdot').style.cssText = `background:${col};box-shadow:0 0 6px ${col}`;
-  document.getElementById('pgt').textContent = (GL[n.generation] || n.generation) + (n.compiler ? ' · مؤلِّف' : '');
+  document.getElementById('pgt').textContent = (GL[n.generation] || n.generation) + (n.compiler ? ' · مؤلِّف' : '') + (n.unnamed ? ' · لم يُسمَّ في الإسناد' : '');
   document.getElementById('pn').textContent = n.name_ar;
   document.getElementById('pl').textContent = n.name_latin || '';
 

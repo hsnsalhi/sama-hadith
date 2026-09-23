@@ -175,6 +175,9 @@ const ACCUSATIVE_CONNECTORS = new Set(['سمعت', 'سمعنا', 'سمع', 'ان
 const REL_CANON = { 'اباه': 'ابيه', 'اباها': 'ابيه', 'اخاه': 'اخيه', 'جدتاي': 'جدته', 'عماي': 'عمه', 'ابواي': 'ابيه', 'حماتي': 'حماته', 'حماته': 'حماته', 'حماتها': 'حماته', 'ابي': 'ابيه', 'امي': 'امه', 'جدي': 'جده', 'جدتي': 'جدته', 'عمي': 'عمه', 'عمتي': 'عمته', 'خالي': 'خاله', 'خالتي': 'خالته', 'اخي': 'اخيه', 'اختي': 'اخته', 'والدي': 'ابيه', 'والدتي': 'امه', 'مولاي': 'مولاه', 'مولاتي': 'مولاته', 'ابنتي': 'ابنته', 'زوجي': 'زوجه', 'زوجتي': 'زوجته', 'امراتي': 'زوجته', 'امراته': 'زوجته', 'ابوه': 'ابيه', 'اخوه': 'اخيه',
   'ابيه': 'ابيه', 'ابيها': 'ابيه', 'ابيهما': 'ابيه', 'جده': 'جده', 'جدها': 'جده', 'جدهما': 'جده', 'جدته': 'جدته', 'جدتها': 'جدته', 'امه': 'امه', 'امها': 'امه', 'امهما': 'امه', 'عمه': 'عمه', 'عمها': 'عمه', 'عمته': 'عمته', 'عمتها': 'عمته', 'خاله': 'خاله', 'خالها': 'خاله', 'خالته': 'خالته', 'خالتها': 'خالته', 'اخيه': 'اخيه', 'اخيها': 'اخيه', 'اخوها': 'اخيه', 'اخته': 'اخته', 'اختها': 'اخته', 'مولاه': 'مولاه', 'مولاها': 'مولاه', 'مولاته': 'مولاته', 'مولاتها': 'مولاته', 'ابنه': 'ابنه', 'ابنها': 'ابنه', 'ابنته': 'ابنته', 'ابنتها': 'ابنته', 'زوجه': 'زوجه', 'زوجها': 'زوجه', 'زوجته': 'زوجته', 'والده': 'ابيه', 'والدها': 'ابيه', 'والدته': 'امه', 'والدتها': 'امه' };
 const RELATIVES = new Set(Object.keys(REL_CANON));
+// a relative of an unnamed relative, reduced when the kinship allows it: the father of his uncle is his grandfather, the father of his brother his father
+const REL_COMPOSE = { 'ابيه@ابيه': 'جده', 'ابيه@عمه': 'جده', 'ابيه@عمته': 'جده', 'ابيه@اخيه': 'ابيه', 'ابيه@اخته': 'ابيه', 'امه@اخيه': 'امه', 'امه@اخته': 'امه', 'امه@ابيه': 'جدته', 'امه@عمه': 'جدته', 'امه@عمته': 'جدته', 'امه@خاله': 'جدته', 'امه@خالته': 'جدته', 'امه@امه': 'جدته' };
+const relKey = (rel, single) => { const i = single.indexOf('@'); if (i > 0) { const c = REL_COMPOSE[rel + '@' + single.slice(0, i)]; if (c) return `${c}@${single.slice(i + 1)}`; } return `${rel}@${single}`; };
 /** Words that can never stand alone as a narrator: relatives without a referent, verbs, particles. */
 export const NON_NAME_WORDS = new Set([...NOT_NAME_START, ...NAME_END0, ...FILLERS, ...RELATIVES, 'ابي', 'جدي', 'جدتي', 'عمي', 'خالي', 'اخي', 'اختي', 'امي', 'ابنتي', 'ابني', 'مولاي', 'شيخ', 'شيخنا', 'شيخي', 'صاحبنا', 'صاحب', 'رجل', 'امراه']);
 export const isJunkName = key => {
@@ -545,7 +548,7 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
       if (single) {
         const rel = REL_CANON[tokens[i + 1]] || tokens[i + 1];
         const resolved = cleanName(resolveRelative(tokens[i + 1], single) || '') || null;
-        const key = resolved || `${rel}@${single}`;
+        const key = resolved || relKey(rel, single);
         addNode(key, tokens[i + 1], tokens[i + 1]);
         for (const s of frontier) addEdge(s, key, t);
         prevFrontier = frontier; frontier = [key]; lastConnector = t; lastName = key;
@@ -560,7 +563,7 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
       if (!single) { stop = i; break; }
       const rel = REL_CANON[tokens[i + 1]] || tokens[i + 1];
       const resolved = cleanName(resolveRelative(rel, single) || '') || null;
-      const key = resolved || `${rel}@${single}`;
+      const key = resolved || relKey(rel, single);
       let display = rel;
       if (resolved && nodes.has(single)) { const parts = nodes.get(single).display.split(' بن '); const drop = rel.startsWith('اب') ? 1 : 2; if (parts.length > drop) display = parts.slice(drop).join(' بن '); }
       const k = skipFillers(i + 2);
@@ -612,7 +615,7 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
 
     // sibling relative: "حدثنا أبي وعمي" → the student's uncle, at the same level as the father
     if (edges.length && t[0] === 'و' && RELATIVES.has(t.slice(1)) && lastName && lastName.includes('@') && !connectorAt(tokens, i + 1) && !(isNameStart(tokens[i + 1] || '') && !NAME_END.has(tokens[i + 1] || ''))) {
-      const key = `${REL_CANON[t.slice(1)]}@${lastName.split('@')[1]}`;
+      const key = relKey(REL_CANON[t.slice(1)], lastName.slice(lastName.indexOf('@') + 1));
       addNode(key, t.slice(1), t.slice(1));
       for (const s of prevFrontier) addEdge(s, key, lastConnector);
       if (!frontier.includes(key)) frontier.push(key);
@@ -730,7 +733,7 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
       const single = frontier.length === 1 && frontier[0] ? frontier[0] : lastName;
       if (!single) { stop = i; break; } // "حدثني عمي" with no narrator to relate to
       const resolved = cleanName(resolveRelative(w, single) || '') || null;
-      key = resolved || `${REL_CANON[w] || w}@${single || '?'}`;
+      key = resolved || relKey(REL_CANON[w] || w, single || '?');
       if (resolved && nodes.has(single)) {
         const parts = nodes.get(single).display.split(' بن ');
         const drop = w.startsWith('اب') ? 1 : 2;

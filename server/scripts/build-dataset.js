@@ -259,13 +259,14 @@ function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map())
   };
   /** The relative of `full` as the dictionaries name him in his teacher list ("عمه ثابت بن سعيد", "جده زيد"). */
   const REL_WORDS = { ابيه: ['ابيه', 'والده'], امه: ['امه', 'والدته'], جده: ['جده'], جدته: ['جدته'], عمه: ['عمه'], عمته: ['عمته'], خاله: ['خاله'], خالته: ['خالته'], اخيه: ['اخيه'], اخته: ['اخته'], مولاه: ['مولاه'], مولاته: ['مولاته'], زوجته: ['زوجته', 'امراته'], زوجه: ['زوجها'], ابنه: ['ابنه'], ابنته: ['ابنته'], حماته: ['حماته'] };
+  for (const k of Object.keys(REL_WORDS)) REL_WORDS[k] = [...new Set([...REL_WORDS[k], ...REL_WORDS[k].map(w => w.replace(/ه$/, 'ها'))])]; // « ابيها », « جدتها »
   const REL_KEY = { ابيها: 'ابيه', جدها: 'جده', امها: 'امه', اخيها: 'اخيه' };
   const teachersOf = new Map(); // corpus: full key → set of teacher keys (no relatives)
   for (const h of hadiths) for (const e of h.graph.edges) { if (!e.student) continue; const a = base(e.student), b = base(e.teacher); if (a.includes('@') || b.includes('@')) continue; (teachersOf.get(a) || teachersOf.set(a, new Set()).get(a)).add(b); }
   const relativeViaLists = (full, rel) => {
     const words = REL_WORDS[rel]; if (!words || !full) return null;
     const names = new Set();
-    for (const c of entriesOf(full)) for (const t of c.teachers) { const m = t.match(new RegExp('^(?:' + words.join('|') + ') (.+)$')); if (m && m[1].length > 2 && !/^(?:و|ال)?(?:الذي|التي|هو|هي)$/.test(m[1])) names.add(m[1].replace(/ (?:وقيل|ويقال|وهو|وهي|قال|قالت).*$/, '')); }
+    for (const c of entriesOf(full)) for (const t of c.teachers) { const m = t.match(new RegExp('^(?:' + words.join('|') + ') (.+)$')); if (m && m[1].length > 2 && !/^(?:و|ال)?(?:الذي|التي|هو|هي)$/.test(m[1]) && !/^(?:عن|وعن|هو|هي|و|ثم|في) /.test(m[1])) names.add(m[1].replace(/ (?:علي خلاف|خلاف|فيه|وقيل|ويقال|قال|قالت|قيل|انه|وهو|وهي|ثم|في|وعن|عن)(?: |$).*$/, '')); }
     if (names.size === 1) { const nm = [...names][0]; const w = nm.split(' '); for (let n = Math.min(w.length, 5); n >= 2; n--) { const k = w.slice(0, n).join(' '); if (freq.has(k)) return k; } return trimName(w); }
     // otherwise: among the teachers of `full` in the corpus, the one whose name the dictionary attaches to that relation
     const relItems = []; for (const c of entriesOf(full)) for (const t of c.teachers) if (new RegExp('^(?:' + words.join('|') + '|عمي|عميه|اعمامه|اخواله|اخوته)(?: |$)').test(t)) relItems.push(t);
@@ -273,6 +274,13 @@ function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map())
     const hits = new Set();
     for (const t of teachersOf.get(full) || []) { const head = t.split(' ')[0]; if (head.length > 2 && relItems.some(x => x.split(' ').includes(head))) hits.add(t); }
     return hits.size === 1 ? [...hits][0] : null;
+  };
+  const nestedViaLists = (full, inner, outer) => { // the father of the grandmother: « جدته عن ابيها » followed by « هو سعيد بن زيد… » in the teacher list
+    const wi = REL_WORDS[inner], wo = REL_WORDS[outer]; if (!wi || !wo || !full) return null;
+    const names = new Set();
+    for (const c of entriesOf(full)) for (let i = 0; i + 1 < c.teachers.length; i++) { const w = c.teachers[i].split(' '); if (w.length === 3 && wi.includes(w[0]) && w[1] === 'عن' && wo.includes(w[2]) && /^هو /.test(c.teachers[i + 1])) names.add(c.teachers[i + 1].replace(/^هو /, '').replace(/ (?:علي خلاف|خلاف|فيه|وقيل|ويقال|قال|قالت|قيل|انه|وهو|وهي|ثم|في|وعن|عن)(?: |$).*$/, '')); }
+    if (names.size !== 1) return null;
+    const w = [...names][0].split(' '); for (let n = Math.min(w.length, 6); n >= 2; n--) { const k = w.slice(0, n).join(' '); if (freq.has(k)) return k; } return trimName(w);
   };
   const viaRijal = (bare, students, teachers, depth, relTeachers = []) => {
     const cands = rijalByHead.get(bare); if (!cands) return null;
@@ -362,7 +370,18 @@ function resolveNames(hadiths, ref = new Map(), rijal = [], fullest = new Map())
     for (const k0 of g.nodes.keys()) {
       if (!k0.includes('@')) continue;
       relTotal++;
-      const [rel, b0] = k0.split('@');
+      const i0 = k0.indexOf('@'); const rel = k0.slice(0, i0); let b0 = k0.slice(i0 + 1);
+      if (b0.includes('@')) { // « ابيه@جدته@رباح » : the relative of an unnamed relative
+        const innerName = rename.get(b0);
+        if (innerName && !innerName.includes('@')) b0 = innerName; // the lists named the grandmother: continue with her name
+        else {
+          const j = b0.indexOf('@'); const rel2 = b0.slice(0, j); const bb = b0.slice(j + 1);
+          const bKey = rename.get(bb) || rename.get(base(bb)) || base(bb); const bFull = bKey.includes(' بن ') ? bKey : (dominant(bKey) || bKey);
+          const t = bFull && bFull.includes(' بن ') ? nestedViaLists(bFull, REL_KEY[rel2] || rel2, REL_KEY[rel] || rel) : null;
+          if (t && cleanName(t)) { rename.set(k0, cleanName(t)); relResolved++; }
+          continue;
+        }
+      }
       let b = rename.get(b0) || rename.get(base(b0)) || base(b0);
       const bDepth = depths.get(b0);
       if (fullest.has(b) && plausible(fullest.get(b), bDepth)) b = fullest.get(b); // "ابن عمر" → عبد الله بن عمر
@@ -558,6 +577,13 @@ function buildEntities(hadiths, ref, canon) {
     if (!e) { e = { key, displays: new Map(), count: 0, colls: new Set(), estimates: [], depths: [], votes: { sahabi: 0, tabii: 0, muhaddith: 0 }, hadiths: [] }; ents.set(key, e); }
     return e;
   };
+  const REL_AR = { حماته: 'حماة', ابيه: 'والد', ابيها: 'والد', جده: 'جدّ', جدها: 'جدّ', امه: 'والدة', امها: 'والدة', عمه: 'عمّ', عمته: 'عمّة', خاله: 'خال', خالته: 'خالة', اخيه: 'أخو', اخته: 'أخت', مولاه: 'مولى', مولاته: 'مولاة', ابنه: 'ابن', ابنته: 'ابنة', زوجه: 'زوج', زوجته: 'زوجة', جدته: 'جدّة', اخيها: 'أخو' };
+  const relLabel = k => { // « ابيه@جدته@رباح » → « والد جدّة رباح … »
+    const i = k.indexOf('@'); if (i < 0) { const b = ents.get(k); return b?.displays.size ? [...b.displays].sort((x, y) => y[1] - x[1])[0][0] : k; }
+    const rel = k.slice(0, i), rest = k.slice(i + 1), j = rest.indexOf('@');
+    if (j > 0 && rel === 'ابيه' && ['امه', 'خاله', 'خالته'].includes(rest.slice(0, j))) return 'جدّ ' + relLabel(rest.slice(j + 1)) + ' لأمّه'; // the father of his mother
+    return (REL_AR[rel] || rel) + ' ' + relLabel(rest);
+  };
   // compilers
   for (const c of COLLECTIONS) { const e = get(c.compiler); e.compiler = c.code; e.displays.set(c.compilerDisplay, 1e9); }
   for (const h of hadiths) {
@@ -566,11 +592,7 @@ function buildEntities(hadiths, ref, canon) {
       const e = get(k);
       e.count++; e.colls.add(h.coll); e.hadiths.push(h.id);
       let d = node.display.replace(/^(?:أبي|أبا)(?= )/, 'أبو').replace(/^(?:ابي|ابا)(?= )/, 'أبو');
-      if (k.includes('@')) {
-        const [rel, b] = k.split('@');
-        const bd = ents.get(b)?.displays.size ? [...ents.get(b).displays].sort((x, y) => y[1] - x[1])[0][0] : b;
-        d = ({ حماته: 'حماة', ابيه: 'والد', ابيها: 'والد', جده: 'جدّ', جدها: 'جدّ', امه: 'والدة', امها: 'والدة', عمه: 'عمّ', عمته: 'عمّة', خاله: 'خال', خالته: 'خالة', اخيه: 'أخو', اخته: 'أخت', مولاه: 'مولى', مولاته: 'مولاة', ابنه: 'ابن', ابنته: 'ابنة', زوجه: 'زوج', زوجته: 'زوجة', جدته: 'جدّة', اخيها: 'أخو' }[rel] || rel) + ' ' + bd;
-      }
+      if (k.includes('@')) d = relLabel(k); // « والد هشام », « والد جدّة رباح بن عبد الرحمن »
       e.displays.set(d, (e.displays.get(d) || 0) + 1);
     }
     if (g.edges.length) { const ce = get(COLLECTIONS.find(c => c.code === h.coll).compiler); if (!ce.hadiths.includes(h.id)) ce.hadiths.push(h.id); }
@@ -648,6 +670,8 @@ function dateAndClassify(hadiths, ents) {
     const required = teacherRank >= 2 ? 2 : teacherRank >= 0 ? 1 : 0; // from a companion or a successor → at least a successor; from a muhaddith → a muhaddith
     if (RANK[e.gen] < required) e.gen = required === 1 ? 'tabii' : 'muhaddith';
   }
+  // an estimate extrapolated link by link below the last dated anchor can fall outside any plausible life: keep it within the generation's span
+  for (const e of ents.values()) if (!anchored(e) && e.dated === 'estimated' && e.death != null && e.gen) { const [lo, hi] = e.gen === 'sahabi' ? [11, 110] : e.gen === 'tabii' ? [40, 190] : [120, 330]; if (e.death < lo) e.death = lo; if (e.death > hi) e.death = hi; }
 }
 
 // ── 7b. Kind of report (classical terminology) ──────────────────────────────
@@ -882,6 +906,41 @@ async function main() {
       if (t.gradeDisplay) e.reliability = t.gradeDisplay;
       if (t.death != null && e.dated !== 'reference' && !e.compiler) { e.death = closestDeath(t, e.death ?? null); e.dated = 'taqrib'; e.deathApprox = t.deathApprox; taqDeath++; }
     }
+    // ── Relatives left unnamed by the isnād (« عن أبيه », « عن جدته عن أبيها ») whom the Tahdhīb names in the teacher list
+    //    (« روى عن عمه علي بن حكيم », « عن جدته عن أبيها، هو سعيد بن زيد بن عمرو بن نفيل »)
+    {
+      const FORMS = { ابيه: ['ابيه', 'ابيها', 'والده', 'والدها'], امه: ['امه', 'امها', 'والدته', 'والدتها'], جده: ['جده', 'جدها'], جدته: ['جدته', 'جدتها'], عمه: ['عمه', 'عمها'], عمته: ['عمته', 'عمتها'], خاله: ['خاله', 'خالها'], خالته: ['خالته', 'خالتها'], اخيه: ['اخيه', 'اخيها'], اخته: ['اخته', 'اختها'], زوجته: ['زوجته', 'امراته'], زوجه: ['زوجها'], مولاه: ['مولاه', 'مولاها'], مولاته: ['مولاته'], ابنه: ['ابنه'], ابنته: ['ابنته'] };
+      const goodName = n => !!n && n.split(' ').length <= 9 && !NON_NAME_WORDS.has(n.split(' ')[0]) && !/^(?:عن|هو|وعن|ابن|بن) /.test(n) && !/^(?:رجل|امراه|ناس|قوم|جماعه|غير)$/.test(n.split(' ')[0]);
+      const nameOfRelative = (entry, rel) => { const forms = FORMS[rel] || [rel]; for (const t of entry.teachers) { const w = cleanName(t).split(' '); if (forms.includes(w[0]) && w.length >= 2 && w[1] !== 'عن') { const n = w.slice(1).join(' ').replace(/ (?:علي خلاف|خلاف|فيه|وقيل|ويقال|قال|قالت|قيل|انه|وهو|وهي|ثم|في|وعن|عن)(?: |$).*$/, '').replace(/ و .*$/, ''); if (goodName(n)) return n; } } return null; };
+      const nestedName = (entry, outer, inner) => { const fi = FORMS[inner] || [inner], fo = FORMS[outer] || [outer]; for (let i = 0; i + 1 < entry.teachers.length; i++) { const w = cleanName(entry.teachers[i]).split(' '); if (w.length === 3 && fi.includes(w[0]) && w[1] === 'عن' && fo.includes(w[2]) && /^هو /.test(cleanName(entry.teachers[i + 1]))) { const n = cleanName(entry.teachers[i + 1]).replace(/^هو /, '').replace(/ (?:علي خلاف|خلاف|فيه|وقيل|ويقال|قال|قالت|قيل|انه|وهو|وهي|ثم|في|وعن|عن)(?: |$).*$/, ''); if (goodName(n)) return n; } } return null; };
+      const fatherOf = n => { const w = n.split(' '); const i = w.findIndex(x => x === 'بن' || x === 'بنت'); return i > 0 && i + 1 < w.length ? w.slice(i + 1).join(' ') : null; };
+      const sub = new Map(); let resolved = 0;
+      for (const e of ents.values()) {
+        if (!e.key.includes('@')) continue;
+        const parts = e.key.replace(/#\d+$/, '').split('@'); const base = ents.get(parts[parts.length - 1]);
+        if (!base?.tahdhib) continue;
+        let name = null;
+        if (parts.length === 2) name = nameOfRelative(base.tahdhib, parts[0]);
+        else if (parts.length === 3) {
+          name = nestedName(base.tahdhib, parts[0], parts[1]);
+          if (!name) { const inner = nameOfRelative(base.tahdhib, parts[1]); if (inner) name = parts[0] === 'ابيه' ? fatherOf(inner) : parts[0] === 'جده' ? (fatherOf(inner) && fatherOf(fatherOf(inner))) : null; }
+        }
+        if (!name || !goodName(name) || (!name.includes(' ') && !/^(?:ابو|ام) /.test(name))) continue; // a bare given name would only mislead
+        e.resolvedName = name; resolved++;
+        (aliases.get(e.key) || aliases.set(e.key, []).get(e.key)).push(name);
+        sub.set(e.key, e);
+      }
+      if (sub.size) {
+        const st2 = matchRijal(sub, aliases, taqrib, tahdhib);
+        for (const e of sub.values()) {
+          const t = e.taqrib; if (!t) continue;
+          if (t.layer) { e.layer = t.layer; e.gen = t.layer === 1 ? 'sahabi' : t.layer <= 5 ? 'tabii' : 'muhaddith'; e.genFixed = true; }
+          if (t.gradeDisplay) e.reliability = t.gradeDisplay;
+          if (t.death != null && e.dated !== 'reference') { e.death = closestDeath(t, e.death ?? null); e.dated = 'taqrib'; e.deathApprox = t.deathApprox; }
+        }
+        log(`relatives named by the Tahdhīb: ${resolved} · matched Taqrīb ${st2.taqrib}, Tahdhīb ${st2.tahdhib}`);
+      }
+    }
     log(`rijāl: Taqrīb ${taqrib.length} entries, Tahdhīb ${tahdhib.length} · matched Taqrīb ${st.taqrib} (ambiguous ${st.taqribAmbiguous}), Tahdhīb ${st.tahdhib} (ambiguous ${st.tahdhibAmbiguous}), both ${st.both} · dates from Taqrīb ${taqDeath}, layers ${taqGen}`);
     // the other biographical dictionaries (OpenITI), aligned on the same entities
     for (const src of SOURCES) {
@@ -922,9 +981,9 @@ async function main() {
         const tWords = new Set([...tName.split(' '), ...main.key.split(' ')].map(w => w.replace(/^ال(?=.{3})/, '')));
         const tChain = new Set(chainOf(tName).map(w => w.replace(/^ال(?=.{3})/, '')));
         for (const other of group.slice(1)) {
-          if (other.key.includes('@') || other.compiler) continue;
+          if ((other.key.includes('@') && !other.resolvedName) || other.compiler) continue;
           if (other.dated === 'reference' && main.dated === 'reference' && other.death != null && main.death != null && Math.abs(other.death - main.death) > 3) continue;
-          const ow = bare(other.key);
+          const ow = bare(other.resolvedName || other.key);
           if (!ow.length || !ow.every(w => tWords.has(w))) continue;          // its name must fit the man
           if (ow.length === 1 && !/^(?:ابن|ابو|ام) /.test(other.key) && tChain.has(ow[0])) continue; // a bare "الحجاج" is only the father of شعبة: another man ("ابن الحجاج" would be him)
           for (const [d, c] of other.displays) main.displays.set(d, (main.displays.get(d) || 0) + c);
@@ -1021,8 +1080,9 @@ async function main() {
   const narrators = list.map(e => ({
     id: e.id,
     key: e.key,
-    name_ar: e.fullName || (named(e).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0] + (e.key.includes('@') ? ' (لم يُسمَّ في الإسناد)' : '')),
-    name_short: named(e).sort((a, b) => b[1] - a[1])[0][0],
+    name_ar: e.fullName || (e.resolvedName ? displayForm(e.resolvedName) : named(e).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0]),
+    unnamed: e.key.includes('@') && !e.resolvedName && !e.taqrib ? true : undefined, // the isnād says only « عن أبيه »: the label describes him, it is not his name
+    name_short: e.resolvedName && !e.fullName ? displayForm(e.resolvedName) : named(e).sort((a, b) => b[1] - a[1])[0][0],
     alt: (() => { const main = new Set([e.fullName, named(e).sort((a, b) => b[1] - a[1])[0][0]].map(x => cleanName(x || ''))); const seen = new Set(); const out = []; for (const [d, c] of named(e).sort((a, b) => b[1] - a[1])) { const k = cleanName(d); if (c < 2 || main.has(k) || seen.has(k)) continue; seen.add(k); out.push(d); if (out.length >= 4) break; } for (const a of aliasesOfKey.get(e.key) || []) { if (a.includes('@') || a.includes('~') || !a.includes(' ') || main.has(a) || seen.has(a)) continue; seen.add(a); out.push(displayForm(a)); if (out.length >= 6) break; } return out.length ? out : undefined; })(), // other forms the isnads use ("ابن شهاب" for al-Zuhrī), for the search
     name_latin: e.latin || null,
     generation: e.gen,

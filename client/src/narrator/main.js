@@ -55,7 +55,7 @@ async function main() {
     document.getElementById('hero-name').textContent = n.name_ar;
     document.getElementById('hero-name').style.color = col;
     document.getElementById('hero-latin').textContent = n.name_latin || '';
-    const tags = [...(n.origin ? [n.origin] : []), ...colls.slice(0, 3)];
+    const tags = [...(n.unnamed ? ['لم يُسمَّ في الإسناد'] : []), ...(n.origin ? [n.origin] : []), ...colls.slice(0, 3)];
     document.getElementById('hero-tags').innerHTML = tags.map(t => `<span class="htag">${t}</span>`).join('');
     document.getElementById('hero').style.display = 'flex';
     document.getElementById('hero').style.borderColor = col + '44';
