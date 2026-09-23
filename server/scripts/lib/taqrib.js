@@ -130,6 +130,7 @@ export function loadTaqrib(path) {
     const name0 = norm.slice(0, nameEnd).trim();
     const stub = / عن /.test(' ' + name0.split(' ').slice(0, 6).join(' ') + ' ') || /^(?:لا يعرف|مجهول|لم اقف)/.test(norm.slice(nameEnd).trim());
     let name = name0.replace(/ عن .*$/, '').replace(GLOSS_RE, '');
+    if (name.startsWith('بن ')) name = 'ا' + name; // « بن العلاء بن الحضرمي » = ابن العلاء
     { // a kunya that a gloss hid ("عمرو بن عبد الله ويقال … أبو إسحاق السبيعي") still names the man: append it to the matching form
       const rest = name0.replace(/ عن .*$/, '').slice(name.length);
       const km = kunyaTail(rest);
@@ -234,7 +235,7 @@ export function entryKeys(e) {
 
 // ── Tahdhīb al-Tahdhīb ──────────────────────────────────────────────────────
 // "### $ 771 م د س مسلم وأبي داود والنسائي صهيب أبو الصهباء البكري البصري ويقال المدني مولى بن عباس روى عن … وعنه … قال أبو زرعة ثقة …"
-const EXPANSION_WORDS = new Set(['البخاري', 'ومسلم', 'والترمذي', 'الترمذي', 'والنسايي', 'النسايي', 'وابن', 'ماجه', 'ماجة', 'وداود', 'في', 'الادب', 'المفرد', 'التعاليق', 'التعليق', 'خلق', 'افعال', 'العباد', 'القراءه', 'الامام', 'رفع', 'اليدين', 'الجمعه', 'الصلاه', 'مسايل', 'الناسخ', 'والمنسوخ', 'المراسيل', 'القدر', 'الشمايل', 'اليوم', 'والليله', 'مسند', 'خصايص', 'السنن', 'الكبري', 'التفسير', 'الاسماء', 'والكني', 'مقدمه', 'الصحيح', 'الستة', 'السته', 'الجماعه', 'الاربعه', 'والاربعه', 'والباقين', 'الباقين', 'سوي', 'وحده', 'فقط', 'اصحاب', 'اصحابها', 'الكتب', 'الجميع', 'وفي', 'كتاب', 'الرد', 'الجهميه', 'فضايل', 'الانصار', 'الصحابه', 'النكاح', 'حديث', 'الغيلانيات', 'الاجابه', 'المرسل', 'الطلاق', 'البعث', 'الزهد', 'الوصايا', 'الكني', 'التاريخ']);
+const EXPANSION_WORDS = new Set(['جزء', 'وجزء', 'البخاري', 'ومسلم', 'والترمذي', 'الترمذي', 'والنسايي', 'النسايي', 'وابن', 'ماجه', 'ماجة', 'وداود', 'في', 'الادب', 'المفرد', 'التعاليق', 'التعليق', 'خلق', 'افعال', 'العباد', 'القراءه', 'الامام', 'رفع', 'اليدين', 'الجمعه', 'الصلاه', 'مسايل', 'الناسخ', 'والمنسوخ', 'المراسيل', 'القدر', 'الشمايل', 'اليوم', 'والليله', 'مسند', 'خصايص', 'السنن', 'الكبري', 'التفسير', 'الاسماء', 'والكني', 'مقدمه', 'الصحيح', 'الستة', 'السته', 'الجماعه', 'الاربعه', 'والاربعه', 'والباقين', 'الباقين', 'سوي', 'وحده', 'فقط', 'اصحاب', 'اصحابها', 'الكتب', 'الجميع', 'وفي', 'كتاب', 'الرد', 'الجهميه', 'فضايل', 'الانصار', 'الصحابه', 'النكاح', 'حديث', 'الغيلانيات', 'الاجابه', 'المرسل', 'الطلاق', 'البعث', 'الزهد', 'الوصايا', 'الكني', 'التاريخ']);
 const STOP_LIST = /^(?:غيرهم|غيره|جماعه|اخرون|خلق|كثير|كثيرون|اخرين|جماعة|روي|مات قبله|وغيرهم|غير ذلك)$/;
 const CUT_RE = / (?:قال|ذكره|وثقه|ضعفه|وقال|مات|توفي|له|روي له|قلت|ذكر|قالوا|قيل|كان|وكان|قال ابو|قال ابن|وله|وذكره)(?= )/;
 let WAW_NAMES = new Set(); // names beginning with و (وكيع، وهب، واقد…) so that "وعنه وكيع" is not split into "كيع"
@@ -414,6 +415,7 @@ export function matchRijal(ents, aliases, taqrib, tahdhib) {
       const ranked = cands(iTaq, e, sTaq).filter(([t, strength]) => dateOk(t, e) && (e.dated !== 'reference' || genOk(t.layer, e.gen)) && !(e.dated === 'reference' && ((strength <= 1 && !deathAgrees(t)) || t.stub || (t.death == null && !t.layer)))).map(([t, strength, bonus]) => {
         let s = bonus;
         if (t.colls.length && t.colls.some(c => collsE.has(c))) s += 2;
+        if (t.colls.length && collsE.size >= 3 && [...collsE].every(c => t.colls.includes(c))) s += 1; // cited by every collection the entity appears in
         if (t.layer && e.gen && layerGen(t.layer) === e.gen) s += 1;
         if (t.death && e.death && Math.abs(closestDeath(t, e.death) - e.death) <= (e.dated === 'reference' ? 3 : 40)) s += 1;
         if (strength === 3) s += 1;
@@ -566,7 +568,7 @@ export function trimFullName(clean, links = 3) {
     if ((w[i] === 'ابو' || w[i] === 'ام') && w[i + 1] && !kunya) { nm = nameAt(i); out.push(...nm); i += nm.length; kunya = true; continue; }
     if (w[i].startsWith('ال') && w[i].length > 3 && !NISBA_STOP.has(w[i])) { if (nisbas < 3) { out.push(w[i]); nisbas++; } i++; continue; }
     if ((w[i] === 'مولي' || w[i] === 'مولاه' || w[i] === 'مولاة') && w[i + 1] && !out.includes('بن')) { // a man known by one name and his patron
-      out.push(w[i]); i++; nm = nameAt(i); out.push(...nm); i += nm.length;
+      out.push(w[i]); i++; if ((w[i] === 'بني' || w[i] === 'بنو' || w[i] === 'ال') && w[i + 1]) { out.push(w[i]); i++; } nm = nameAt(i); out.push(...nm); i += nm.length;
       let l = 0; while (l < 2 && (w[i] === 'بن' || w[i] === 'بنت') && w[i + 1]) { nm = nameAt(i + 1); out.push(w[i], ...nm); i += 1 + nm.length; l++; }
       continue;
     }

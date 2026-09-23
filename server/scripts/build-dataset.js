@@ -19,7 +19,7 @@
 import { mkdir, writeFile, readFile, rm, access } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseIsnadGraph, cleanName, displayForm, connectorType, setNameVocab, normalizeArabic, isJunkName, NON_NAME_WORDS } from './lib/isnad-graph.js';
+import { parseIsnadGraph, cleanName, displayForm, connectorType, setNameVocab, normalizeArabic, isJunkName, NON_NAME_WORDS, saneKey, badNameStart } from './lib/isnad-graph.js';
 import { loadReference } from './lib/reference-loader.js';
 import { EXTRA_NARRATORS } from './lib/reference-extra.js';
 import { BIOS } from './lib/reference-bios.js';
@@ -104,7 +104,7 @@ async function loadAll() {
 function parseAll(hadiths) {
   const first = new Map();
   for (const h of hadiths) for (const k of parseIsnadGraph(h.text).nodes.keys()) { const w = k.split(' ')[0]; first.set(w, (first.get(w) || 0) + 1); }
-  const nameStarts = new Set([...first].filter(([, n]) => n >= 3).map(([w]) => w));
+  const nameStarts = new Set([...first].filter(([w, n]) => n >= 3 && !badNameStart(w)).map(([w]) => w)); // never let a mis-parsed first word (« عن », « الصلاه ») become a name start
   const keysByColl = Object.fromEntries(COLLECTIONS.map(c => [c.code, compilerKeysOf(c)]));
   for (const h of hadiths) {
     const g = parseIsnadGraph(h.text, nameStarts, { compilerKeys: keysByColl[h.coll] });
@@ -526,6 +526,20 @@ function pruneJunkNodes(hadiths) {
   let n = 0;
   for (const h of hadiths) {
     const g = h.graph; if (!g?.nodes) continue;
+    // 1. keys that contain a foreign word are cut there (« يونس بن عبيد حدثنا الحسن »), merging into the existing node when there is one
+    for (const k of [...g.nodes.keys()]) {
+      const sane = saneKey(k);
+      if (sane === k) continue;
+      const node = g.nodes.get(k); g.nodes.delete(k);
+      if (sane && !isJunkName(sane)) {
+        if (!g.nodes.has(sane)) { node.key = sane; node.raw = sane; node.display = displayForm(sane); g.nodes.set(sane, node); }
+        for (const e of g.edges) { if (e.teacher === k) e.teacher = sane; if (e.student === k) e.student = sane; }
+        g.edges = g.edges.filter(e => e.teacher !== e.student);
+      } else {
+        g.edges = g.edges.filter(e => e.teacher !== k && e.student !== k);
+      }
+    }
+    // 2. phantom nodes: the Prophet, common nouns, particles, relatives without a referent
     const junk = [...g.nodes.keys()].filter(k => isJunkName(k) || (!k.includes(' ') && !k.includes('@') && g.nodes.get(k)?.display && NON_NAME_WORDS.has(cleanName(g.nodes.get(k).display)))); // "منيه" reached from "ابن منية عن أبيه": a mother's name taken for the father
     if (!junk.length) continue;
     n += junk.length;
