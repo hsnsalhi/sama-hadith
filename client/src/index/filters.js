@@ -2,6 +2,8 @@ import { state } from './state.js';
 import { buildStars } from './stars.js';
 import { buildTimeline } from './timeline.js';
 import { buildSelLines } from './selection.js';
+import { openPanel } from './panel.js';
+import { PROPHET_ID } from '../lib/constants.js';
 
 export function initFilters() {
   // Generation filter buttons
@@ -9,6 +11,9 @@ export function initFilters() {
   document.getElementById('bs').addEventListener('click', () => setF('sahabi'));
   document.getElementById('bt').addEventListener('click', () => setF('tabii'));
   document.getElementById('bm').addEventListener('click', () => setF('muhaddith'));
+
+  // the star of the Prophet ﷺ: fly to it and open its panel
+  document.getElementById('bp').addEventListener('click', () => { const p = state.narById.get(PROPHET_ID); if (p) openPanel(p); });
 
   // Auto-rotate
   document.getElementById('bauto').addEventListener('click', toggleAuto);

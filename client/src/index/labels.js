@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { PROPHET_ID } from '../lib/constants.js';
 
 const labelContainer = document.createElement('div');
 labelContainer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:10;overflow:hidden;';
@@ -14,7 +15,7 @@ export function updateLabels() {
   state.labelDivs.forEach(d => d.remove());
   state.labelDivs = [];
 
-  const vis = state.narrators.filter(n => state.filter === 'all' || n.generation === state.filter);
+  const vis = state.narrators.filter(n => !n.prophet && (state.filter === 'all' || n.generation === state.filter));
   const camDist = state.spherical.radius;
   const showAll = camDist < 320;
   const showSome = camDist < 700;
@@ -35,6 +36,24 @@ export function updateLabels() {
 
   const placed = [];
   const minDist = showAll ? 55 : 80;
+  // the star of the Prophet ﷺ always carries its name
+  const pp = state.pathIds && state.pathIds.has(PROPHET_ID) ? null : state.posMap[PROPHET_ID]; // on a hadith path the path's own label names him
+  if (pp) {
+    const v = pp.clone().project(state.camera);
+    if (v.z <= 1 && v.z >= -1) {
+      const sx = (v.x * 0.5 + 0.5) * innerWidth, sy = (-v.y * 0.5 + 0.5) * innerHeight;
+      if (sx > -80 && sx < innerWidth + 80 && sy > -40 && sy < innerHeight + 40) {
+        placed.push({ sx, sy });
+        const d = document.createElement('div');
+        d.className = 'lbl prophet' + (state.pathIds && !state.pathIds.has(PROPHET_ID) ? ' dim' : '');
+        d.setAttribute('dir', 'rtl');
+        d.textContent = 'محمد رسول الله ﷺ';
+        d.style.cssText = `position:absolute;left:${sx}px;top:${sy + 30}px;transform:translateX(-50%);`;
+        labelContainer.appendChild(d);
+        state.labelDivs.push(d);
+      }
+    }
+  }
 
   projected.sort((a, b) => {
     if (a.n.id === state.selId) return -1;

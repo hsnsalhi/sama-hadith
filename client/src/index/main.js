@@ -1,7 +1,8 @@
 import '../styles/index.css';
 import { state } from './state.js';
 import { initThree } from './scene.js';
-import { buildStars } from './stars.js';
+import { buildStars, animateProphet } from './stars.js';
+import { PROPHET_ID } from '../lib/constants.js';
 import { updateLabels } from './labels.js';
 import { computeTimelineRange, buildTimeline } from './timeline.js';
 import { buildGeoAxis } from './geo-axis.js';
@@ -37,6 +38,7 @@ function animate() {
 
   if (state.bgParticles) state.bgParticles.rotation.y = t * 0.008;
   if (state.starPoints) state.starPoints.material.uniforms.uTime.value = t;
+  animateProphet(t);
 
   updateLabels();
   updatePathLabels();
@@ -53,8 +55,8 @@ async function loadData() {
   setLS('تجهيز فهرس الأحاديث...', 80);
   await initHadithMode();
 
-  document.getElementById('stn').textContent = state.narrators.length.toLocaleString('en-US');
-  document.getElementById('stl').textContent = state.transmissions.length.toLocaleString('en-US');
+  document.getElementById('stn').textContent = state.narrators.filter(n => !n.prophet).length.toLocaleString('en-US');
+  document.getElementById('stl').textContent = state.transmissions.filter(t => t.teacher_id !== PROPHET_ID).length.toLocaleString('en-US');
   document.getElementById('sth').textContent = (manifest.hadiths_with_isnad || manifest.hadiths).toLocaleString('en-US');
 
   setLS('بناء الكون ثلاثي الأبعاد...', 92);

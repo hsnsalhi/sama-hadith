@@ -62,7 +62,7 @@ export function buildTimeline() {
     const W = track.clientWidth || 800, H = track.clientHeight || 26;
     cv.width = W * devicePixelRatio; cv.height = H * devicePixelRatio; cv.style.width = W + 'px'; cv.style.height = H + 'px';
     const ctx = cv.getContext('2d'); ctx.scale(devicePixelRatio, devicePixelRatio); ctx.clearRect(0, 0, W, H);
-    const vis = state.narrators.filter(n => (state.filter === 'all' || n.generation === state.filter) && n.death_ah);
+    const vis = state.narrators.filter(n => !n.prophet && (state.filter === 'all' || n.generation === state.filter) && n.death_ah);
     // stack dots per pixel column so density shows as height
     const cols = new Map();
     for (const n of vis) { const x = Math.round(tlPct(n.death_ah) / 100 * W); const arr = cols.get(x) || cols.set(x, []).get(x); arr.push(n); }
@@ -155,7 +155,7 @@ export function updateTimeline(narrator) {
   hlName.style.color = col;
   hlName.style.textShadow = `0 0 10px ${col}`;
 
-  const birthStr = birthEst ? fmtYear(Math.max(0, birthEst)) : '؟';
+  const birthStr = narrator.prophet ? '571 م (53 ق.هـ)' : birthEst ? fmtYear(Math.max(0, birthEst)) : '؟';
   const deathStr = narrator.death_ah ? fmtYear(narrator.death_ah) : '؟';
   hlDates.textContent = `${birthStr} — ${deathStr}`;
 }

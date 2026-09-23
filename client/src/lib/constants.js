@@ -1,5 +1,7 @@
 // Generation colors — hex int for Three.js
+export const PROPHET_ID = 100000; // the star of the Prophet ﷺ, where every marfūʿ chain ends (not a narrator)
 export const GC_HEX = {
+  prophet: 0xfff3c9,
   sahabi: 0xf5d77a,
   tabii: 0x7ab8f5,
   muhaddith: 0xc07af5,
@@ -8,6 +10,7 @@ export const GC_HEX = {
 
 // Generation colors — CSS strings
 export const GCS = {
+  prophet: '#fff3c9',
   sahabi: '#f5d77a',
   tabii: '#7ab8f5',
   muhaddith: '#c07af5',
@@ -22,6 +25,7 @@ export const deathAt = h => `ت ${fmtYear(h)}`;
 
 // Generation labels (Arabic)
 export const GL = {
+  prophet: 'رسول الله ﷺ',
   sahabi: 'صحابي',
   tabii: 'تابعي',
   muhaddith: 'محدّث',
@@ -30,6 +34,7 @@ export const GL = {
 
 // Z-axis offset per generation (3D view)
 export const GEN_Z = {
+  prophet: -165,
   sahabi: -120,
   tabii: -40,
   muhaddith: 40,
@@ -49,6 +54,7 @@ export const ERAS = [
 
 // Average lifespan per generation (for birth estimation)
 export const AVG_LIFE = {
+  prophet: 63,
   sahabi: 65,
   tabii: 70,
   muhaddith: 70,

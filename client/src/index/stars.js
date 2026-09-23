@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { state } from './state.js';
-import { GC_HEX, GEN_Z } from '../lib/constants.js';
+import { GC_HEX, GEN_Z, PROPHET_ID } from '../lib/constants.js';
 import { getGeoY } from '../lib/utils.js';
 import { clearLabels } from './labels.js';
 import vertexShader from '../shaders/star.vert.glsl';
@@ -56,7 +56,7 @@ function starSize(n) {
 }
 
 export function buildStars() {
-  const vis = state.narrators.filter(n => state.filter === 'all' || n.generation === state.filter);
+  const vis = state.narrators.filter(n => !n.prophet && (state.filter === 'all' || n.generation === state.filter));
   if (state.starPoints) {
     state.scene.remove(state.starPoints);
     state.starPoints.geometry.dispose();
@@ -110,6 +110,7 @@ export function buildStars() {
 
   state.starPoints = new THREE.Points(geo, mat);
   state.scene.add(state.starPoints);
+  buildProphetStar();
   // first display of the flat map: spread it over the whole viewport
   if (state.view === '2d' && !state.fittedOnce && vis.length) { state.fittedOnce = true; fitToStars(positions); }
 
@@ -125,6 +126,53 @@ export function setHighlight(ids) {
   if (state.pathIds) for (const id of state.pathIds) { const i = state.indexOfId[id]; if (i !== undefined) arr[i] = 1; }
   attr.needsUpdate = true;
   state.starPoints.material.uniforms.uDim.value = state.pathIds ? 1 : 0;
+  if (state.prophet) state.prophet.dim = state.pathIds ? (state.pathIds.has(PROPHET_ID) ? 0 : 1) : 0;
+}
+
+// ── The star of the Prophet ﷺ ──────────────────────────────────────────────
+// A single distinguished light at the origin of the sky (Medina, 11 AH): a soft white-gold halo with eight rays, always visible,
+// drawn apart from the narrators' point cloud and kept at a constant size on screen.
+function prophetTexture(rays) {
+  const S = 256, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'); const cx = S / 2;
+  const grd = g.createRadialGradient(cx, cx, 0, cx, cx, cx);
+  if (rays) { grd.addColorStop(0, 'rgba(255,252,240,1)'); grd.addColorStop(0.07, 'rgba(255,246,220,0.95)'); grd.addColorStop(0.18, 'rgba(255,230,170,0.45)'); grd.addColorStop(0.4, 'rgba(255,214,130,0.1)'); grd.addColorStop(1, 'rgba(255,200,100,0)'); }
+  else { grd.addColorStop(0, 'rgba(255,236,190,0.55)'); grd.addColorStop(0.35, 'rgba(255,220,150,0.18)'); grd.addColorStop(0.7, 'rgba(255,210,130,0.05)'); grd.addColorStop(1, 'rgba(255,200,100,0)'); }
+  g.fillStyle = grd; g.fillRect(0, 0, S, S);
+  if (rays) {
+    g.translate(cx, cx);
+    for (let i = 0; i < 8; i++) {
+      const long = i % 2 === 0, L = long ? cx * 0.98 : cx * 0.62, w = long ? 6 : 3.5;
+      const rg = g.createLinearGradient(0, 0, L, 0); rg.addColorStop(0, 'rgba(255,248,225,0.9)'); rg.addColorStop(0.5, 'rgba(255,236,180,0.35)'); rg.addColorStop(1, 'rgba(255,230,160,0)');
+      g.fillStyle = rg; g.beginPath(); g.moveTo(0, -w); g.lineTo(L, 0); g.lineTo(0, w); g.closePath(); g.fill();
+      g.rotate(Math.PI / 4);
+    }
+  }
+  return new THREE.CanvasTexture(c);
+}
+function buildProphetStar() {
+  const n = state.narById.get(PROPHET_ID);
+  if (!n) return;
+  const pos = getPos(n); pos.x += 26; // a step inside the sky, clear of the geographic axis drawn at its edge
+  state.posMap[n.id] = pos;
+  if (!state.prophet) {
+    const mk = (rays, order) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: prophetTexture(rays), transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending })); sp.renderOrder = order; state.scene.add(sp); return sp; };
+    state.prophet = { n, star: mk(true, 8), halo: mk(false, 7), dim: 0 };
+  }
+  state.prophet.star.position.copy(pos); state.prophet.halo.position.copy(pos);
+}
+/** Called every frame: constant on-screen size, a slow breathing halo, brighter when hovered, selected or on a hadith path. */
+export function animateProphet(t) {
+  const p = state.prophet; if (!p || !state.camera) return;
+  const dist = state.camera.position.distanceTo(p.star.position);
+  const per = 2 * Math.tan(state.camera.fov * Math.PI / 360) * dist / Math.max(1, innerHeight); // world units per pixel at that depth
+  const active = state.selId === PROPHET_ID || state.hovId === PROPHET_ID || (state.pathIds && state.pathIds.has(PROPHET_ID));
+  const breath = 1 + 0.05 * Math.sin(t * 1.6);
+  const px = (active ? 64 : 50) * breath;
+  p.star.scale.set(px * per, px * per, 1);
+  p.halo.scale.set(px * 2.6 * per, px * 2.6 * per, 1);
+  const fade = p.dim ? 0.3 : 1;
+  p.star.material.opacity = fade * (active ? 1 : 0.92);
+  p.halo.material.opacity = fade * (0.55 + 0.15 * Math.sin(t * 1.6 + 1)) * (active ? 1.2 : 1);
 }
 
 /** World position of a narrator even when filtered out of the sky. */

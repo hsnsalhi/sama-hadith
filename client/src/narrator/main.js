@@ -37,6 +37,7 @@ async function main() {
     const hadithIds = hadithRows.map(r => r.id);
 
     if (!n) { showNotFound(); return; }
+    if (n.prophet) { renderProphet(n, transData || [], narMap); return; }
     const col = GCS[n.generation] || '#c9a84c';
 
     const byWeight = (a, b) => b.count - a.count;
@@ -137,6 +138,52 @@ async function main() {
 }
 
 main();
+
+// ── The Prophet ﷺ: his star is where the marfūʿ chains end; the page names him with the reverence due, without the narrators' apparatus ──
+function renderProphet(n, transData, narMap) {
+  const col = GCS.prophet;
+  const students = transData.filter(t => t.teacher_id == n.id).sort((a, b) => b.count - a.count).map(t => ({ n: narMap.get(t.student_id), w: t.count })).filter(x => x.n);
+  document.title = 'سماء الحديث · ' + n.name_ar;
+  document.getElementById('hero-star').innerHTML = `<svg viewBox="0 0 48 48" width="44" height="44" fill="none"><g stroke="${col}" stroke-width="1.6" stroke-linecap="round"><path d="M24 3v10M24 35v10M3 24h10M35 24h10M9 9l7 7M32 32l7 7M39 9l-7 7M16 32l-7 7"/></g><circle cx="24" cy="24" r="6.5" fill="${col}"/><circle cx="24" cy="24" r="11" stroke="${col}" stroke-opacity=".45" stroke-width="1"/></svg>`;
+  document.getElementById('hero-gen').textContent = 'خاتم النبيين والمرسلين';
+  document.getElementById('hero-gen').style.color = col;
+  document.getElementById('hero-name').textContent = n.name_ar;
+  document.getElementById('hero-name').style.color = col;
+  document.getElementById('hero-latin').textContent = n.name_latin || '';
+  document.getElementById('hero-tags').innerHTML = ['مكة', 'المدينة', ...(n.collections || []).slice(0, 7)].map(t => `<span class="htag">${t}</span>`).join('');
+  document.getElementById('hero').style.display = 'flex';
+  document.getElementById('hero').style.borderColor = col + '55';
+
+  const sec = document.getElementById('sec-bio'); sec.style.display = 'block';
+  const bioEl = document.getElementById('bio-text');
+  bioEl.innerHTML = `<div class="prov">سيرة موجزة</div>${n.bio || ''}`; bioEl.style.borderColor = col + '55';
+  document.getElementById('bio-rijal').style.display = 'none';
+  const top = students.slice(0, 6).map(x => `${x.n.name_ar} (${x.w})`);
+  const GEN_NAMES = { ...COLL_NAMES, abudawud: 'أبي داود' }; // after « في »
+  const byColl = Object.entries(n.coll_counts || {}).sort((a, b) => b[1] - a[1]).map(([c, k]) => `${k} في ${GEN_NAMES[c] || c}`);
+  document.getElementById('bio-profile').innerHTML = `<div class="prov">من أسانيد الكتب السبعة</div><p>إليه ﷺ تُرفع <b>${ar((n.hadith_count || 0).toLocaleString('en'))}</b> حديثاً في هذا الأطلس${byColl.length ? `: ${joinAr(byColl)}` : ''}.</p><p>رواها عنه مباشرةً <b>${ar(students.length)}</b> من الصحابة رضوان الله عليهم${top.length ? `، وأكثرهم رواية عنه ${joinAr(top)}` : ''}.</p><p>هذه النجمة ليست راوياً من الرواة: لا تُقدَّر لها طبقة ولا تاريخ، ولا يُطبَّق عليها جرحٌ ولا تعديل؛ هي النقطة التي تنتهي إليها الأسانيد المرفوعة.</p>`;
+  document.getElementById('bio-facts').innerHTML = [
+    ['المولد', 'مكة، عام الفيل، نحو 571 م'], ['الهجرة', '622 م (1 هـ) إلى المدينة'], ['الوفاة', fmtYear(11) + '، المدينة'],
+    ['الأحاديث المرفوعة إليه', ar((n.hadith_count || 0).toLocaleString('en'))], ['رواها عنه من الصحابة', ar(students.length)], ['المصادر', (n.collections || []).join('، ') || '—'],
+  ].map(([k, v]) => `<div class="fact"><span class="fact-k">${k}</span><span class="fact-v">${v}</span></div>`).join('');
+
+  document.getElementById('st-hadiths').textContent = ar((n.hadith_count || 0).toLocaleString('en'));
+  document.getElementById('st-death').textContent = fmtYear(11);
+  document.getElementById('st-teachers').parentElement.style.display = 'none'; // « روى عن » has no meaning here
+  document.getElementById('st-students').textContent = ar(students.length);
+  document.getElementById('stats').style.display = 'grid';
+
+  const coords = getCoords('المدينة');
+  if (coords) { document.getElementById('sec-map').style.display = 'block'; setTimeout(() => drawMap(coords, 'المدينة'), 100); }
+  if (students.length) {
+    document.getElementById('sec-isnad').style.display = 'block';
+    setTimeout(() => drawIsnad(n, [], students.map(x => x.n)), 100);
+    document.getElementById('sec-people').style.display = 'block';
+    document.getElementById('teachers-list').innerHTML = '';
+    document.getElementById('students-list').innerHTML = `<div class="people-title">روى عنه من الصحابة رضوان الله عليهم <span>${ar(students.length)}</span></div>` + students.map(({ n: x, w }) => `<a class="person-row" href="narrator.html?id=${x.id}"><i style="background:${GCS[x.generation] || '#c9a84c'}"></i><span class="person-name">${x.name_ar}</span><span class="person-meta">${w} ${w === 1 ? 'حديث' : w === 2 ? 'حديثان' : w <= 10 ? 'أحاديث' : 'حديثاً'}</span></a>`).join('');
+  }
+  const ld = document.getElementById('loading'); ld.style.opacity = '0'; setTimeout(() => ld.style.display = 'none', 600);
+}
 
 
 // ── ترجمة الراوي ─────────────────────────────────────────────────────────

@@ -1065,6 +1065,18 @@ async function main() {
       r.count++; if (e.type === 'direct') r.direct++;
     }
   }
+  // ── The Prophet ﷺ: not a narrator of the corpus, but the point every marfūʿ chain reaches.
+  //    A companion at the end of a marfūʿ chain heard him directly; a successor there (mursal) did not.
+  const PROPHET_ID = 100000;
+  const prophetDirect = new Map(), prophetColls = new Map(); let marfuTotal = 0;
+  for (const h of hadiths) {
+    const g = h.graph; if (!g.reachesProphet || !g.edges.length) continue;
+    marfuTotal++; prophetColls.set(h.coll, (prophetColls.get(h.coll) || 0) + 1);
+    const hasTeacher = new Set(g.edges.map(e => e.student));
+    for (const k of g.nodes.keys()) if (!hasTeacher.has(k)) { const e = ents.get(canon.get(k) || k); if (e?.id && e.gen === 'sahabi') prophetDirect.set(e.id, (prophetDirect.get(e.id) || 0) + 1); }
+  }
+  const transCore = trans.size; // the links between narrators; the links to the Prophet ﷺ are added for display and kept out of the counts
+  for (const [id, count] of prophetDirect) trans.set(`${PROPHET_ID}-${id}`, { teacher_id: PROPHET_ID, student_id: id, count, direct: 0 });
   const teachersCount = new Map(), studentsCount = new Map();
   for (const r of trans.values()) { teachersCount.set(r.student_id, (teachersCount.get(r.student_id) || 0) + 1); studentsCount.set(r.teacher_id, (studentsCount.get(r.teacher_id) || 0) + 1); }
 
@@ -1104,10 +1116,21 @@ async function main() {
     teachers_count: teachersCount.get(e.id) || 0,
     students_count: studentsCount.get(e.id) || 0,
     compiler: e.compiler || null,
+    prophet_direct: prophetDirect.get(e.id) || undefined, // marfūʿ hadiths this companion reports from the Prophet ﷺ himself
   }));
+  const prophet = {
+    id: PROPHET_ID, key: 'النبي ﷺ', prophet: true,
+    name_ar: 'محمد رسول الله ﷺ', name_short: 'رسول الله ﷺ', alt: ['النبي', 'رسول الله', 'محمد', 'محمد بن عبد الله', 'ابو القاسم', 'المصطفي', 'خاتم النبيين', 'النبي محمد'],
+    name_latin: 'Muḥammad, the Messenger of God ﷺ', generation: 'prophet',
+    death_ah: 11, death_estimated: false, death_source: 'reference', birth_ah: -53, layer: null, taqrib: null, tahdhib: null, notices: null, depth: null,
+    coll_counts: Object.fromEntries(prophetColls), kind_counts: { marfu: marfuTotal },
+    bio: 'محمد بن عبد الله بن عبد المطلب بن هاشم القرشي، خاتم الأنبياء والمرسلين ﷺ. وُلد بمكة عام الفيل (نحو 571 م)، وبُعث فيها على رأس الأربعين، وهاجر إلى المدينة سنة 1 هـ (622 م)، وتوفي بها في ربيع الأول سنة 11 هـ (632 م) ودُفن في حجرة عائشة رضي الله عنها. إليه تُرفع الأحاديث المرفوعة كلها، ويرويها عنه الصحابة رضوان الله عليهم؛ وهو في هذا الأطلس النجمة التي تنتهي إليها الأسانيد، لا راوٍ من الرواة.',
+    origin: 'المدينة', reliability: null, hadith_count: marfuTotal, collections: [...prophetColls.keys()].map(c => collName[c]),
+    teachers_count: 0, students_count: prophetDirect.size, compiler: null,
+  };
 
   await rm(OUT, { recursive: true, force: true });
-  await writeJson('narrators.json', narrators);
+  await writeJson('narrators.json', [...narrators, prophet]);
   await writeJson('transmissions.json', [...trans.values()].map(r => [r.teacher_id, r.student_id, r.count, r.direct])); // compact rows
 
   // connectors vocabulary
@@ -1148,7 +1171,8 @@ async function main() {
           grades: h.grades, isnad_ar: h.isnad_ar, matn_ar: h.matn_ar, text_en: h.text_en, text_src: h.text_src,
           isnad: {
             nodes: nodeIds,
-            edges: g.edges.map(e => [e.student ? idOf(e.student) : idOf(c.compiler), idOf(e.teacher), connId(e.connector), e.inherited ? 1 : 0]).filter(e => e[0] && e[1] && e[0] !== e[1]),
+            edges: [...g.edges.map(e => [e.student ? idOf(e.student) : idOf(c.compiler), idOf(e.teacher), connId(e.connector), e.inherited ? 1 : 0]).filter(e => e[0] && e[1] && e[0] !== e[1]),
+              ...(g.reachesProphet ? [...g.nodes.keys()].filter(k => !hasTeacher.has(k) && ents.get(canon.get(k) || k)?.gen === 'sahabi').map(k => [idOf(k), PROPHET_ID, connId('عن'), 0]).filter(e => e[0]) : [])],
             companions: [...g.nodes.keys()].filter(k => !hasTeacher.has(k)).map(idOf).filter(Boolean),
             reaches_prophet: g.reachesProphet,
             inherited: g.inheritedAll ? 'all' : g.edges.some(e => e.inherited && e.student === null) ? 'head' : g.edges.some(e => e.inherited) ? 'tail' : null,
@@ -1202,12 +1226,12 @@ async function main() {
       reference: { legacy: 88, extra: EXTRA_NARRATORS.length, bios: Object.keys(BIOS).length, ref_keys: ref.size },
     },
     merges: mergeCount, merges_taqrib: mergedOnTaqrib, name_vocabulary: vocabSize,
-    transmissions: trans.size, hadiths: loaded.length, hadiths_with_text: hadiths.length, hadiths_with_isnad: hadithsWithIsnad,
+    transmissions: transCore, prophet: { id: PROPHET_ID, marfu: marfuTotal, companions: prophetDirect.size }, hadiths: loaded.length, hadiths_with_text: hadiths.length, hadiths_with_isnad: hadithsWithIsnad,
     isnads_inherited_tail: inherited, isnads_inherited_head: inheritedHead, isnads_inherited_whole: inheritedAll, hadiths_without_chain: stillEmpty.length,
     relatives_resolved: res.relResolved, short_names_expanded: res.shortExpanded,
   });
   log(`kinds: ${JSON.stringify(kindCounts)}`);
-  log(`narrators ${narrators.length} (reference-dated ${refDated}, dated ${dated}) · transmissions ${trans.size} · hadiths ${loaded.length} (with text ${hadiths.length}, with isnad ${hadithsWithIsnad}) · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  log(`narrators ${narrators.length} (reference-dated ${refDated}, dated ${dated}) · transmissions ${transCore} · hadiths ${loaded.length} (with text ${hadiths.length}, with isnad ${hadithsWithIsnad}) · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

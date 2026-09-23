@@ -1,4 +1,4 @@
-import { deathAt } from '../lib/constants.js';
+import { deathAt, PROPHET_ID } from '../lib/constants.js';
 import '../styles/stats.css';
 import { getManifest, getTransmissions } from '../lib/api.js';
 
@@ -12,7 +12,7 @@ const row = (k, v, extra = '') => `<tr><td>${k}</td><td class="n">${v}</td>${ext
 
 async function main() {
   const [m, trans] = await Promise.all([getManifest(), getTransmissions()]);
-  const links = trans.length;
+  const links = trans.filter(t => t.teacher_id !== PROPHET_ID).length;
   const occ = trans.reduce((a, t) => a + (t.count || 0), 0);
   const direct = trans.reduce((a, t) => a + (t.direct || 0), 0);
   const withText = m.hadiths_with_text, noText = (m.entries_without_text || []).length;

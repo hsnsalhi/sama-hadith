@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { GCS, GL, fmtYear } from '../lib/constants.js';
+import { GCS, GL, fmtYear, PROPHET_ID } from '../lib/constants.js';
 import { buildSelLines, flyTo } from './selection.js';
 import { updateTimeline } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
@@ -25,7 +25,7 @@ export function openPanel(n, { keepPath = false } = {}) {
 
   const col = GCS[n.generation] || '#c9a84c';
   document.getElementById('pdot').style.cssText = `background:${col};box-shadow:0 0 6px ${col}`;
-  document.getElementById('pgt').textContent = (GL[n.generation] || n.generation) + (n.compiler ? ' · مؤلِّف' : '') + (n.unnamed ? ' · لم يُسمَّ في الإسناد' : '');
+  document.getElementById('pgt').textContent = n.prophet ? 'خاتم النبيين والمرسلين' : (GL[n.generation] || n.generation) + (n.compiler ? ' · مؤلِّف' : '') + (n.unnamed ? ' · لم يُسمَّ في الإسناد' : '');
   document.getElementById('pn').textContent = n.name_ar;
   document.getElementById('pl').textContent = n.name_latin || '';
 
@@ -36,7 +36,19 @@ export function openPanel(n, { keepPath = false } = {}) {
   const item = ({ n: x, w }) => `<div class="pl-item" data-narrator-id="${x.id}"><div class="pl-d" style="background:${GCS[x.generation]};box-shadow:0 0 4px ${GCS[x.generation]}"></div><span class="pl-n">${x.name_ar}</span><span class="pl-e">${w > 1 ? '×' + ar(w) + ' · ' : ''}${x.death_ah ? fmtYear(x.death_ah) : ''}</span></div>`;
   const list = arr => arr.map(item).join('');
 
-  document.getElementById('pb').innerHTML = `
+  if (n.prophet) { // the Prophet ﷺ: no grade, no estimate, no « narrator » wording
+    document.getElementById('pb').innerHTML = `
+      ${state.hadith && hadithApi ? `<button id="back-hadith" class="cb wide">↩ العودة إلى الحديث</button>` : ''}
+      <a href="narrator.html?id=${n.id}" class="full-link">صفحته الكاملة ←</a>
+      <div class="ir"><span class="il">المولد</span><span class="iv">مكة، نحو 571 م (عام الفيل)</span></div>
+      <div class="ir"><span class="il">الوفاة</span><span class="iv">${fmtYear(11)} · المدينة</span></div>
+      <div class="ir"><span class="il">الأحاديث المرفوعة إليه</span><span class="iv">${ar((n.hadith_count || 0).toLocaleString('en'))}</span></div>
+      <div class="ir"><span class="il">رواها عنه مباشرة</span><span class="iv">${ar(students.length)} من الصحابة</span></div>
+      <div class="note">إليه ﷺ تنتهي الأسانيد المرفوعة كلها؛ هذه النجمة ليست راوياً من الرواة، ولا يُطبَّق عليها جرحٌ ولا تعديل.</div>
+      ${students.length ? `<div class="ps"><div class="pst">روى عنه من الصحابة رضوان الله عليهم (${ar(students.length)})</div>${list(students)}</div>` : ''}
+      <div class="ps"><div class="pst">الأحاديث</div><div class="pl-more">للاطّلاع على الأحاديث المرفوعة اختر نمط «حديث · مسار الإسناد» في البحث؛ كل مسار مرفوع يصل إلى هذه النجمة.</div></div>
+    `;
+  } else document.getElementById('pb').innerHTML = `
     ${state.hadith && hadithApi ? `<button id="back-hadith" class="cb wide">↩ العودة إلى الحديث</button>` : ''}
     <a href="narrator.html?id=${n.id}" class="full-link">ترجمة الراوي الكاملة ←</a>
     <div class="ir"><span class="il">وفاته</span><span class="iv">${n.death_ah ? fmtYear(n.death_ah) + (n.death_estimated ? ' <small title="تاريخ مقدَّر من موقعه في الأسانيد">(تقديري)</small>' : '') : '—'}</span></div>
@@ -48,7 +60,7 @@ export function openPanel(n, { keepPath = false } = {}) {
     ${students.length ? `<div class="ps"><div class="pst">روى عنه (${ar(students.length)})</div>${list(students)}</div>` : ''}
     <div class="ps" id="panel-hadiths"><div class="pst">أحاديثه</div><div class="pl-more">جارٍ التحميل…</div></div>
   `;
-  loadPanelHadiths(n.id);
+  if (!n.prophet) loadPanelHadiths(n.id);
 
   document.getElementById('pb').querySelectorAll('.pl-item[data-narrator-id]').forEach(el => {
     el.addEventListener('click', () => focusNarrator(parseInt(el.dataset.narratorId), { keepPath }));

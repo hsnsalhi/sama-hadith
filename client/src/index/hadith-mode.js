@@ -4,7 +4,7 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { state } from './state.js';
-import { GC_HEX, GCS, GL, KINDS, kindOf, gradeAr, graderAr, fmtYear } from '../lib/constants.js';
+import { GC_HEX, GCS, GL, KINDS, kindOf, gradeAr, graderAr, fmtYear, PROPHET_ID } from '../lib/constants.js';
 import { setHighlight, positionOf } from './stars.js';
 import { updateTimelineRange } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
@@ -208,9 +208,9 @@ function buildLabels(h, ids) {
   for (const id of ids) {
     const n = state.narById.get(id); if (!n) continue;
     const el = document.createElement('div');
-    el.className = 'plbl node' + (n.compiler ? ' compiler' : '');
+    el.className = 'plbl node' + (n.compiler ? ' compiler' : '') + (n.prophet ? ' prophet' : '');
     el.style.setProperty('--c', GCS[n.generation] || '#c9a84c');
-    el.innerHTML = `<span class="plbl-n">${n.name_short || n.name_ar}</span><span class="plbl-d">${n.death_ah ? fmtYear(n.death_ah) + (n.death_estimated ? ' ~' : '') : ''}</span>`;
+    el.innerHTML = `<span class="plbl-n">${n.prophet ? n.name_ar : n.name_short || n.name_ar}</span><span class="plbl-d">${n.prophet ? '' : n.death_ah ? fmtYear(n.death_ah) + (n.death_estimated ? ' ~' : '') : ''}</span>`;
     el.addEventListener('click', () => openPanel(n, { keepPath: true }));
     layer.appendChild(el);
     labelItems.push({ el, pos: positionOf(n), kind: 'node' });
@@ -279,6 +279,7 @@ async function renderPanel(h) {
   const connOf = (s, t) => { const e = h.isnad.edges.find(x => x[0] === s && x[1] === t); return e ? connectors[e[2]] : ''; };
   const chip = id => {
     const n = state.narById.get(id); if (!n) return '';
+    if (n.prophet) return `<span class="nchip prophet" data-n="${id}">${n.name_ar}</span>`;
     const col = GCS[n.generation] || '#c9a84c';
     return `<span class="nchip" data-n="${id}" style="--c:${col}"><i></i>${n.name_ar}<small>${n.death_ah ? toArabicDigits(n.death_ah) + (n.death_estimated ? '~' : '') : ''}</small></span>`;
   };
@@ -301,7 +302,7 @@ async function renderPanel(h) {
     ${grades ? `<div class="ps"><div class="pst">الحكم</div>${grades}</div>` : ''}
     ${h.isnad.inherited === 'all' ? `<div class="note">هذه الفقرة بلا إسناد مستقل في المصدر؛ المسار المعروض هو إسناد الحديث السابق.</div>` : h.isnad.inherited === 'tail' ? `<div class="note">«بهذا الإسناد»: تكملة المسار مأخوذة من الحديث السابق (الخطوط المنقّطة الخافتة).</div>` : h.isnad.inherited === 'head' ? `<div class="note">يبدأ النص بـ«قال فلان» تتمةً للحديث السابق؛ بداية المسار مأخوذة منه (الخطوط المنقّطة الخافتة).</div>` : ''}
     ${h.isnad.edges.some(e => connectorTypes[e[2]] === 'quote') ? `<div class="note">يبدأ المسار بـ«قال فلان» دون سماع مصرَّح: رابطة معلَّقة (خط منقّط رفيع).</div>` : ''}
-    ${h.no_text ? '' : `<div class="ps"><div class="pst">سلسلة الرواة${h.isnad.reaches_prophet ? ' · تنتهي إلى النبي ﷺ' : ''}</div><div class="chain">${chainHtml}${h.isnad.reaches_prophet ? '<div class="lvl-conn"><em>↓</em></div><div class="lvl"><span class="nchip prophet">رسول الله ﷺ</span></div>' : ''}</div></div>`}
+    ${h.no_text ? '' : `<div class="ps"><div class="pst">سلسلة الرواة${h.isnad.reaches_prophet ? ' · تنتهي إلى النبي ﷺ' : ''}</div><div class="chain">${chainHtml}${h.isnad.reaches_prophet && !h.isnad.edges.some(e => e[1] === PROPHET_ID) ? '<div class="lvl-conn"><em>↓</em></div><div class="lvl"><span class="nchip prophet">رسول الله ﷺ</span></div>' : ''}</div></div>`}
     ${h.isnad_ar ? `<div class="ps"><div class="pst">الإسناد</div><div class="isnad-txt">${h.isnad_ar}</div></div>` : ''}
     ${h.no_text ? '' : `<div class="ps"><div class="pst">المتن</div><div class="matn-txt">${h.matn_ar || '—'}</div></div>`}
     ${h.text_src === 'hadith-json' ? `<div class="ps note-src">النص ناقص في طبعة hadith-api، فأُكمل من <a href="https://github.com/AhmedBaset/hadith-json" target="_blank" rel="noopener">hadith-json</a> (sunnah.com)</div>` : ''}
