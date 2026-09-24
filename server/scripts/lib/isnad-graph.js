@@ -393,13 +393,17 @@ function resolveRelative(word, prevName) {
   const parts = prevName.split(' ');
   const idx = parts.indexOf('بن');
   word = REL_CANON[word] || word;
-  if (word === 'ابيه') return idx > 0 && idx + 1 < parts.length ? parts.slice(idx + 1).join(' ') : null;
-  if (word === 'جده') {
+  let out = null;
+  if (word === 'ابيه') out = idx > 0 && idx + 1 < parts.length ? parts.slice(idx + 1).join(' ') : null;
+  else if (word === 'جده') {
     if (idx <= 0) return null;
     const rest = parts.slice(idx + 1); const idx2 = rest.indexOf('بن');
-    return idx2 > 0 && idx2 + 1 < rest.length ? rest.slice(idx2 + 1).join(' ') : null;
+    out = idx2 > 0 && idx2 + 1 < rest.length ? rest.slice(idx2 + 1).join(' ') : null;
   }
-  return null;
+  // « عمرو بن شعيب عن أبيه » : a bare « شعيب » would be pooled with the best-known Shuʿayb; the genealogy of the rijāl books
+  // (applied later to the unresolved « ابيه@عمرو بن شعيب ») names him properly (شعيب بن محمد بن عبد الله بن عمرو)
+  if (out && !out.includes(' ')) return null;
+  return out;
 }
 
 // ── Main parser ────────────────────────────────────────────────────────────
@@ -809,7 +813,7 @@ export function parseIsnadGraph(text, nameStarts = new Set(), { compilerKeys = n
   return { nodes, edges, leaves, reachesProphet, isnadEnd, normalized, isnad_ar, matn_ar };
 }
 
-export function connectorType(c) { return CONNECTORS.get(c) || (c === 'قال' || c === 'قراءة' ? 'quote' : 'direct'); }
+export function connectorType(c) { return CONNECTORS.get(c) || (c === 'قال' || c === 'قراءة' || c === 'مرسلاً' || c === 'منقطعاً' ? 'quote' : 'direct'); }
 
 /** Teacher→student pairs of a parsed graph (ROOT edges excluded). */
 export function graphTransmissions(g) {

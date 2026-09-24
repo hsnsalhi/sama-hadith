@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { GCS, GL, fmtYear, PROPHET_ID } from '../lib/constants.js';
+import { GCS, GL, fmtYear, PROPHET_ID, genLabel, naratedFrom, naratedBy } from '../lib/constants.js';
 import { buildSelLines, flyTo } from './selection.js';
 import { updateTimeline } from './timeline.js';
 import { updateGeoAxis } from './geo-axis.js';
@@ -25,7 +25,7 @@ export function openPanel(n, { keepPath = false } = {}) {
 
   const col = GCS[n.generation] || '#c9a84c';
   document.getElementById('pdot').style.cssText = `background:${col};box-shadow:0 0 6px ${col}`;
-  document.getElementById('pgt').textContent = n.prophet ? 'خاتم النبيين والمرسلين' : (GL[n.generation] || n.generation) + (n.compiler ? ' · مؤلِّف' : '') + (n.unnamed ? ' · لم يُسمَّ في الإسناد' : '');
+  document.getElementById('pgt').textContent = n.prophet ? 'خاتم النبيين والمرسلين' : genLabel(n) + (n.compiler ? ' · مؤلِّف' : '') + (n.unnamed ? (n.female ? ' · لم تُسمَّ في الإسناد' : ' · لم يُسمَّ في الإسناد') : '');
   document.getElementById('pn').textContent = n.name_ar;
   document.getElementById('pl').textContent = n.name_latin || '';
 
@@ -50,15 +50,15 @@ export function openPanel(n, { keepPath = false } = {}) {
     `;
   } else document.getElementById('pb').innerHTML = `
     ${state.hadith && hadithApi ? `<button id="back-hadith" class="cb wide">↩ العودة إلى الحديث</button>` : ''}
-    <a href="narrator.html?id=${n.id}" class="full-link">ترجمة الراوي الكاملة ←</a>
-    <div class="ir"><span class="il">وفاته</span><span class="iv">${n.death_ah ? fmtYear(n.death_ah) + (n.death_estimated ? ' <small title="تاريخ مقدَّر من موقعه في الأسانيد">(تقديري)</small>' : '') : '—'}</span></div>
+    <a href="narrator.html?id=${n.id}" class="full-link">${n.female ? 'ترجمة الراوية الكاملة' : 'ترجمة الراوي الكاملة'} ←</a>
+    <div class="ir"><span class="il">${n.female ? 'وفاتها' : 'وفاته'}</span><span class="iv">${n.death_ah ? fmtYear(n.death_ah) + (n.death_estimated ? ' <small title="تاريخ مقدَّر من موقعه في الأسانيد">(تقديري)</small>' : '') : '—'}</span></div>
     <div class="ir"><span class="il">المنشأ</span><span class="iv">${n.origin || '—'}</span></div>
-    <div class="ir"><span class="il">وروده في الأسانيد</span><span class="iv">${ar((n.hadith_count || 0).toLocaleString('en'))}</span></div>
+    <div class="ir"><span class="il">${n.female ? 'ورودها في الأسانيد' : 'وروده في الأسانيد'}</span><span class="iv">${ar((n.hadith_count || 0).toLocaleString('en'))}</span></div>
     <div class="ir"><span class="il">الحكم</span><span class="iv">${n.reliability || '—'}</span></div>
     ${colls.length ? `<div class="ps"><div class="pst">المصادر</div>${colls.map(c => `<span class="tag tc">${c}</span>`).join('')}</div>` : ''}
-    ${teachers.length ? `<div class="ps"><div class="pst">روى عن (${ar(teachers.length)})</div>${list(teachers)}</div>` : ''}
-    ${students.length ? `<div class="ps"><div class="pst">روى عنه (${ar(students.length)})</div>${list(students)}</div>` : ''}
-    <div class="ps" id="panel-hadiths"><div class="pst">أحاديثه</div><div class="pl-more">جارٍ التحميل…</div></div>
+    ${teachers.length ? `<div class="ps"><div class="pst">${naratedFrom(n)} (${ar(teachers.length)})</div>${list(teachers)}</div>` : ''}
+    ${students.length ? `<div class="ps"><div class="pst">${naratedBy(n)} (${ar(students.length)})</div>${list(students)}</div>` : ''}
+    <div class="ps" id="panel-hadiths"><div class="pst">${n.female ? 'أحاديثها' : 'أحاديثه'}</div><div class="pl-more">جارٍ التحميل…</div></div>
   `;
   if (!n.prophet) loadPanelHadiths(n.id);
 
@@ -81,7 +81,7 @@ async function loadPanelHadiths(id) {
     if (!rows.length) { box.querySelector('.pl-more').textContent = 'لا أحاديث مسندة'; return; }
     const byColl = new Map();
     for (const r of rows) (byColl.get(r.collName) || byColl.set(r.collName, []).get(r.collName)).push(r);
-    box.innerHTML = `<div class="pst">أحاديثه (${ar(rows.length)})</div>` + [...byColl].map(([name, list], i) => `
+    box.innerHTML = `<div class="pst">${state.narById.get(id)?.female ? 'أحاديثها' : 'أحاديثه'} (${ar(rows.length)})</div>` + [...byColl].map(([name, list], i) => `
       <details class="hgroup" ${i === 0 ? 'open' : ''}><summary>${name} <span>${ar(list.length)}</span></summary>
       ${list.map(r => `<div class="hc hclick" data-h="${r.id}"><div class="ht">${r.snippet || '<i>النص غير متوفر</i>'}</div><div class="hm">${name} ${ar(r.num)} · <span class="hm-link">تتبّع الإسناد ↗</span></div></div>`).join('')}
       </details>`).join('');

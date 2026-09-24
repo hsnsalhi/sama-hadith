@@ -3,7 +3,7 @@ import { normalizeText } from '../lib/search-norm.js';
 const wordCache = new WeakMap();
 const wordsOf = n => { let w = wordCache.get(n); if (!w) { w = normalizeText(`${n.name_ar || ''} ${n.name_short || ''} ${(n.alt || []).join(' ')}`).split(' ').filter(Boolean).map(x => x === 'ابن' ? 'بن' : x); wordCache.set(n, w); } return w; };
 const matchWord = (w, x) => x === w || x.startsWith(w) || (w.startsWith('ال') && w.length > 3 && (x === w.slice(2) || x.startsWith(w.slice(2)))) || ('ال' + w === x);
-import { GCS, GL } from '../lib/constants.js';
+import { GCS, genLabel } from '../lib/constants.js';
 import { openPanel } from './panel.js';
 import { isHadithMode, runHadithSearch } from './hadith-mode.js';
 
@@ -36,7 +36,7 @@ export function initSearch() {
     sr.innerHTML = res.map(n =>
       `<div class="sri" data-narrator-id="${n.id}">
         <span class="sri-n">${n.name_ar}</span>
-        <span class="sri-g" style="background:${GCS[n.generation]}18;color:${GCS[n.generation]};border:0.5px solid ${GCS[n.generation]}33">${GL[n.generation]}</span>
+        <span class="sri-g" style="background:${GCS[n.generation]}18;color:${GCS[n.generation]};border:0.5px solid ${GCS[n.generation]}33">${genLabel(n)}</span>
       </div>`
     ).join('');
 

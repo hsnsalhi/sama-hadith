@@ -301,7 +301,8 @@ async function renderPanel(h) {
     ${h.no_text ? `<div class="note warn">هذا الرقم موجود في المصدر لكن نصّه غير متوفر فيه؛ لا إسناد ولا متن يمكن عرضهما.</div>` : ''}
     ${grades ? `<div class="ps"><div class="pst">الحكم</div>${grades}</div>` : ''}
     ${h.isnad.inherited === 'all' ? `<div class="note">هذه الفقرة بلا إسناد مستقل في المصدر؛ المسار المعروض هو إسناد الحديث السابق.</div>` : h.isnad.inherited === 'tail' ? `<div class="note">«بهذا الإسناد»: تكملة المسار مأخوذة من الحديث السابق (الخطوط المنقّطة الخافتة).</div>` : h.isnad.inherited === 'head' ? `<div class="note">يبدأ النص بـ«قال فلان» تتمةً للحديث السابق؛ بداية المسار مأخوذة منه (الخطوط المنقّطة الخافتة).</div>` : ''}
-    ${h.isnad.edges.some(e => connectorTypes[e[2]] === 'quote') ? `<div class="note">يبدأ المسار بـ«قال فلان» دون سماع مصرَّح: رابطة معلَّقة (خط منقّط رفيع).</div>` : ''}
+    ${h.isnad.edges.some(e => connectorTypes[e[2]] === 'quote' && e[1] !== PROPHET_ID) ? `<div class="note">يبدأ المسار بـ«قال فلان» دون سماع مصرَّح: رابطة معلَّقة (خط منقّط رفيع).</div>` : ''}
+    ${h.isnad.edges.some(e => e[1] === PROPHET_ID && connectorTypes[e[2]] === 'quote') ? `<div class="note">آخر راوٍ مذكور في السند ليس صحابياً، فالرابطة إلى النبي ﷺ منقّطة: إمّا إرسال في المصدر، وإمّا سقط اسم الصحابي من التحليل.</div>` : ''}
     ${h.no_text ? '' : `<div class="ps"><div class="pst">سلسلة الرواة${h.isnad.reaches_prophet ? ' · تنتهي إلى النبي ﷺ' : ''}</div><div class="chain">${chainHtml}${h.isnad.reaches_prophet && !h.isnad.edges.some(e => e[1] === PROPHET_ID) ? '<div class="lvl-conn"><em>↓</em></div><div class="lvl"><span class="nchip prophet">رسول الله ﷺ</span></div>' : ''}</div></div>`}
     ${h.isnad_ar ? `<div class="ps"><div class="pst">الإسناد</div><div class="isnad-txt">${h.isnad_ar}</div></div>` : ''}
     ${h.no_text ? '' : `<div class="ps"><div class="pst">المتن</div><div class="matn-txt">${h.matn_ar || '—'}</div></div>`}

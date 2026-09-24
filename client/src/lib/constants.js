@@ -32,6 +32,13 @@ export const GL = {
   rijal: 'ناقد رجال',
 };
 
+// feminine forms, for the women among the narrators (« صحابية », « روت عن »)
+export const GLF = { sahabi: 'صحابية', tabii: 'تابعية', muhaddith: 'محدّثة', rijal: 'ناقدة رجال' };
+export const genLabel = n => (n.female ? GLF[n.generation] : GL[n.generation]) || n.generation;
+/** « روى عن » / « روت عن » and « روى عنه » / « روى عنها » */
+export const naratedFrom = n => n.female ? 'روت عن' : 'روى عن';
+export const naratedBy = n => n.female ? 'روى عنها' : 'روى عنه';
+
 // Z-axis offset per generation (3D view)
 export const GEN_Z = {
   prophet: -165,

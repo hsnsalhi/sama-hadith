@@ -1089,6 +1089,21 @@ async function main() {
   // "عن أبيه" resolved to a man keeps the relative word among its displays: never show it as his name
   const named = e => { const d = [...e.displays].filter(([x]) => !NON_NAME_WORDS.has(cleanName(x))); return d.length ? d : [[e.key.replace(/~+$/, ''), 1]]; }; // only "أبيه" on record: show the resolved name itself
   const aliasesOfKey = new Map(); for (const [a, t] of canon) (aliasesOfKey.get(t) || aliasesOfKey.set(t, []).get(t)).push(a);
+  const FEMALE_NAMES = new Set(['عايشه', 'فاطمه', 'حفصه', 'زينب', 'اسماء', 'صفيه', 'ميمونه', 'جويريه', 'سوده', 'خديجه', 'رمله', 'هند', 'اميمه', 'سلمي', 'عمره', 'حبيبه', 'رقيه', 'لبابه', 'بريره', 'معاذه', 'حكيمه', 'خوله', 'سهله', 'بسره', 'نسيبه', 'كبشه', 'عاتكه', 'فريعه', 'جدامه', 'حميده', 'هنيده', 'ليلي', 'الرباب', 'ضباعه', 'جميله', 'ريطه', 'قيله', 'سبيعه', 'فاخته', 'امامه', 'هاله', 'عزه', 'امينه', 'قريبه', 'مليكه', 'لميس', 'كريمه', 'فسيله', 'عميره', 'صفيه', 'حمنه', 'خيره', 'مسيكه', 'عمره', 'زياده', 'برزه', 'ام', 'فاطمة']);
+  const FEMALE_REL = new Set(['امه', 'جدته', 'عمته', 'خالته', 'اخته', 'زوجته', 'مولاته', 'ابنته', 'حماته']);
+  const isFemale = e => {
+    if (e.compiler) return false;
+    const k = e.key.replace(/[~#].*$/, '');
+    if (k.includes('@')) return FEMALE_REL.has(k.slice(0, k.indexOf('@')));
+    const words = k.split(' ');
+    if (words[0] === 'ام' || words.includes('بنت') || words.includes('ابنه') || (FEMALE_NAMES.has(words[0]) && words[1] !== 'بن')) return true; // « جويرية بن أسماء » is a man
+    const names = [e.taqrib?.name, e.tahdhib?.name, e.fullName].filter(Boolean).map(cleanName);
+    const ownFem = n => { const w = n.split(' '); const i = w.findIndex(x => x === 'بنت' || x === 'ابنه'); return (i > 0 && i <= 2) || w[0] === 'ام'; }; // her own name (« زينب بنت جحش »), not a mother named later in the notice (« امه حنتمه بنت هاشم »)
+    if (names.some(ownFem)) return true;
+    if (words[1] === 'بن' || words[0] === 'ابن' || words[0] === 'ابو') return false;
+    const raw = normalizeArabic(e.taqrib?.raw || '');
+    return /(?:^| )(?:صحابيه|مقبوله|صدوقه|ثقه فاضله|تابعيه)(?= |$)/.test(raw); // Ibn Ḥajar's feminine verdicts
+  };
   const narrators = list.map(e => ({
     id: e.id,
     key: e.key,
@@ -1117,6 +1132,7 @@ async function main() {
     students_count: studentsCount.get(e.id) || 0,
     compiler: e.compiler || null,
     prophet_direct: prophetDirect.get(e.id) || undefined, // marfūʿ hadiths this companion reports from the Prophet ﷺ himself
+    female: isFemale(e) || undefined,
   }));
   const prophet = {
     id: PROPHET_ID, key: 'النبي ﷺ', prophet: true,
@@ -1172,7 +1188,8 @@ async function main() {
           isnad: {
             nodes: nodeIds,
             edges: [...g.edges.map(e => [e.student ? idOf(e.student) : idOf(c.compiler), idOf(e.teacher), connId(e.connector), e.inherited ? 1 : 0]).filter(e => e[0] && e[1] && e[0] !== e[1]),
-              ...(g.reachesProphet ? [...g.nodes.keys()].filter(k => !hasTeacher.has(k) && ents.get(canon.get(k) || k)?.gen === 'sahabi').map(k => [idOf(k), PROPHET_ID, connId('عن'), 0]).filter(e => e[0]) : [])],
+              // every marfūʿ chain is drawn up to the Prophet ﷺ: a companion hears him (« عن »); a successor there reports him without naming the companion (« مرسلاً »); anyone later, with a gap (« منقطعاً »)
+              ...(g.reachesProphet ? [...g.nodes.keys()].filter(k => !hasTeacher.has(k)).map(k => { const gen = ents.get(canon.get(k) || k)?.gen; return [idOf(k), PROPHET_ID, connId(gen === 'sahabi' ? 'عن' : gen === 'tabii' ? 'مرسلاً' : 'منقطعاً'), 0]; }).filter(e => e[0]) : [])],
             companions: [...g.nodes.keys()].filter(k => !hasTeacher.has(k)).map(idOf).filter(Boolean),
             reaches_prophet: g.reachesProphet,
             inherited: g.inheritedAll ? 'all' : g.edges.some(e => e.inherited && e.student === null) ? 'head' : g.edges.some(e => e.inherited) ? 'tail' : null,

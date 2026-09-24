@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { GL, fmtYear, PROPHET_ID } from '../lib/constants.js';
+import { fmtYear, PROPHET_ID, genLabel } from '../lib/constants.js';
 import { openPanel, closePanel } from './panel.js';
 const COARSE = matchMedia('(pointer: coarse)').matches;
 
@@ -31,7 +31,7 @@ export function handleMouseMove(e) {
     if (n) {
       document.getElementById('ttn').textContent = n.name_ar;
       document.getElementById('tts').textContent =
-        fmtYear(n.death_ah, n.death_estimated) + ' - ' + (GL[n.generation] || n.generation) + (n.origin ? ' - ' + n.origin : '');
+        fmtYear(n.death_ah, n.death_estimated) + ' - ' + genLabel(n) + (n.origin ? ' - ' + n.origin : '');
       tt.style.display = COARSE ? 'none' : 'block';
       tt.style.left = (e.clientX + 12) + 'px';
       tt.style.top = (e.clientY - 8) + 'px';

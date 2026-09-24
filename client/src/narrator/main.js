@@ -1,5 +1,5 @@
 import '../styles/narrator.css';
-import { GCS, GL, kindOf, KINDS, gradeAr, graderAr, fmtYear, deathAt } from '../lib/constants.js';
+import { GCS, GL, kindOf, KINDS, gradeAr, graderAr, fmtYear, deathAt, genLabel, naratedFrom, naratedBy } from '../lib/constants.js';
 import { getCollections } from '../lib/api.js';
 import { getCoords } from '../lib/utils.js';
 import { getNarratorById, getTransmissionsByNarrator, getHadith, getNarratorMap, getHadithRowsByNarrator, getRijal, getManifest } from '../lib/api.js';
@@ -51,12 +51,12 @@ async function main() {
     const colls = Array.isArray(n.collections) ? n.collections : [];
     document.getElementById('hero-star').innerHTML = `<svg viewBox="0 0 24 24" width="36" height="36" fill="${col}"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
     document.getElementById('hero-star').style.color = col;
-    document.getElementById('hero-gen').textContent = (GL[n.generation] || n.generation) + (n.compiler ? ' · مؤلِّف' : '');
+    document.getElementById('hero-gen').textContent = genLabel(n) + (n.compiler ? ' · مؤلِّف' : '');
     document.getElementById('hero-gen').style.color = col;
     document.getElementById('hero-name').textContent = n.name_ar;
     document.getElementById('hero-name').style.color = col;
     document.getElementById('hero-latin').textContent = n.name_latin || '';
-    const tags = [...(n.unnamed ? ['لم يُسمَّ في الإسناد'] : []), ...(n.origin ? [n.origin] : []), ...colls.slice(0, 3)];
+    const tags = [...(n.unnamed ? [n.female ? 'لم تُسمَّ في الإسناد' : 'لم يُسمَّ في الإسناد'] : []), ...(n.origin ? [n.origin] : []), ...colls.slice(0, 3)];
     document.getElementById('hero-tags').innerHTML = tags.map(t => `<span class="htag">${t}</span>`).join('');
     document.getElementById('hero').style.display = 'flex';
     document.getElementById('hero').style.borderColor = col + '44';
@@ -67,9 +67,10 @@ async function main() {
     // STATS
     document.getElementById('st-hadiths').textContent = ar((hadithIds.length || n.hadith_count || 0).toLocaleString('en'));
     document.getElementById('st-death').textContent = n.death_ah ? fmtYear(n.death_ah, n.death_estimated) : '—';
-    if (n.death_estimated) document.getElementById('st-death').title = 'تاريخ مقدَّر من موقعه في الأسانيد';
+    if (n.death_estimated) document.getElementById('st-death').title = n.female ? 'تاريخ مقدَّر من موقعها في الأسانيد' : 'تاريخ مقدَّر من موقعه في الأسانيد';
     document.getElementById('st-teachers').textContent = teachers.length;
     document.getElementById('st-students').textContent = students.length;
+    if (n.female) { document.querySelector('#st-teachers + .stat-lbl').textContent = 'روت عن'; document.querySelector('#st-students + .stat-lbl').textContent = 'روى عنها'; }
     document.getElementById('stats').style.display = 'grid';
 
     // MINI TIMELINE
@@ -93,14 +94,14 @@ async function main() {
     const personRow = ({ n: x, w }) => `<a class="person-row" href="narrator.html?id=${x.id}"><i style="background:${GCS[x.generation] || '#c9a84c'}"></i><span class="person-name">${x.name_ar}</span><span class="person-meta">${w > 1 ? '×' + ar(w) + ' · ' : ''}${x.death_ah ? fmtYear(x.death_ah, x.death_estimated) : ''}</span></a>`;
     if (teacherRows.length || studentRows.length) {
       document.getElementById('sec-people').style.display = 'block';
-      document.getElementById('teachers-list').innerHTML = teacherRows.length ? `<div class="people-title">روى عن <span>${ar(teacherRows.length)}</span></div>` + teacherRows.map(personRow).join('') : '';
-      document.getElementById('students-list').innerHTML = studentRows.length ? `<div class="people-title">روى عنه <span>${ar(studentRows.length)}</span></div>` + studentRows.map(personRow).join('') : '';
+      document.getElementById('teachers-list').innerHTML = teacherRows.length ? `<div class="people-title">${naratedFrom(n)} <span>${ar(teacherRows.length)}</span></div>` + teacherRows.map(personRow).join('') : '';
+      document.getElementById('students-list').innerHTML = studentRows.length ? `<div class="people-title">${naratedBy(n)} <span>${ar(studentRows.length)}</span></div>` + studentRows.map(personRow).join('') : '';
     }
 
     // HADITHS — every hadith in whose isnad the narrator appears, grouped by collection; click to load the full text
     if (hadithRows.length) {
       document.getElementById('sec-hadiths').style.display = 'block';
-      document.querySelector('#sec-hadiths .section-title').textContent = `أحاديثه (${ar(hadithRows.length)})`;
+      document.querySelector('#sec-hadiths .section-title').textContent = `${n.female ? 'أحاديثها' : 'أحاديثه'} (${ar(hadithRows.length)})`;
       const list = document.getElementById('hadiths-list');
       const byColl = new Map();
       for (const r of hadithRows) (byColl.get(r.collName) || byColl.set(r.collName, []).get(r.collName)).push(r);
@@ -125,7 +126,7 @@ async function main() {
     }
 
     // RIJAL — the full notice of Tahdhīb al-Tahdhīb (critics' statements, teachers, students)
-    if (rijal && (rijal.tahdhib || rijal.notices?.length)) { document.getElementById('sec-rijal').style.display = 'block'; buildRijal(n, rijal); document.querySelector('#sec-rijal .section-title').textContent = `تراجمه في كتب الرجال (${(rijal.notices?.length || 0) + (rijal.tahdhib ? 1 : 0)})`; }
+    if (rijal && (rijal.tahdhib || rijal.notices?.length)) { document.getElementById('sec-rijal').style.display = 'block'; buildRijal(n, rijal); document.querySelector('#sec-rijal .section-title').textContent = `${n.female ? 'تراجمها' : 'تراجمه'} في كتب الرجال (${(rijal.notices?.length || 0) + (rijal.tahdhib ? 1 : 0)})`; }
 
     // Hide loading
     const ld = document.getElementById('loading');
@@ -187,6 +188,7 @@ function renderProphet(n, transData, narMap) {
 
 
 // ── ترجمة الراوي ─────────────────────────────────────────────────────────
+const LAYER_TEXT_F = { sahabi: 'من الصحابيات رضوان الله عليهن', tabii: 'من التابعيات', muhaddith: 'من المحدّثات ومن بعد التابعين', rijal: 'من علماء الرجال' };
 const LAYER_TEXT = { sahabi: 'من الصحابة رضوان الله عليهم', tabii: 'من التابعين', muhaddith: 'من المحدّثين وأتباع التابعين ومن بعدهم', rijal: 'من علماء الرجال' };
 const KIND_LABEL = { marfu: 'مرفوعة إلى النبي ﷺ', mawquf: 'موقوفة على صحابي', maqtu: 'مقطوعة على تابعي', balagh: 'بلاغات', ray: 'آراء وأقوال' };
 const joinAr = (arr) => arr.length <= 1 ? arr.join('') : arr.slice(0, -1).join('، ') + ' و' + arr[arr.length - 1];
@@ -224,16 +226,19 @@ function renderBiography(n, teachers, students, hadithRows, trans, collections, 
   const topT = teachers.slice(0, 5).map(x => `${x.n.name_ar} (${x.w})`);
   const topS = students.slice(0, 5).map(x => `${x.n.name_ar} (${x.w})`);
 
+  const f = !!n.female; // feminine agreement for the women among the narrators
   const p = [];
-  p.push(`<b>${n.name_ar}</b>${n.name_latin ? ` <span class="latin">${n.name_latin}</span>` : ''}، ${LAYER_TEXT[n.generation] || ''}${n.origin ? `، من أهل ${n.origin}` : ''}${n.death_ah ? `، ${n.death_estimated ? 'يُقدَّر أنه توفي نحو سنة' : 'توفي سنة'} ${fmtYear(n.death_ah)}` : ''}${n.reliability ? `، حكمه عند النقّاد: «${n.reliability}»` : ''}.${n.compiler ? ' وهو مؤلِّف أحد الكتب المعتمدة في هذا الأطلس، فيبدأ به إسناد كل حديث في كتابه.' : ''}`);
+  p.push(`<b>${n.name_ar}</b>${n.name_latin ? ` <span class="latin">${n.name_latin}</span>` : ''}، ${(f ? LAYER_TEXT_F : LAYER_TEXT)[n.generation] || ''}${n.origin ? `، من أهل ${n.origin}` : ''}${n.death_ah ? `، ${n.death_estimated ? (f ? 'يُقدَّر أنها توفيت نحو سنة' : 'يُقدَّر أنه توفي نحو سنة') : (f ? 'توفيت سنة' : 'توفي سنة')} ${fmtYear(n.death_ah)}` : ''}${n.reliability ? `، ${f ? 'حكمها' : 'حكمه'} عند النقّاد: «${n.reliability}»` : ''}.${n.compiler ? ' وهو مؤلِّف أحد الكتب المعتمدة في هذا الأطلس، فيبدأ به إسناد كل حديث في كتابه.' : ''}`);
   if (teachers.length || students.length) {
     let t = '';
-    if (teachers.length) t += `روى عن ${plural(teachers.length, 'راوٍ واحد', 'راويين', 'رواة', 'راوياً')}${topT.length > 1 ? `، وأكثر مروياته عن ${joinAr(topT)}` : ''}`;
-    if (students.length) t += `${t ? '، و' : ''}روى عنه ${plural(students.length, 'راوٍ واحد', 'راويان', 'رواة', 'راوياً')}${topS.length > 1 ? `، وأكثرهم رواية عنه ${joinAr(topS)}` : ''}`;
-    p.push(t + '.' + (directPct != null ? ` نسبة ما صُرِّح فيه بالسماع (حدثنا، أخبرنا، سمعت) من روابطه ${directPct}٪، والباقي بالعنعنة.` : ''));
+    const direct = teachers.find(x => x.n.prophet), others = teachers.filter(x => !x.n.prophet), topO = others.slice(0, 5).map(x => `${x.n.name_ar} (${x.w})`);
+    if (direct) t += `${f ? 'روت' : 'روى'} عن النبي ﷺ مباشرةً في ${plural(direct.w, 'حديث واحد', 'حديثين', 'أحاديث', 'حديثاً')}${others.length ? '، و' : ''}`;
+    if (others.length) t += `${direct ? 'عن' : f ? 'روت عن' : 'روى عن'} ${plural(others.length, 'راوٍ واحد', 'راويين', 'رواة', 'راوياً')}${topO.length > 1 ? `، وأكثر ${f ? 'مروياتها' : 'مروياته'} عن ${joinAr(topO)}` : ''}`;
+    if (students.length) t += `${t ? '، و' : ''}روى ${f ? 'عنها' : 'عنه'} ${plural(students.length, 'راوٍ واحد', 'راويان', 'رواة', 'راوياً')}${topS.length > 1 ? `، وأكثرهم رواية ${f ? 'عنها' : 'عنه'} ${joinAr(topS)}` : ''}`;
+    p.push(t + '.' + (directPct != null ? ` نسبة ما صُرِّح فيه بالسماع (حدثنا، أخبرنا، سمعت) من ${f ? 'روابطها' : 'روابطه'} ${directPct}٪، والباقي بالعنعنة.` : ''));
   }
   if (total) {
-    let t = `ورد في ${plural(total, 'حديث واحد', 'حديثين', 'أحاديث', 'حديثاً')} من كتب هذا الأطلس`;
+    let t = `${f ? 'وردت' : 'ورد'} في ${plural(total, 'حديث واحد', 'حديثين', 'أحاديث', 'حديثاً')} من كتب هذا الأطلس`;
     if (byColl.length) t += `: ${joinAr(byColl.map(([c, k]) => `${k} في ${c}`))}`;
     t += '.';
     if (kinds.length) t += ` وهي بحسب نوعها: ${joinAr(kinds.map(([k, v]) => `${v} ${KIND_LABEL[k] || k}`))}.`;
@@ -241,19 +246,19 @@ function renderBiography(n, teachers, students, hadithRows, trans, collections, 
   }
   if (n.depth != null && !n.compiler) {
     const pos = n.depth >= 4.5 ? 'في آخر السند، أي في طبقة الصحابة والتابعين الأوائل' : n.depth >= 3 ? 'في وسط السند' : n.depth >= 1.5 ? 'في أوائل السند قريباً من المصنِّفين' : 'في أول السند، ممن روى عنهم المصنِّفون مباشرة';
-    p.push(`موقعه في الأسانيد ${pos} (متوسط رتبته ${n.depth} من المصنِّف).`);
+    p.push(`${f ? 'موقعها' : 'موقعه'} في الأسانيد ${pos} (متوسط ${f ? 'رتبتها' : 'رتبته'} ${n.depth} من المصنِّف).`);
   }
   document.getElementById('bio-profile').innerHTML = `<div class="prov">مستخرج آلياً من أسانيد الكتب السبعة${n.death_estimated && !n.layer ? '؛ التاريخ والطبقة تقديريان ما لم يُذكر خلاف ذلك' : n.death_estimated ? '؛ التاريخ تقديري' : ''}</div>` + p.map(x => `<p>${x}</p>`).join('');
 
   // 3. facts grid
   const facts = [
-    ['الطبقة', GL[n.generation] || n.generation],
+    ['الطبقة', genLabel(n)],
     ['طبقته عند ابن حجر', n.layer ? `${n.layer} · ${layerNames[n.layer] || ''}` : '—'],
     ['الوفاة', n.death_ah ? `${fmtYear(n.death_ah)}${n.death_estimated ? ' (تقديري)' : ''}` : '—'],
     ['مصدر التاريخ', DEATH_SRC[n.death_source] || '—'],
     ['المنشأ', n.origin || '—'],
     ['الحكم', n.reliability || '—'],
-    ['روى عن', teachers.length], ['روى عنه', students.length],
+    [naratedFrom(n), teachers.filter(x => !x.n.prophet).length + (teachers.some(x => x.n.prophet) ? ' + النبي ﷺ' : '')], [naratedBy(n), students.length],
     ['الأحاديث', total], ['روابط السند', allLinks],
     ['المصادر', byColl.map(x => x[2]).join('، ') || '—'],
   ];

@@ -20,6 +20,7 @@ const BOOKS = {
 };
 const ORDER = ['sacd', 'tarikh', 'ijli', 'jarh', 'thiqat', 'majruhin', 'shahin', 'nuaym', 'istiab', 'usd', 'kamal', 'kashif', 'mizan', 'siyar', 'tahdhib', 'isaba'];
 
+let FEMALE = false; // set by buildRijal for the women among the narrators
 function card(list, { src, ref, text, teachers, students, grades }) {
   const b = BOOKS[src] || { title: src, author: '' };
   const short = text.length > 900;
@@ -30,8 +31,8 @@ function card(list, { src, ref, text, teachers, students, grades }) {
     <div class="rijal-text">${short ? text.slice(0, 900) + '…' : text}</div>
     ${short ? '<button class="rijal-more">عرض النص كاملاً</button>' : ''}
     ${grades?.length ? `<div class="rijal-grades">${grades.map(g => `<span class="rq-chip" title="${(g.text || '').replace(/"/g, '&quot;')}">${g.critic ? g.critic + ': ' : ''}${g.verdict}</span>`).join('')}</div>` : ''}
-    ${teachers?.length ? `<div class="rijal-sub"><span class="rijal-k">روى عن (في هذا الكتاب):</span> ${teachers.join('، ')}</div>` : ''}
-    ${students?.length ? `<div class="rijal-sub"><span class="rijal-k">روى عنه (في هذا الكتاب):</span> ${students.join('، ')}</div>` : ''}
+    ${teachers?.length ? `<div class="rijal-sub"><span class="rijal-k">${FEMALE ? 'روت عن' : 'روى عن'} (في هذا الكتاب):</span> ${teachers.join('، ')}</div>` : ''}
+    ${students?.length ? `<div class="rijal-sub"><span class="rijal-k">${FEMALE ? 'روى عنها' : 'روى عنه'} (في هذا الكتاب):</span> ${students.join('، ')}</div>` : ''}
   `;
   const btn = el.querySelector('.rijal-more');
   if (btn) btn.addEventListener('click', () => { el.querySelector('.rijal-text').textContent = text; btn.remove(); });
@@ -39,6 +40,7 @@ function card(list, { src, ref, text, teachers, students, grades }) {
 }
 
 export function buildRijal(n, rijal) {
+  FEMALE = !!n.female;
   const list = document.getElementById('rijal-list');
   list.innerHTML = '';
   const notices = [];
